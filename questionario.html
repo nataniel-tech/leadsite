@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>Questionário do seu site</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f172a; color: #e2e8f0;
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    line-height: 1.5; padding: 18px 16px 60px; max-width: 560px; margin: 0 auto;
+  }
+  .topo { text-align: center; padding: 18px 0 8px; }
+  .topo .emoji { font-size: 40px; }
+  h1 { font-size: 21px; margin: 8px 0 4px; }
+  .sub { color: #94a3b8; font-size: 14px; }
+  .carta {
+    background: #1e293b; border-radius: 14px; padding: 16px;
+    margin-top: 14px; border: 1px solid #33415555;
+  }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  input, textarea {
+    width: 100%; background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+    border-radius: 10px; padding: 11px 12px; font-size: 16px; font-family: inherit;
+  }
+  input:focus, textarea:focus { outline: 2px solid #38bdf8; border-color: transparent; }
+  textarea { min-height: 84px; resize: vertical; }
+  .btn {
+    display: block; width: 100%; border: 0; border-radius: 12px; padding: 14px;
+    font-size: 16px; font-weight: 700; cursor: pointer; text-align: center;
+    text-decoration: none; margin-top: 12px; background: #334155; color: #e2e8f0;
+  }
+  .btn.principal { background: #38bdf8; color: #082f49; }
+  .btn.zap { background: #22c55e; color: #052e16; }
+  .aviso { border-radius: 12px; padding: 12px; font-size: 14px; margin-top: 12px; }
+  .aviso.alerta { background: #78350f55; border: 1px solid #f59e0b55; color: #fcd34d; }
+  .aviso.bom { background: #065f4655; border: 1px solid #10b98155; color: #6ee7b7; }
+  .mini { color: #94a3b8; font-size: 12px; margin-top: 10px; text-align: center; }
+  .codigo {
+    background: #0f172a; border: 1px dashed #475569; border-radius: 10px;
+    padding: 10px; font-size: 11px; word-break: break-all; margin-top: 10px;
+    font-family: monospace; max-height: 140px; overflow: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="emoji">🎨</div>
+  <h1 id="titulo">Questionário do seu site</h1>
+  <div class="sub" id="intro">Pagamento confirmado! Responda estas perguntas rápidas para o seu site sair do seu jeito.</div>
+</div>
+
+<div id="corpo"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   Página do questionário — o cliente abre pelo link que recebe
+   no WhatsApp depois de pagar o Pix. Sem servidor, sem cadastro:
+   as perguntas vão no próprio link (#d=...) e as respostas voltam
+   como um código (LSR1...) que ele devolve no WhatsApp.
+   ══════════════════════════════════════════════════════════ */
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/* mesmo base64 do app, na versão que cabe em link */
+function b64uCodificar(txt) {
+  var bytes = new TextEncoder().encode(txt);
+  var bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64uDecodificar(s) {
+  var b = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+var D = null;      /* { v, lid, neg, dono, ps:[{id,t,tipo}] } */
+var MONTADO = '';  /* mensagem pronta com o código das respostas */
+
+(function () {
+  var corpo = document.getElementById('corpo');
+  var m = location.hash.match(/#d=([A-Za-z0-9_-]+)/);
+  if (!m) { mostrarErro(); return; }
+  try { D = JSON.parse(b64uDecodificar(m[1])); }
+  catch (e) { mostrarErro(); return; }
+  if (!D || !Array.isArray(D.ps) || !D.ps.length) { mostrarErro(); return; }
+
+  if (D.neg) {
+    document.getElementById('titulo').textContent = 'Site de ' + D.neg;
+  }
+
+  var h = '<div class="carta">';
+  h += '<label>Antes de tudo: como podemos te chamar?</label>' +
+       '<input id="p_contato" placeholder="seu nome">';
+  D.ps.forEach(function (p) {
+    h += '<label>' + esc(p.t) + '</label>';
+    if (p.tipo === 'area') {
+      h += '<textarea id="p_' + esc(p.id) + '" maxlength="500"></textarea>';
+    } else {
+      h += '<input id="p_' + esc(p.id) + '" maxlength="300">';
+    }
+  });
+  h += '<p class="mini" style="text-align:left">📷 Fotos e logotipo: depois de enviar, é só mandar aqui no WhatsApp.</p>';
+  h += '<button class="btn principal" onclick="enviar()">✅ Enviar respostas</button>';
+  h += '<div id="resultado"></div>';
+  h += '</div>';
+  corpo.innerHTML = h;
+})();
+
+function mostrarErro() {
+  document.getElementById('corpo').innerHTML =
+    '<div class="carta"><div class="aviso alerta"><b>Link incompleto ou vencido.</b><br>' +
+    'Abra de novo o link que você recebeu no WhatsApp — ele precisa estar inteiro, sem corte.</div></div>';
+}
+
+function enviar() {
+  var r = {};
+  var respondeu = 0;
+  var contato = (document.getElementById('p_contato').value || '').trim().slice(0, 80);
+  D.ps.forEach(function (p) {
+    var el = document.getElementById('p_' + p.id);
+    var v = el ? el.value.trim().slice(0, 500) : '';
+    if (v) { r[p.id] = v; respondeu++; }
+  });
+  var alvo = document.getElementById('resultado');
+  if (!respondeu) {
+    alvo.innerHTML = '<div class="aviso alerta">Responda pelo menos uma pergunta antes de enviar. 🙂</div>';
+    return;
+  }
+
+  var token = 'LSR1.' + b64uCodificar(JSON.stringify({ v: 1, lid: D.lid || '', nome: D.neg || '', contato: contato, r: r }));
+  MONTADO = 'Oi! Terminei de responder o questionário do meu site 😄\n' +
+    'As minhas respostas vão neste código:\n\n' + token + '\n\n' +
+    'É só colar ele no seu app que ele entende tudo sozinho.';
+
+  var h = '<div class="aviso bom"><b>✅ Pronto!</b> Agora é só enviar o código pra quem está fazendo o seu site:</div>';
+  if (D.dono) {
+    if (MONTADO.length > 3500) {
+      h += '<div class="aviso alerta">Suas respostas ficaram grandes demais para o link do WhatsApp — ' +
+           'toque em copiar e cole na conversa.</div>';
+      h += '<button class="btn principal" onclick="copiarTudo()">📋 Copiar respostas</button>';
+    } else {
+      h += '<a class="btn zap" href="https://wa.me/' + esc(D.dono) + '?text=' + encodeURIComponent(MONTADO) +
+           '" target="_blank" rel="noopener">💬 Enviar pelo WhatsApp</a>';
+      h += '<button class="btn" onclick="copiarTudo()">📋 Ou copiar o código</button>';
+    }
+  } else {
+    h += '<div class="aviso alerta">O link veio sem o número de quem faz o seu site — copie o código e mande pra essa pessoa na conversa de vocês.</div>';
+    h += '<button class="btn principal" onclick="copiarTudo()">📋 Copiar respostas</button>';
+  }
+  h += '<div class="codigo">' + esc(token) + '</div>';
+  alvo.innerHTML = h;
+  alvo.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copiarTudo() {
+  var alvo = document.getElementById('resultado');
+  function pronto(ok) {
+    alvo.innerHTML = (ok
+      ? '<div class="aviso bom"><b>✅ Copiado!</b> Cole na conversa do WhatsApp e envie.</div>'
+      : '<div class="aviso alerta">Não consegui copiar sozinho — selecione o código acima e copie na mão.</div>') +
+      '<div class="codigo">' + esc(MONTADO) + '</div>';
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(MONTADO).then(function () { pronto(true); }, function () { copiarNaMarra(); });
+  } else copiarNaMarra();
+
+  function copiarNaMarra() {
+    try {
+      var t = document.createElement('textarea');
+      t.value = MONTADO; document.body.appendChild(t);
+      t.select(); document.execCommand('copy'); document.body.removeChild(t);
+      pronto(true);
+    } catch (e) { pronto(false); }
+  }
+}
+</script>
+</body>
+</html>

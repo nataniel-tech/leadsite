@@ -310,6 +310,8 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
     </div>
 
     <button class="btn principal" id="btnBuscar" onclick="buscar()">🔍 Buscar agora</button>
+    <button class="btn" id="btnRegiao" onclick="buscarRegiao()">🗺️ Caçar na região (cidades até ~300 km)</button>
+    <p class="mini" id="fonteBusca" style="text-align:center"></p>
   </div>
 
   <div id="bResultado">
@@ -325,6 +327,7 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
 <section class="tela" id="tela-clientes">
   <div class="placar" id="cPlacar"></div>
   <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
+  <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas dos clientes</button>
   <div class="chips" id="cFiltros" style="margin:12px 0"></div>
   <div id="cLista"></div>
 </section>
@@ -4599,10 +4602,11 @@ var SALVA_DE_VERDADE = temArmazenamento();
 var VAZIO = {
   versao: 1,
   config: {
-    meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '',
-    pixCodigo: '', pixChave: '', pixNome: '', pixCidade: '',
+    meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '5566996974248',
+    pixCodigo: '00020101021126360014br.gov.bcb.pix0114+55669995125755204000053039865802BR5920NATANIEL DA S SANTOS6012RONDONOPOLIS62070503***6304FF74', pixChave: '', pixNome: '', pixCidade: '',
     iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: false,
     cidadePadrao: 'Rondonópolis',
+    geoapifyChave: 'aec5b014ccc54d76be718a03ab50c632', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
   },
   leads: [], sites: []
@@ -4616,6 +4620,10 @@ function carregar() {
     if (!cru) return JSON.parse(JSON.stringify(VAZIO));
     var d = JSON.parse(cru);
     d.config = Object.assign({}, VAZIO.config, d.config || {});
+    /* dados que já vêm com o app: completam aparelhos com config antiga vazia */
+    if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
+    if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
+    if (!d.config.geoapifyChave) d.config.geoapifyChave = VAZIO.config.geoapifyChave;
     d.leads = d.leads || []; d.sites = d.sites || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
@@ -4877,6 +4885,275 @@ function pontuar(b) {
     (b.endereco ? 10 : 0) + (b.email ? 10 : 0) + (b.horario ? 5 : 0);
 }
 
+/* ─────────── Google Places (busca rica, opcional) ───────────
+   O mapa gratuito (OpenStreetMap) tem pouca empresa em cidade pequena.
+   Com a chave do Google Places a busca acha muito mais — com telefone
+   e dizendo quem já tem site. Sem chave, o app segue no mapa grátis. */
+
+/* Cidades num raio de ~300 km de Rondonópolis (MT, GO e MS). */
+var CIDADES_REGIAO = [
+  'Rondonópolis', 'Pedra Preta', 'Alto Araguaia', 'Alto Garças', 'Alto Taquari',
+  'Santa Rita do Araguaia', 'Portelândia', 'Mineiros', 'Guiratinga', 'Tesouro',
+  'General Carneiro', 'Poxoréu', 'Juscimeira', 'Jaciara', 'Dom Aquino',
+  'Campo Verde', 'Primavera do Leste', 'Paranatinga', 'Santo Antônio do Leverger',
+  'Cuiabá', 'Várzea Grande', 'Chapada dos Guimarães', 'Barra do Garças',
+  'Pontal do Araguaia', 'Torixoréu', 'Ribeirãozinho', 'Araguaiana',
+  'Montividiu', 'Rio Verde', 'Santo Antônio da Barra', 'Serranópolis', 'Jataí',
+  'Itumbiara', 'Cachoeira Dourada', 'Inaciolândia', 'Paraíso das Águas', 'Chapadão do Sul'
+];
+
+function googlePronto() { return !!BD.config.gmapsChave; }
+
+/* ─────────── Geoapify (busca turbinada, grátis sem cartão) ───────────
+   Primeira opção quando existe chave: 3.000 créditos/dia de graça,
+   sem cartão de crédito. Traduz as categorias do app pra linguagem
+   do Geoapify e busca num círculo em volta do centro da cidade. */
+
+var GEOAPIFY_CATS = {
+  restaurante:  ['catering.restaurant'],
+  lanchonete:   ['catering.fast_food', 'catering.ice_cream'],
+  cafe_bar:     ['catering.cafe', 'catering.bar', 'catering.pub'],
+  padaria:      ['commercial.food_and_drink.bakery'],
+  mercado:      ['commercial.supermarket', 'commercial.convenience',
+                 'commercial.food_and_drink.fruit_and_vegetable', 'commercial.food_and_drink.butcher'],
+  salao:        ['service.beauty.hairdresser', 'service.beauty.massage', 'service.beauty.tattoo'],
+  academia:     ['sport.fitness', 'sport.sports_centre'],
+  oficina:      ['service.vehicle.repair'],
+  autopecas:    ['commercial.vehicle'],
+  clinica:      ['healthcare.clinic_or_praxis', 'healthcare.dentist', 'pet.veterinary'],
+  farmacia:     ['healthcare.pharmacy'],
+  petshop:      ['pet.shop', 'pet.service'],
+  roupas:       ['commercial.clothing'],
+  construcao:   ['commercial.houseware_and_hardware'],
+  moveis:       ['commercial.furniture_and_interior'],
+  eletronicos:  ['commercial.elektronics'],
+  hotel:        ['accommodation'],
+  escola:       ['education.school', 'education.language_school', 'education.driving_school'],
+  advocacia:    ['office.lawyer', 'office.accountant', 'office.insurance', 'office.company'],
+  imobiliaria:  ['office.estate_agent', 'service.estate_agent'],
+  papelaria:    ['commercial.stationery', 'commercial.books'],
+  floricultura: ['commercial.florist', 'commercial.garden'],
+  lavanderia:   ['service.cleaning.laundry', 'service.cleaning.dry_cleaning'],
+  otica:        ['commercial.health_and_beauty.optician']
+};
+
+function geoapifyPronto() { return !!BD.config.geoapifyChave; }
+
+/* cache pra não geocodificar a mesma cidade duas vezes (a caçada agradece) */
+var GEO_CACHE = {};
+
+async function geoapifyBusca(catsGeo, lon, lat, raioM) {
+  var url = 'https://api.geoapify.com/v2/places?categories=' + encodeURIComponent(catsGeo.join(',')) +
+    '&filter=circle:' + lon + ',' + lat + ',' + raioM +
+    '&limit=20&lang=pt&apiKey=' + encodeURIComponent(BD.config.geoapifyChave);
+  var r = await comTempo(fetch(url), 25000, 'consultando o Geoapify');
+  if (!r.ok) {
+    var corpo = await r.text(), msg = '';
+    try { msg = JSON.parse(corpo).error && JSON.parse(corpo).error.message; } catch (e) {}
+    if (r.status === 401 || r.status === 403) {
+      throw new Error('O Geoapify recusou a chave. Confira em Ajustes se ela está inteira.' + (msg ? ' (' + msg + ')' : ''));
+    }
+    if (r.status === 429) throw new Error('O Geoapify pediu pra esperar (limite diário de créditos). Tente de novo amanhã.');
+    throw new Error('Geoapify respondeu erro ' + r.status + (msg ? ': ' + msg : ''));
+  }
+  var j = await r.json();
+  return j.features || [];
+}
+
+function lugarGeoapifyParaAchado(f, cidade, rotulo) {
+  var p = f.properties || {};
+  var nome = p.name;
+  if (!nome) return null;
+  var tel = p.phone || p['contact:phone'] || p.contact__phone || null;
+  var site = p.website || p.url || null;
+  var rua = [p.street, p.housenumber].filter(Boolean).join(', ');
+  var b = {
+    osmId: 'ga:' + (p.place_id || nome + p.lat + p.lon),
+    nome: nome,
+    categoria: rotulo || (p.categories && p.categories[0]) || 'outro',
+    telefone: tel, email: p.email || null,
+    endereco: [rua, p.suburb].filter(Boolean).join(' - ') || p.address_line1 || null,
+    cidade: p.city || cidade,
+    site: site, temSite: !!site,
+    temRedeSocial: false, horario: p.opening_hours || null,
+    lat: p.lat, lon: p.lon
+  };
+  b.score = pontuar(b);
+  return b;
+}
+
+async function buscarGeoapifyEm(cidade, cats, aviso) {
+  var local = GEO_CACHE[cidade.toLowerCase()];
+  if (!local) {
+    if (aviso) aviso('Geoapify: achando ' + cidade + ' no mapa…');
+    local = await acharCidade(cidade);
+    GEO_CACHE[cidade.toLowerCase()] = local;
+  }
+  var lista = [], vistos = {};
+  for (var i = 0; i < cats.length; i++) {
+    var rotulo = CATEGORIAS[cats[i]] ? CATEGORIAS[cats[i]].rotulo.replace(/^\S+\s*/, '') : cats[i];
+    var catsGeo = GEOAPIFY_CATS[cats[i]] || [];
+    if (!catsGeo.length) continue;
+    if (aviso) aviso('Geoapify: procurando ' + rotulo.toLowerCase() + ' em ' + cidade + '…');
+    var features = await geoapifyBusca(catsGeo, local.lon, local.lat, 15000);
+    features.forEach(function (f) {
+      var b = lugarGeoapifyParaAchado(f, cidade, rotulo);
+      if (!b) return;
+      var ch = b.nome.toLowerCase().trim() + '|' + (b.cidade || cidade).toLowerCase();
+      if (vistos[ch]) return;
+      vistos[ch] = 1;
+      lista.push(b);
+    });
+    await new Promise(function (r) { setTimeout(r, 250); });
+  }
+  return lista;
+}
+
+/* ordem de preferência: Geoapify (grátis sem cartão) → Google → mapa gratuito */
+function fonteBuscaAtiva() {
+  if (geoapifyPronto()) return 'geoapify';
+  if (googlePronto()) return 'google';
+  return 'osm';
+}
+
+async function placesBusca(texto) {
+  var r = await comTempo(fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': BD.config.gmapsChave,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,' +
+        'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri,' +
+        'places.primaryTypeDisplayName'
+    },
+    body: JSON.stringify({ textQuery: texto, languageCode: 'pt-BR', regionCode: 'BR', maxResultCount: 20 })
+  }), 25000, 'consultando o Google');
+  if (!r.ok) {
+    var corpo = await r.text(), msg = '';
+    try { msg = JSON.parse(corpo).error.message; } catch (e) {}
+    if (r.status === 401 || r.status === 403) {
+      throw new Error('O Google recusou a chave. Confira em Ajustes se ela está inteira ' +
+        'e se a "Places API (New)" está ativada no projeto.' + (msg ? ' (' + msg + ')' : ''));
+    }
+    throw new Error('Google respondeu erro ' + r.status + (msg ? ': ' + msg : ''));
+  }
+  var j = await r.json();
+  return j.places || [];
+}
+
+function lugarParaAchado(p, cidade, rotulo) {
+  var nome = (p.displayName && p.displayName.text) || '';
+  if (!nome) return null;
+  var tel = p.internationalPhoneNumber || p.nationalPhoneNumber || null;
+  if (tel) tel = tel.replace(/[^0-9+]/g, '');
+  var b = {
+    osmId: 'g:' + p.id,
+    nome: nome,
+    categoria: rotulo || (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || 'outro',
+    telefone: tel, email: null,
+    endereco: p.formattedAddress || null,
+    cidade: cidade,
+    site: p.websiteUri || null, temSite: !!p.websiteUri,
+    temRedeSocial: false, horario: null
+  };
+  b.score = pontuar(b);
+  return b;
+}
+
+/* Busca cada categoria numa cidade. Mostra o andamento no aviso. */
+async function buscarGoogleEm(cidade, cats, aviso) {
+  var lista = [], vistos = {};
+  for (var i = 0; i < cats.length; i++) {
+    var rotulo = CATEGORIAS[cats[i]] ? CATEGORIAS[cats[i]].rotulo.replace(/^\S+\s*/, '') : cats[i];
+    if (aviso) aviso('Google: procurando ' + rotulo.toLowerCase() + ' em ' + cidade + '…');
+    var lugares = await placesBusca(rotulo + ' em ' + cidade + ', Brasil');
+    lugares.forEach(function (p) {
+      var b = lugarParaAchado(p, cidade, rotulo);
+      if (!b) return;
+      var ch = b.nome.toLowerCase().trim() + '|' + cidade.toLowerCase();
+      if (vistos[ch]) return;
+      vistos[ch] = 1;
+      lista.push(b);
+    });
+    await new Promise(function (r) { setTimeout(r, 250); });
+  }
+  return lista;
+}
+
+/* Qual fonte está em uso — aparece embaixo dos botões de busca. */
+function atualizarFonteBusca() {
+  var el = $('#fonteBusca');
+  if (!el) return;
+  var f = fonteBuscaAtiva();
+  el.textContent = f === 'geoapify'
+    ? '🟢 Busca turbinada: Geoapify (grátis sem cartão)'
+    : f === 'google'
+      ? '🟢 Busca turbinada: Google Places'
+      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify em Ajustes pra achar muito mais.';
+}
+
+/* Caçada em todas as cidades da região de uma vez.
+   Usa Geoapify (preferido) ou Google Places. */
+async function buscarRegiao() {
+  var fonte = fonteBuscaAtiva();
+  if (fonte === 'osm') {
+    abrir('Caçada na região pede uma chave',
+      '<p class="ajuda">Procurar em ' + CIDADES_REGIAO.length + ' cidades de uma vez pesa demais pro mapa gratuito. ' +
+      'A caçada usa o <b>Geoapify</b> (grátis, sem cartão: myprojects.geoapify.com) ou o Google Places. ' +
+      'Cole a chave em Ajustes e volte aqui.</p>' +
+      '<button class="btn principal" onclick="fechar();ir(\'ajustes\')">⚙️ Colocar a chave</button>' +
+      '<button class="btn" onclick="fechar()">Continuar no mapa gratuito, uma cidade por vez</button>');
+    return;
+  }
+  var cats = $$('#chips .chip.on').map(function (c) { return c.dataset.cat; });
+  if (!cats.length) cats = ['salao', 'oficina', 'mercado', 'construcao'];
+
+  var painel = $('#bResultado');
+  painel.innerHTML = '<div class="rodando-tela"><div class="roda"></div>' +
+    '<b id="regiaoPasso">Começando a caçada…</b>' +
+    '<p class="mini">' + CIDADES_REGIAO.length + ' cidades × ' + cats.length + ' tipos (' +
+    (fonte === 'geoapify' ? 'Geoapify' : 'Google Places') + '). Pode levar alguns minutos.</p></div>';
+  $('#btnRegiao').disabled = true;
+
+  var todos = [], vistos = {}, falhas = 0;
+  try {
+    for (var i = 0; i < CIDADES_REGIAO.length; i++) {
+      var cid = CIDADES_REGIAO[i];
+      var passo = $('#regiaoPasso');
+      if (passo) passo.textContent = '🗺️ Caçando em ' + cid + ' (' + (i + 1) + '/' + CIDADES_REGIAO.length + ')…';
+      try {
+        var ach = fonte === 'geoapify'
+          ? await buscarGeoapifyEm(cid, cats)
+          : await buscarGoogleEm(cid, cats);
+        ach.forEach(function (b) {
+          var ch = b.nome.toLowerCase().trim() + '|' + (b.cidade || cid).toLowerCase();
+          if (!vistos[ch]) { vistos[ch] = 1; todos.push(b); }
+        });
+      } catch (e) {
+        /* erro de chave/limite cancela tudo; falha pontual segue adiante */
+        if (/recusou a chave|Places API|limite diário/.test(e.message)) throw e;
+        falhas++;
+      }
+      await new Promise(function (r) { setTimeout(r, 900); });   /* respeita o ritmo dos servidores */
+    }
+  } catch (e) {
+    painel.innerHTML = '<div class="aviso ruim"><b>A caçada parou</b><br>' + esc(e.message) + '</div>' +
+      '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Rever a chave</button>';
+    $('#btnRegiao').disabled = false;
+    return;
+  }
+
+  var soSemSite = $('#bSoSemSite').checked;
+  if (soSemSite) todos = todos.filter(function (b) { return !b.temSite; });
+  todos.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
+  ACHADOS = todos;
+  pintarAchados(
+    { nome: 'Região de Rondonópolis — ' + CIDADES_REGIAO.length + ' cidades' + (falhas ? ' (' + falhas + ' com falha)' : '') },
+    { fonteRica: true, soSemSite: soSemSite }
+  );
+  $('#btnRegiao').disabled = false;
+}
+
 async function buscar() {
   var cidade = $('#bCidade').value.trim();
   if (!cidade) { recado('Escreva a cidade'); return; }
@@ -4894,6 +5171,30 @@ async function buscar() {
     '<b>Procurando em ' + esc(cidade) + '…</b>' +
     '<p class="mini">Isso leva de 10 a 40 segundos. Não feche a tela.</p></div>';
   $('#btnBuscar').disabled = true;
+
+  /* com chave Geoapify ou Google ligada, a busca vai pra lá — muito mais empresas */
+  var fonte = fonteBuscaAtiva();
+  if (fonte !== 'osm') {
+    try {
+      var avisoFn = function (msg) {
+        var b = $('#bResultado .rodando-tela b');
+        if (b) b.textContent = msg;
+      };
+      var listaG = fonte === 'geoapify'
+        ? await buscarGeoapifyEm(cidade, cats, avisoFn)
+        : await buscarGoogleEm(cidade, cats, avisoFn);
+      if (soSemSite) listaG = listaG.filter(function (b) { return !b.temSite; });
+      listaG.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
+      ACHADOS = listaG;
+      pintarAchados({ nome: cidade + (fonte === 'geoapify' ? ' (Geoapify)' : ' (Google Places)') },
+        { fonteRica: true, soSemSite: soSemSite });
+    } catch (e) {
+      painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(e.message || String(e)) + '</div>' +
+        '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
+    }
+    $('#btnBuscar').disabled = false;
+    return;
+  }
 
   try {
     var local = await acharCidade(cidade);
@@ -5001,7 +5302,9 @@ function pintarAchados(local, info) {
       h += '<p>O mapa tem ' + info.brutos + ' pontos por aqui, mas nenhum com nome cadastrado. ' +
            'Tente outros tipos de negócio.</p></div>';
     } else {
-      h += '<p>O OpenStreetMap não tem esses tipos de negócio cadastrados nessa área.</p></div>';
+      h += '<p>' + (info.fonteRica
+        ? 'A busca turbinada não devolveu esses tipos de negócio nessa área. Tente outros tipos ou outra cidade.'
+        : 'O OpenStreetMap não tem esses tipos de negócio cadastrados nessa área.') + '</p></div>';
       h += '<div class="aviso alerta"><b>Tente assim</b><br>' +
            '• Marque mais tipos de uma vez<br>' +
            '• Use "A cidade toda" em vez de um raio<br>' +
@@ -5178,9 +5481,10 @@ function pintarClientes() {
       '<button class="btn" onclick="novoCliente()">✍️ Ou cadastrar na mão</button></div>';
     return;
   }
-  if (!lista.length) { $('#cLista').innerHTML = '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
+  if (!lista.length) { $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + painelEsquecidos() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
 
-  $('#cLista').innerHTML = '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
+  $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + painelEsquecidos() +
+    '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
     lista.map(function (l) {
     var e = ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo;
     return '<div class="carta" onclick="abrirFicha(\'' + l.id + '\')">' +
@@ -5191,7 +5495,10 @@ function pintarClientes() {
         (l.cidade ? ' · ' + esc(l.cidade) : '') + '</div>' +
       '<div>' +
         '<span class="selo ' + e.cor + '">' + e.rotulo + '</span>' +
-        (l.pago ? '<span class="selo pago">✅ pagou</span>' : '') +
+        (l.pago ? '<span class="selo pago">✅ pagou</span>'
+          : l.sinal ? '<span class="selo quente">🟡 sinal pago</span>' : '') +
+        (l.questionario && l.questionario.status === 'respondido' ? '<span class="selo pago">📝 respondeu</span>'
+          : l.questionario && l.questionario.status === 'enviado' ? '<span class="selo quente">⏳ questionário</span>' : '') +
         (l.plano && l.plano.ativo ? '<span class="selo plano">🔁 ' + dinheiro(l.plano.valor) + '/mês</span>' : '') +
         (l.siteUrl ? '<span class="selo plano">🌐 no ar</span>'
                    : l.siteSlug ? '<span class="selo etapa">🎨 site pronto</span>' : '') +
@@ -5202,6 +5509,102 @@ function pintarClientes() {
         : '') +
     '</div>';
   }).join('');
+}
+
+/* Painel no topo da lista: quem pagou e ainda não respondeu o
+   questionário (e quem pagou mas nem recebeu ainda). */
+function painelQuestionarios() {
+  var aguardando = BD.leads.filter(function (l) {
+    return l.pago && l.questionario && l.questionario.status === 'enviado';
+  });
+  var semEnviar = BD.leads.filter(function (l) { return l.pago && !l.questionario; });
+  if (!aguardando.length && !semEnviar.length) return '';
+
+  var h = '<div class="carta" style="outline:1px solid #f59e0b66;margin-bottom:12px">';
+  h += '<h3>🤖 Questionários pendentes</h3>';
+  h += aguardando.map(function (l) {
+    var dias = Math.max(0, Math.floor((Date.now() - new Date(l.questionario.enviadoEm).getTime()) / 86400000)) || 0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · ' +
+      (dias === 0 ? 'enviado hoje' : 'esperando há ' + dias + ' dia(s)') + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="lembrarQuestionario(\'' + l.id + '\')">💬 Lembrar</button>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirQuestionario(\'' + l.id + '\')">📥</button></div>';
+  }).join('');
+  h += semEnviar.map(function (l) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · pagou, ainda sem questionário</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="prepararQuestionario(\'' + l.id + '\')">📝 Enviar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
+}
+
+/* Painel: planos cuja mensalidade deste mês ainda não veio —
+   avisa quem está perto de vencer e quem já passou. */
+function painelMensalidades() {
+  var ref = hoje().slice(0, 7);
+  var hojeDia = new Date().getDate();
+  var itens = [];
+  BD.leads.forEach(function (l) {
+    if (!(l.plano && l.plano.ativo)) return;
+    var pagoEsteMes = (l.plano.mensalidades || []).some(function (m) { return m.referencia === ref; });
+    if (pagoEsteMes) return;
+    var dia = l.plano.diaVencimento || 1;
+    itens.push({ l: l, atraso: hojeDia - dia });   /* >0 = já venceu */
+  });
+  if (!itens.length) return '';
+  itens.sort(function (a, b) { return b.atraso - a.atraso; });
+
+  var h = '<div class="carta" style="outline:1px solid #38bdf866;margin-bottom:12px">';
+  h += '<h3>🔁 Mensalidades deste mês</h3>';
+  h += itens.map(function (it) {
+    var quando = it.atraso > 0 ? '⚠️ vencida há ' + it.atraso + ' dia(s)'
+      : it.atraso === 0 ? '⏰ vence hoje'
+      : '📅 vence em ' + (-it.atraso) + ' dia(s)';
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(it.l.nome || 'cliente') + '</b> · ' +
+      dinheiro(it.l.plano.valor) + ' · ' + quando + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="lembrarMensalidade(\'' + it.l.id + '\')">💬 Avisar</button>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirCobranca(\'' + it.l.id + '\', true)">💰 Cobrar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
+}
+
+/* Manda o lembrete da mensalidade no WhatsApp do cliente. */
+function lembrarMensalidade(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.plano) return;
+  var n = numeroZap(l.telefone);
+  if (!n) { recado('Cliente sem telefone com DDD'); return; }
+  var msg = 'Oi, ' + (l.nome || '') + '! Passando pra avisar da mensalidade do site desse mês: ' +
+    dinheiro(l.plano.valor) + '.\n\nSe quiser, já te mando o Pix por aqui. Qualquer mudança no site é só me chamar.';
+  anotar(l, '🔔 Lembrete de mensalidade enviado');
+  salvar();
+  abrirLink(linkZap(n, msg));
+}
+
+/* Clientes que ficaram pra trás: sem contato há mais de 7 dias. */
+function painelEsquecidos() {
+  var corte = Date.now() - 7 * 86400000;
+  var esquecidos = BD.leads.filter(function (l) {
+    if (l.pago || l.etapa === 'fechado' || l.etapa === 'perdido') return false;
+    var h = l.historico || [];
+    if (!h.length) return true;
+    return new Date(h[h.length - 1].data).getTime() < corte;
+  }).slice(0, 6);
+  if (!esquecidos.length) return '';
+
+  var h = '<div class="carta" style="outline:1px solid #8b5cf666;margin-bottom:12px">';
+  h += '<h3>💤 Clientes esquecidos</h3>';
+  h += esquecidos.map(function (l) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · ' +
+      (ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo).rotulo.toLowerCase() + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirMensagens(\'' + l.id + '\')">💬 Retomar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
 }
 
 function filtrar(k) { FILTRO = k; pintarClientes(); }
@@ -5329,7 +5732,10 @@ function abrirFicha(idLead) {
   h += '</div>';
 
   h += '<button class="btn zap" onclick="abrirMensagens(\'' + l.id + '\')">💬 Mandar mensagem pronta</button>';
-  h += '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">💰 Cobrar ' + esc(BD.config.meuPreco) + '</button>';
+  h += '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">💰 ' +
+       (l.pago ? 'Pago ✅' : l.sinal ? 'Cobrar o restante' : 'Cobrar sinal (' + dinheiro(numeroDoTexto(BD.config.meuPreco) / 2) + ')') + '</button>';
+  h += '<button class="btn" onclick="abrirQuestionario(\'' + l.id + '\')">📝 Questionário' +
+       (l.questionario ? (l.questionario.status === 'respondido' ? ' ✅' : ' ⏳') : '') + '</button>';
   h += '<button class="btn" onclick="criarSitePara(\'' + l.id + '\')">🎨 ' +
        (l.siteSlug ? 'Abrir o site dele' : 'Montar o site dele') + '</button>';
   if (l.siteUrl && zap) {
@@ -5410,6 +5816,7 @@ function modelos(l) {
   var cid = l.cidade || 'sua região';
   var preco = c.meuPreco || 'R$ 97';
   var plano = c.planoPreco || 'R$ 70';
+  var metade = dinheiro(numeroDoTexto(preco) / 2);
 
   return [
     { t: '👋 Primeiro contato', m:
@@ -5426,7 +5833,8 @@ function modelos(l) {
 
     { t: '💰 Proposta', m:
       'Fechado, ' + emp + '!\n\n' +
-      'O site sai por ' + preco + ', pagamento único. Está incluso:\n' +
+      'O site sai por ' + preco + ': você paga metade agora (' + metade + ') pra eu já começar, ' +
+      'e a outra metade só quando você aprovar o site pronto.\n\nEstá incluso:\n' +
       '• Site completo no celular e no computador\n' +
       '• Botão de WhatsApp\n' +
       '• Aparecer no Google\n' +
@@ -5436,7 +5844,7 @@ function modelos(l) {
     { t: '🎁 Site pronto', m:
       'Olha só, ' + emp + ' — ficou pronto!\n\n' +
       'Dá uma olhada e me fala o que quer mudar (cor, texto, foto, qualquer coisa). Eu ajusto sem cobrar nada a mais.\n\n' +
-      'Se gostou, é só me avisar que eu te mando o Pix de ' + preco + ' e coloco no ar.' },
+      'Se gostou, é só me avisar que eu te mando o Pix da outra metade (' + metade + ') e coloco no ar.' },
 
     { t: '🔁 Oferecer o plano', m:
       'Oi! Tudo certo com o site?\n\n' +
@@ -5525,16 +5933,50 @@ function gerarPix(valor, descricao) {
   });
 }
 
-function abrirCobranca(idLead, ehPlano) {
+/* Cobrança do site em duas etapas:
+   1) sinal (metade) pra começar → dispara o questionário
+   2) restante quando o cliente aprova o site pronto
+   ehPlano = cobrança de mensalidade; tudoDeUmaVez = valor cheio à vista */
+function abrirCobranca(idLead, ehPlano, tudoDeUmaVez) {
   var l = acharLead(idLead);
   if (!pixPronto()) {
     abrir('Falta o seu Pix', '<div class="aviso alerta">Antes de cobrar, cadastre seu Pix.</div>' +
       '<button class="btn principal" onclick="fechar();ir(\'ajustes\')">⚙️ Ir para Ajustes</button>');
     return;
   }
-  var valor = ehPlano
-    ? (l.plano && l.plano.valor || numeroDoTexto(BD.config.planoPreco))
-    : numeroDoTexto(BD.config.meuPreco);
+
+  var cheio = numeroDoTexto(BD.config.meuPreco);
+  var valor, legenda, oque, confirmar;
+
+  if (ehPlano) {
+    valor = l.plano && l.plano.valor || numeroDoTexto(BD.config.planoPreco);
+    legenda = 'mensalidade do plano';
+    oque = ' da mensalidade';
+    confirmar = '<button class="btn" onclick="marcarMensalidade(\'' + l.id + '\')">✅ Recebi a mensalidade</button>';
+  } else if (l.pago) {
+    abrir('Já pagou', '<div class="aviso bom">✅ ' + esc(l.nome || 'cliente') + ' já pagou o site (' +
+      dinheiro(cheio) + ').</div>' +
+      '<p class="ajuda">Próximo passo: oferecer o plano mensal. Pagando todo mês, você ajusta o que ele quiser no site.</p>' +
+      '<button class="btn principal" onclick="fechar();abrirPlano(\'' + l.id + '\')">🔁 Oferecer o plano mensal</button>');
+    return;
+  } else if (l.sinal && !tudoDeUmaVez) {
+    valor = Math.max(0, cheio - (l.sinal.valor || 0));
+    legenda = 'restante do site (sinal de ' + dinheiro(l.sinal.valor) + ' já pago)';
+    oque = ' do restante do site';
+    confirmar = '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o restante</button>';
+  } else if (!tudoDeUmaVez) {
+    valor = cheio / 2;
+    legenda = 'sinal — metade do site, pra começar';
+    oque = ' do sinal (metade). É com ele que eu já começo o seu site';
+    confirmar = '<button class="btn" onclick="marcarSinal(\'' + l.id + '\')">✅ Recebi o sinal (metade)</button>' +
+      '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\', false, true)">💵 Cobrar tudo de uma vez (' + dinheiro(cheio) + ')</button>';
+  } else {
+    valor = cheio;
+    legenda = 'valor do site (à vista)';
+    oque = ' do site';
+    confirmar = '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o pagamento</button>' +
+      '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">↩️ Voltar pra cobrança em duas vezes</button>';
+  }
 
   var codigo;
   try { codigo = gerarPix(valor, ehPlano ? 'Mensalidade' : 'Site'); }
@@ -5546,12 +5988,12 @@ function abrirCobranca(idLead, ehPlano) {
 
   var h = '<div class="meio"><div class="qr" id="qrAlvo"></div></div>';
   h += '<div class="meio" style="margin:12px 0"><b style="font-size:22px">' + dinheiro(valor) + '</b>' +
-       '<div class="mini">' + (ehPlano ? 'mensalidade do plano' : 'valor do site') + '</div></div>';
+       '<div class="mini">' + legenda + '</div></div>';
   h += '<label>Pix copia e cola</label><div class="codigo">' + esc(codigo) + '</div>';
   h += '<button class="btn principal" onclick="copiar(' + JSON.stringify(codigo) + ')">📋 Copiar o código Pix</button>';
   var nZap = numeroZap(l.telefone);
   if (nZap) {
-    var msg = 'Oi! Segue o Pix' + (ehPlano ? ' da mensalidade' : ' do site') + ': ' + dinheiro(valor) +
+    var msg = 'Oi! Segue o Pix' + oque + ': ' + dinheiro(valor) +
       '\n\nÉ só copiar o código abaixo e colar no seu aplicativo do banco:\n\n' + codigo;
     h += botaoLink(linkZap(nZap, msg), '💬 Mandar no WhatsApp', 'zap',
                    "marcarPixEnviado('" + l.id + "')");
@@ -5559,11 +6001,9 @@ function abrirCobranca(idLead, ehPlano) {
     h += '<div class="aviso alerta">Telefone sem DDD — complete na ficha para mandar pelo WhatsApp.</div>';
   }
   h += '<hr class="sep">';
-  h += ehPlano
-    ? '<button class="btn" onclick="marcarMensalidade(\'' + l.id + '\')">✅ Recebi a mensalidade</button>'
-    : '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o pagamento</button>';
+  h += confirmar;
 
-  abrir('Cobrar ' + esc(l.nome), h);
+  abrir('Cobrar ' + esc(l.nome || 'cliente'), h);
 
   try {
     var q = qrcode(0, 'M'); q.addData(codigo); q.make();
@@ -5577,12 +6017,27 @@ function marcarPixEnviado(idLead) {
   return true;
 }
 
+/* Sinal recebido (metade): negócio fechado, questionário já sai
+   pro cliente responder enquanto você monta o site. */
+function marcarSinal(idLead) {
+  var l = acharLead(idLead);
+  var cheio = numeroDoTexto(BD.config.meuPreco);
+  l.sinal = { valor: cheio / 2, em: hoje() };
+  l.etapa = 'fechado';
+  anotar(l, '🟡 Pagou o sinal: ' + dinheiro(l.sinal.valor) + ' (metade de ' + dinheiro(cheio) + ')');
+  salvar(); fechar(); pintarClientes();
+  recado('🟡 Sinal registrado!');
+  prepararQuestionario(idLead);   /* já gera o questionário sozinho */
+}
+
 function marcarPago(idLead) {
   var l = acharLead(idLead);
   l.pago = true; l.etapa = 'fechado';
-  anotar(l, '✅ Pagou ' + BD.config.meuPreco);
+  if (l.sinal) anotar(l, '✅ Pagou o restante — total fechado em ' + BD.config.meuPreco);
+  else anotar(l, '✅ Pagou ' + BD.config.meuPreco);
   salvar(); fechar(); pintarClientes();
   recado('💰 Pagamento registrado!');
+  if (!l.questionario) prepararQuestionario(idLead);   /* se pagou à vista */
 }
 
 /* ─────────── plano mensal ─────────── */
@@ -5661,6 +6116,404 @@ function registrarManutencao(idLead) {
   anotar(l, '🔧 ' + oQue);
   salvar(); abrirPlano(idLead);
   recado('🔧 Revisão registrada');
+}
+
+/* ══════════════════════════════════════════════════════════
+   2b. QUESTIONÁRIO — pagou o Pix, o cliente responde sozinho
+   ──────────────────────────────────────────────────────────────
+   Fluxo: você toca em "Recebi o pagamento" → a IA monta perguntas
+   pro ramo do cliente → sai um link da página questionario.html
+   com as perguntas dentro do próprio link → o cliente responde no
+   celular dele e devolve um código (LSR1...) no WhatsApp → você
+   cola o código aqui e as respostas entram na ficha do cliente.
+   ══════════════════════════════════════════════════════════ */
+
+/* base64 que cabe em link (sem +, / ou =) */
+function b64uCodificar(txt) {
+  return paraBase64(txt).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64uDecodificar(s) {
+  var b = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* Onde mora a página do questionário. Se o GitHub estiver ligado,
+   é no GitHub Pages; senão, tenta a mesma pasta onde o app está. */
+function baseQuestionario() {
+  var c = BD.config;
+  if (c.ghUsuario && c.ghRepo) {
+    return 'https://' + c.ghUsuario + '.github.io/' + c.ghRepo + '/questionario.html';
+  }
+  return location.href.replace(/[^/]*$/, '') + 'questionario.html';
+}
+
+/* Perguntas padrão — usadas quando a IA está desligada ou falhou. */
+function perguntasBasicas() {
+  return [
+    { id: 'q1', t: 'Qual o nome do negócio e o que ele faz de principal?', tipo: 'area' },
+    { id: 'q2', t: 'Quais serviços ou produtos vocês oferecem? Pode listar, com preço se quiser.', tipo: 'area' },
+    { id: 'q3', t: 'Qual o horário de funcionamento?', tipo: 'texto' },
+    { id: 'q4', t: 'Qual o endereço? (rua, número e bairro)', tipo: 'texto' },
+    { id: 'q5', t: 'Qual o ponto forte de vocês? O que têm de diferente dos outros?', tipo: 'area' },
+    { id: 'q6', t: 'Tem preferência de cor ou estilo pro site? (cores da logo, moderno, clássico…)', tipo: 'texto' },
+    { id: 'q7', t: 'Você tem fotos dos produtos e logotipo? Depois me manda aqui no WhatsApp.', tipo: 'texto' }
+  ];
+}
+
+/* A IA adapta as perguntas pro ramo de cada cliente. */
+async function perguntasComIA(l) {
+  var prompt =
+    'Você cria questionários para donos de pequenos negócios brasileiros responderem ' +
+    'antes de ganhar um site profissional.\n' +
+    'Negócio: ' + (l.nome || 'sem nome') + '\nRamo: ' + (l.categoria || 'não informado') +
+    '\nCidade: ' + (l.cidade || BD.config.cidadePadrao || 'não informada') + '\n\n' +
+    'Crie de 6 a 8 perguntas simples, em português informal e direto, específicas pra esse ramo. ' +
+    'Elas precisam descobrir: o que o negócio faz de principal, serviços ou produtos (com preço se tiver), ' +
+    'horário de funcionamento, endereço, ponto forte/diferencial, estilo visual desejado e se tem fotos e logotipo.\n' +
+    'Responda APENAS JSON válido neste formato:\n' +
+    '{"perguntas":[{"id":"q1","t":"texto da pergunta","tipo":"texto"},{"id":"q2","t":"outra pergunta","tipo":"area"}]}\n' +
+    'Use "area" só pra pergunta de resposta longa. Sem emojis.';
+  var bruto = await IA.chamarBruto(configIA(), prompt, 800);
+  var j = IA.extrairJSON(bruto);
+  var ps = (j.perguntas || []).filter(function (p) { return p && p.t; }).slice(0, 10)
+    .map(function (p, i) {
+      return { id: 'q' + (i + 1), t: String(p.t).trim(), tipo: p.tipo === 'area' ? 'area' : 'texto' };
+    });
+  if (ps.length < 4) throw new Error('a IA devolveu poucas perguntas');
+  return ps;
+}
+
+/* Gera o questionário do cliente e abre a tela de envio.
+   Chamada sozinha assim que o pagamento é registrado. */
+async function prepararQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l) return;
+  var usarIA = BD.config.iaAtiva && BD.config.iaChave;
+  if (usarIA) {
+    abrir('🤖 Montando o questionário…', '<div class="rodando-tela"><div class="roda"></div>' +
+      '<b>A IA está criando perguntas pro ramo de ' + esc(l.nome || 'cliente') + '…</b></div>');
+  }
+  var ps = perguntasBasicas(), deIA = false;
+  if (usarIA) {
+    try { ps = await perguntasComIA(l); deIA = true; }
+    catch (e) { /* IA falhou: segue com as perguntas padrão */ }
+  }
+  var payload = { v: 1, lid: l.id, neg: l.nome || '', dono: BD.config.meuWhats || '', ps: ps };
+  var link = baseQuestionario() + '#d=' + b64uCodificar(JSON.stringify(payload));
+  l.questionario = {
+    status: 'enviado', enviadoEm: hoje(), respondidoEm: null, respostas: null,
+    perguntas: ps, link: link, deIA: deIA
+  };
+  anotar(l, '📝 Questionário pronto (' + ps.length + ' perguntas' + (deIA ? ', feitas pela IA' : ' padrão') + ')');
+  salvar();
+  abrirEnviarQuestionario(idLead);
+}
+
+function mensagemDoQuestionario(l) {
+  return 'Oi, tudo bem? Aqui é o ' + (BD.config.meuNome || 'Nataniel') + '! 🎉\n\n' +
+    'Pagamento recebido, muito obrigado! Agora me ajuda com umas perguntas rápidas ' +
+    'pra eu montar o site do seu jeito. É só tocar no link:\n\n' +
+    l.questionario.link + '\n\n' +
+    'São 2 minutinhos. Qualquer dúvida é só me chamar aqui.';
+}
+
+function abrirEnviarQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario) return;
+  var q = l.questionario;
+  var n = numeroZap(l.telefone);
+
+  var h = '<div class="aviso bom"><b>✅ Pagamento registrado — questionário pronto!</b><br>' +
+    (q.deIA ? 'A IA criou as perguntas pro ramo do cliente.' : 'Usei as perguntas padrão (a IA está desligada ou falhou).') + '</div>';
+  if (!BD.config.meuWhats) {
+    h += '<div class="aviso alerta"><b>Falta o seu WhatsApp em Ajustes.</b> Sem ele, o cliente até responde, ' +
+      'mas as respostas não voltam pra você. Coloque seu número e gere o questionário de novo.</div>';
+  }
+  h += '<label>Link do questionário</label><div class="codigo" style="font-size:11px">' + esc(q.link) + '</div>';
+  h += '<button class="btn" onclick="copiar(' + JSON.stringify(q.link) + ')">📋 Copiar link</button>';
+
+  if (n) {
+    var msg = mensagemDoQuestionario(l);
+    h += '<label>Mandar no WhatsApp</label>' +
+      '<textarea id="msgTexto" style="min-height:150px" oninput="atualizarLinkZap(\'' + n + '\')">' + esc(msg) + '</textarea>';
+    h += '<a class="btn zap" id="linkZap" href="' + linkZap(n, msg) + '" target="_blank" rel="noopener" ' +
+      'onclick="return questionarioEnviado(\'' + l.id + '\')">💬 Enviar pro cliente</a>';
+  } else {
+    h += '<div class="aviso alerta">Cliente sem telefone com DDD — copie o link acima e mande por onde preferir.</div>';
+  }
+  h += '<div id="qDisponivel"></div>';
+  h += '<button class="btn" onclick="fechar()">Fechar</button>';
+  abrir('📝 Questionário de ' + esc(l.nome || 'cliente'), h);
+  conferirPaginaQuestionario();
+}
+
+function questionarioEnviado(idLead) {
+  var l = acharLead(idLead);
+  if (l) { anotar(l, '📤 Questionário enviado no WhatsApp'); salvar(); }
+  return true;
+}
+
+/* Aviso caso a página ainda não esteja publicada no GitHub Pages. */
+async function conferirPaginaQuestionario() {
+  var alvo = $('#qDisponivel');
+  if (!alvo) return;
+  try {
+    var r = await fetchLimitado(baseQuestionario(), { method: 'HEAD' }, 8000);
+    if (r.status === 404) {
+      alvo.innerHTML = '<div class="aviso alerta">⚠️ A página do questionário ainda não está no ar no seu GitHub. ' +
+        'O arquivo questionario.html precisa ser publicado junto com o app para o link abrir.</div>';
+    }
+  } catch (e) { /* sem internet ou bloqueio de navegador: não atrapalha */ }
+}
+
+/* Central do questionário na ficha do cliente: mostra o estado
+   (sem / esperando / respondido) e resolve a partir dali. */
+function abrirQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l) return;
+  var q = l.questionario;
+  var h = '';
+
+  if (!q) {
+    h += '<p class="ajuda">Depois que o cliente paga, você gera um link de perguntas. Ele responde sozinho ' +
+      'no celular dele e as respostas voltam pra cá. Se a IA estiver ligada, ela adapta as perguntas pro ramo dele.</p>';
+    h += '<button class="btn principal" onclick="prepararQuestionario(\'' + l.id + '\')">🪄 Gerar questionário</button>';
+    abrir('📝 Questionário', h);
+    return;
+  }
+
+  if (q.status === 'respondido') {
+    h += '<div class="aviso bom"><b>✅ Respondeu em ' + dataCurta(q.respondidoEm) + '</b></div>';
+    h += (q.respostas || []).map(function (r) {
+      return '<div style="margin-bottom:10px"><b style="font-size:13px">' + esc(r.pergunta) + '</b>' +
+        '<div class="codigo" style="margin-top:4px">' + esc(r.resposta || '(não respondeu)') + '</div></div>';
+    }).join('');
+    h += '<button class="btn principal" onclick="fechar();rascunhoDasRespostas(\'' + l.id + '\')">🪄 Montar o site com essas respostas</button>';
+    h += '<button class="btn" onclick="prepararQuestionario(\'' + l.id + '\')">🔄 Gerar questionário de novo</button>';
+    abrir('📝 Respostas de ' + esc(l.nome || 'cliente'), h);
+    return;
+  }
+
+  /* status === 'enviado' */
+  h += '<div class="aviso alerta">Enviado em ' + dataCurta(q.enviadoEm) + ' — ainda sem respostas.</div>';
+  h += '<label>Link</label><div class="codigo" style="font-size:11px">' + esc(q.link) + '</div>';
+  h += '<button class="btn" onclick="copiar(' + JSON.stringify(q.link) + ')">📋 Copiar link</button>';
+  var n = numeroZap(l.telefone);
+  if (n) {
+    h += botaoLink(linkZap(n, mensagemLembrete(l)), '💬 Lembrar o cliente', 'zap',
+                   "questionarioEnviado('" + l.id + "')");
+  }
+  h += '<button class="btn principal" onclick="receberRespostas(\'' + l.id + '\')">📥 Ele já respondeu? Colar respostas aqui</button>';
+  h += '<button class="btn" onclick="prepararQuestionario(\'' + l.id + '\')">🔄 Gerar questionário de novo</button>';
+  abrir('📝 Questionário de ' + esc(l.nome || 'cliente'), h);
+}
+
+function dataCurta(iso) {
+  var d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+}
+
+function mensagemLembrete(l) {
+  return 'Oi! Passando pra lembrar do questionário do seu site — são só 2 minutinhos:\n\n' +
+    l.questionario.link + '\n\n' +
+    'Assim que você responder eu já começo a montar. 😊';
+}
+
+/* Atalho do painel de clientes: cobra quem ainda não respondeu. */
+function lembrarQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario) return;
+  var n = numeroZap(l.telefone);
+  if (!n) { abrirQuestionario(idLead); return; }
+  anotar(l, '🔔 Lembrete do questionário enviado');
+  salvar();
+  abrirLink(linkZap(n, mensagemLembrete(l)));
+}
+
+/* Cola aqui a mensagem que o cliente devolveu no WhatsApp. */
+function receberRespostas(idLead) {
+  var l = acharLead(idLead);
+  var h = '<p class="ajuda">Quando o cliente responder, chega no seu WhatsApp uma mensagem com um código ' +
+    'que começa com <b>LSR1.</b> — pode vir no meio da conversa, não tem problema. Cole a mensagem inteira aqui.</p>';
+  h += '<textarea id="qCola" style="min-height:140px" placeholder="cole aqui a mensagem do cliente"></textarea>';
+  h += '<button class="btn principal" onclick="importarRespostas(\'' + l.id + '\')">📥 Importar respostas</button>';
+  h += '<div id="qImportaErro"></div>';
+  abrir('📥 Receber respostas' + (l && l.nome ? ' de ' + esc(l.nome) : ''), h);
+}
+
+/* Decodifica a mensagem que o cliente devolve no WhatsApp. */
+function decodificarCodigoRespostas(texto) {
+  var m = String(texto || '').match(/LSR1\.([A-Za-z0-9_-]+)/);
+  if (!m) return { erro: 'Não achei o código LSR1 na mensagem. Confira se colou tudo.' };
+  try { return { dados: JSON.parse(b64uDecodificar(m[1])) }; }
+  catch (e) { return { erro: 'Código incompleto ou corrompido — peça pro cliente copiar de novo.' }; }
+}
+
+/* Grava as respostas na ficha do cliente. Devolve false se veio vazio. */
+function aplicarRespostas(l, d) {
+  var r = d.r || {};
+  var ps = (l.questionario && l.questionario.perguntas) || [];
+  var respostas = ps.map(function (p) {
+    return { id: p.id, pergunta: p.t, resposta: String(r[p.id] == null ? '' : r[p.id]).trim() };
+  }).filter(function (x) { return x.resposta; });
+  Object.keys(r).forEach(function (k) {
+    if (!ps.some(function (p) { return p.id === k; }) && String(r[k]).trim()) {
+      respostas.push({ id: k, pergunta: '(pergunta extra)', resposta: String(r[k]).trim() });
+    }
+  });
+  if (!respostas.length) return false;
+  if (d.contato) l.contato = d.contato;
+  if (!l.questionario) l.questionario = { perguntas: ps, link: '' };
+  l.questionario.status = 'respondido';
+  l.questionario.respondidoEm = hoje();
+  l.questionario.respostas = respostas;
+  anotar(l, '📥 Respostas do questionário importadas (' + respostas.length + ')');
+  salvar();
+  return true;
+}
+
+function importarRespostas(idLead) {
+  var l = acharLead(idLead);
+  var alvo = $('#qImportaErro');
+  var texto = $('#qCola') ? $('#qCola').value : '';
+  var dec = decodificarCodigoRespostas(texto);
+  if (dec.erro) { alvo.innerHTML = '<div class="aviso ruim">' + esc(dec.erro) + '</div>'; return; }
+  var d = dec.dados;
+  /* se o código foi gerado pra outro cliente, avisa mas deixa importar */
+  if (d.lid && d.lid !== l.id && acharLead(d.lid)) {
+    alvo.innerHTML = '<div class="aviso alerta">Esse código era do cliente <b>' + esc(acharLead(d.lid).nome) +
+      '</b> — estou importando na ficha aberta mesmo assim.</div>';
+  }
+  if (!aplicarRespostas(l, d)) {
+    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
+    return;
+  }
+  fechar();
+  abrirQuestionario(idLead);
+  recado('📥 Respostas salvas!');
+}
+
+/* ─────────── caixa de respostas ───────────
+   Tudo que voltou do WhatsApp num lugar só: cola a mensagem do
+   cliente e o código (LSR1...) já diz de quem é — entra na ficha
+   certa sozinho. */
+function abrirCaixaRespostas() {
+  var h = '<p class="ajuda">Cole aqui a mensagem que o cliente devolveu no WhatsApp. ' +
+    'O código já diz de quem é — entra na ficha certa sozinho.</p>';
+  h += '<textarea id="cxCola" style="min-height:110px" placeholder="cole aqui a mensagem do cliente"></textarea>';
+  h += '<button class="btn principal" onclick="importarDaCaixa()">📥 Importar</button>';
+  h += '<div id="cxAviso"></div>';
+  h += '<hr class="sep">';
+
+  var respondidos = BD.leads
+    .filter(function (l) { return l.questionario && l.questionario.status === 'respondido'; })
+    .sort(function (a, b) { return (b.questionario.respondidoEm || '').localeCompare(a.questionario.respondidoEm || ''); });
+
+  if (!respondidos.length) {
+    h += '<div class="vazio"><p><b>Ninguém respondeu ainda.</b></p>' +
+      '<p>Quando um cliente devolver as respostas no WhatsApp, cole aqui em cima.</p></div>';
+  } else {
+    h += '<b style="font-size:14px">Respostas recebidas (' + respondidos.length + ')</b>';
+    h += respondidos.map(function (l) {
+      var q = l.questionario;
+      var resumo = (q.respostas && q.respostas[0]) ? q.respostas[0].resposta.slice(0, 70) : '';
+      return '<div class="carta" style="margin:10px 0" onclick="fechar();abrirFicha(\'' + l.id + '\')">' +
+        '<h3>' + esc(l.nome || 'cliente') + '</h3>' +
+        '<div class="meta">respondeu em ' + dataCurta(q.respondidoEm) + ' · ' + (q.respostas || []).length + ' respostas</div>' +
+        (resumo ? '<div class="mini">' + esc(resumo) + '…</div>' : '') +
+        '<div class="linha-btn">' +
+          '<button class="btn pequeno" onclick="event.stopPropagation();fechar();abrirQuestionario(\'' + l.id + '\')">👀 Ver respostas</button>' +
+          '<button class="btn pequeno" onclick="event.stopPropagation();fechar();rascunhoDasRespostas(\'' + l.id + '\')">🪄 Montar site</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  abrir('📥 Caixa de respostas', h);
+}
+
+function importarDaCaixa() {
+  var alvo = $('#cxAviso');
+  var dec = decodificarCodigoRespostas($('#cxCola').value);
+  if (dec.erro) { alvo.innerHTML = '<div class="aviso ruim">' + esc(dec.erro) + '</div>'; return; }
+  var d = dec.dados;
+  var l = d.lid ? acharLead(d.lid) : null;
+  if (!l) {
+    alvo.innerHTML = '<div class="aviso alerta">Esse código não bate com nenhum cliente daqui ' +
+      '(pode ter sido gerado em outro aparelho). Importe pela ficha do cliente: 📝 Questionário → 📥 colar respostas.</div>';
+    return;
+  }
+  if (!aplicarRespostas(l, d)) {
+    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
+    return;
+  }
+  alvo.innerHTML = '<div class="aviso bom"><b>✅ Respostas de ' + esc(l.nome || 'cliente') + ' salvas!</b> ' +
+    'Abra a caixa de novo pra ver ou montar o site.</div>';
+  $('#cxCola').value = '';
+  recado('📥 Respostas importadas');
+}
+
+/* Pega as respostas e deixa o site do cliente pré-montado:
+   a IA transforma as respostas em textos, serviços e FAQ. */
+async function rascunhoDasRespostas(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario || !l.questionario.respostas) return;
+  criarSitePara(idLead);   /* prepara o cfg e vai pra tela do site */
+
+  if (!(BD.config.iaAtiva && BD.config.iaChave)) {
+    recado('Site aberto — ligue a IA pra ela preencher os textos sozinha.');
+    return;
+  }
+
+  abrir('🪄 A IA está lendo as respostas…', '<div class="rodando-tela"><div class="roda"></div>' +
+    '<b>Transformando respostas em site…</b></div>');
+
+  try {
+    var qa = l.questionario.respostas.map(function (r) {
+      return 'Pergunta: ' + r.pergunta + '\nResposta: ' + r.resposta;
+    }).join('\n\n');
+    var paletas = Object.keys(SiteGen.PALETAS), fontes = Object.keys(SiteGen.FONTES);
+    var prompt =
+      'Um cliente respondeu um questionário para ganhar um site. Respostas dele:\n\n' + qa + '\n\n' +
+      'Negócio: ' + (l.nome || cfg.nome) + '. Cidade: ' + (l.cidade || cfg.cidade || '') + '.\n' +
+      'Monte o conteúdo do site em português do Brasil, com texto natural e sem frases genéricas.\n' +
+      'Responda APENAS JSON válido:\n' +
+      '{"titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
+      '"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
+      '"servicos":[{"nome":"...","descricao":"uma frase"}],' +
+      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"horario":"horário por extenso",' +
+      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '"}\n' +
+      'Inclua de 4 a 6 serviços e de 4 a 5 perguntas frequentes, baseados SÓ nas respostas acima. ' +
+      'Se uma cor foi pedida nas respostas, escolha a paleta mais parecida.';
+    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2200));
+
+    if (j.titulo) cfg.titulo = String(j.titulo);
+    if (j.subtitulo) cfg.subtitulo = String(j.subtitulo);
+    if (j.sobre) cfg.sobreTexto = String(j.sobre);
+    if (Array.isArray(j.servicos) && j.servicos.length) {
+      cfg.servicos = j.servicos.filter(function (s) { return s && s.nome; })
+        .map(function (s) { return { nome: String(s.nome), descricao: String(s.descricao || '') }; });
+    }
+    if (Array.isArray(j.faq) && j.faq.length) {
+      cfg.faq = j.faq.filter(function (f) { return f && f.p; })
+        .map(function (f) { return { p: String(f.p), r: String(f.r || '') }; });
+    }
+    if (j.horario) cfg.horario = String(j.horario);
+    if (j.paleta && SiteGen.PALETAS[j.paleta]) cfg.paleta = j.paleta;
+    if (j.fonte && SiteGen.FONTES[j.fonte]) cfg.fonte = j.fonte;
+
+    salvarRascunho();
+    anotar(l, '🪄 Site pré-montado a partir das respostas do questionário');
+    salvar();
+    fechar();
+    pintarSite();
+    recado('🪄 Pronto! Revise e publique.');
+  } catch (e) {
+    fechar();
+    recado('A IA não respondeu agora — o formulário está aberto pra preencher na mão.');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -6385,11 +7238,30 @@ function pintarAjustes() {
 
   h += '<div class="bloco"><h2>👤 Você</h2>';
   h += '<label>Seu nome (aparece nas mensagens)</label><input id="aNome" value="' + esc(c.meuNome) + '">';
+  h += '<label>Seu WhatsApp (com DDD)</label><input id="aWhats" inputmode="numeric" value="' + esc(c.meuWhats) + '" placeholder="66999998888">';
+  h += '<p class="ajuda mini">É pra onde o cliente envia as respostas do questionário depois que paga o Pix.</p>';
   h += '<div class="dupla">' +
     '<div><label>Preço do site</label><input id="aPreco" value="' + esc(c.meuPreco) + '"></div>' +
     '<div><label>Plano por mês</label><input id="aPlano" value="' + esc(c.planoPreco) + '"></div>' +
     '</div>';
   h += '<label>Sua cidade</label><input id="aCidade" value="' + esc(c.cidadePadrao) + '">';
+  h += '</div>';
+
+  h += '<div class="bloco"><h2>🔍 Busca de clientes</h2>';
+  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito (poucas empresas em cidade pequena). ' +
+    'Com uma chave ela acha MUITO mais — com telefone e dizendo quem já tem site.</p>';
+  h += '<label>Chave do Geoapify (recomendada — grátis, sem cartão)</label>' +
+    '<input id="aGeoapify" type="password" value="' + esc(c.geoapifyChave) + '" placeholder="cole aqui" autocapitalize="none">';
+  h += '<p class="ajuda mini">Crie de graça em <b>myprojects.geoapify.com</b>: registre, crie um projeto, ' +
+    'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada.</p>';
+  h += '<button class="btn" onclick="testarGeoapify()">🔍 Testar a chave Geoapify</button>';
+  h += '<div id="aGeoapifyResultado"></div>';
+  h += '<label style="margin-top:14px">Chave do Google Places (alternativa)</label>' +
+    '<input id="aGmaps" type="password" value="' + esc(c.gmapsChave) + '" placeholder="AIza…" autocapitalize="none">';
+  h += '<p class="ajuda mini">console.cloud.google.com → projeto → ative <b>Places API (New)</b> → Credenciais. ' +
+    'Os primeiros US$ 200 por mês o Google não cobra, mas pede cartão. Se as duas chaves estiverem aqui, o app usa o Geoapify.</p>';
+  h += '<button class="btn" onclick="testarGmaps()">🔍 Testar a chave Google</button>';
+  h += '<div id="aGmapsResultado"></div>';
   h += '</div>';
 
   h += '<div class="bloco"><h2>💰 Pix</h2>';
@@ -6460,9 +7332,12 @@ function pintarAjustes() {
 function salvarAjustes() {
   var c = BD.config;
   c.meuNome = $('#aNome').value.trim() || 'Nataniel';
+  c.meuWhats = soNumero($('#aWhats').value);
   c.meuPreco = $('#aPreco').value.trim() || 'R$ 97';
   c.planoPreco = $('#aPlano').value.trim() || 'R$ 70';
   c.cidadePadrao = $('#aCidade').value.trim();
+  c.geoapifyChave = $('#aGeoapify').value.trim();
+  c.gmapsChave = $('#aGmaps').value.trim();
   c.pixCodigo = $('#aPixCodigo').value.trim();
   c.pixChave = $('#aPixChave').value.trim();
   c.pixNome = $('#aPixNome').value.trim();
@@ -6478,6 +7353,36 @@ function salvarAjustes() {
   salvar();
   recado('💾 Salvo');
   if ($('#bCidade') && !$('#bCidade').value) $('#bCidade').value = c.cidadePadrao;
+  atualizarFonteBusca();
+}
+
+async function testarGeoapify() {
+  salvarAjustes();
+  var alvo = $('#aGeoapifyResultado');
+  if (!BD.config.geoapifyChave) { alvo.innerHTML = '<div class="aviso alerta">Cole a chave primeiro.</div>'; return; }
+  alvo.innerHTML = '<div class="rodando-tela"><div class="roda"></div><b>Consultando o Geoapify…</b></div>';
+  try {
+    var local = GEO_CACHE['rondonópolis'] || await acharCidade('Rondonópolis');
+    var features = await geoapifyBusca(['commercial.food_and_drink.bakery'], local.lon, local.lat, 15000);
+    alvo.innerHTML = '<div class="aviso bom"><b>✅ Geoapify funcionando!</b><br>' +
+      'Achei ' + features.length + ' padarias em Rondonópolis num instante. A busca agora usa ele.</div>';
+  } catch (e) {
+    alvo.innerHTML = '<div class="aviso ruim"><b>Ainda não funcionou</b><br>' + esc(e.message) + '</div>';
+  }
+}
+
+async function testarGmaps() {
+  salvarAjustes();
+  var alvo = $('#aGmapsResultado');
+  if (!BD.config.gmapsChave) { alvo.innerHTML = '<div class="aviso alerta">Cole a chave primeiro.</div>'; return; }
+  alvo.innerHTML = '<div class="rodando-tela"><div class="roda"></div><b>Consultando o Google…</b></div>';
+  try {
+    var lugares = await placesBusca('padaria em Rondonópolis, Brasil');
+    alvo.innerHTML = '<div class="aviso bom"><b>✅ Google Places funcionando!</b><br>' +
+      'Achei ' + lugares.length + ' padarias em Rondonópolis num instante. A busca agora usa ele.</div>';
+  } catch (e) {
+    alvo.innerHTML = '<div class="aviso ruim"><b>Ainda não funcionou</b><br>' + esc(e.message) + '</div>';
+  }
 }
 
 function testarPix() {
@@ -6639,6 +7544,7 @@ function iniciar() {
   }
 
   pintarChips();
+  atualizarFonteBusca();
   $('#bCidade').value = BD.config.cidadePadrao || '';
   $('#fundoModal').onclick = fechar;
   $$('.abas button').forEach(function (b) {
