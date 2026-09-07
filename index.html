@@ -4599,8 +4599,8 @@ var SALVA_DE_VERDADE = temArmazenamento();
 var VAZIO = {
   versao: 1,
   config: {
-    meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '',
-    pixCodigo: '', pixChave: '', pixNome: '', pixCidade: '',
+    meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '5566996974248',
+    pixCodigo: '00020101021126360014br.gov.bcb.pix0114+55669995125755204000053039865802BR5920NATANIEL DA S SANTOS6012RONDONOPOLIS62070503***6304FF74', pixChave: '', pixNome: '', pixCidade: '',
     iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: false,
     cidadePadrao: 'Rondonópolis',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
@@ -4616,6 +4616,9 @@ function carregar() {
     if (!cru) return JSON.parse(JSON.stringify(VAZIO));
     var d = JSON.parse(cru);
     d.config = Object.assign({}, VAZIO.config, d.config || {});
+    /* dados que já vêm com o app: completam aparelhos com config antiga vazia */
+    if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
+    if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
     d.leads = d.leads || []; d.sites = d.sites || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
@@ -5192,7 +5195,8 @@ function pintarClientes() {
         (l.cidade ? ' · ' + esc(l.cidade) : '') + '</div>' +
       '<div>' +
         '<span class="selo ' + e.cor + '">' + e.rotulo + '</span>' +
-        (l.pago ? '<span class="selo pago">✅ pagou</span>' : '') +
+        (l.pago ? '<span class="selo pago">✅ pagou</span>'
+          : l.sinal ? '<span class="selo quente">🟡 sinal pago</span>' : '') +
         (l.questionario && l.questionario.status === 'respondido' ? '<span class="selo pago">📝 respondeu</span>'
           : l.questionario && l.questionario.status === 'enviado' ? '<span class="selo quente">⏳ questionário</span>' : '') +
         (l.plano && l.plano.ativo ? '<span class="selo plano">🔁 ' + dinheiro(l.plano.valor) + '/mês</span>' : '') +
@@ -5360,7 +5364,8 @@ function abrirFicha(idLead) {
   h += '</div>';
 
   h += '<button class="btn zap" onclick="abrirMensagens(\'' + l.id + '\')">💬 Mandar mensagem pronta</button>';
-  h += '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">💰 Cobrar ' + esc(BD.config.meuPreco) + '</button>';
+  h += '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">💰 ' +
+       (l.pago ? 'Pago ✅' : l.sinal ? 'Cobrar o restante' : 'Cobrar sinal (' + dinheiro(numeroDoTexto(BD.config.meuPreco) / 2) + ')') + '</button>';
   h += '<button class="btn" onclick="abrirQuestionario(\'' + l.id + '\')">📝 Questionário' +
        (l.questionario ? (l.questionario.status === 'respondido' ? ' ✅' : ' ⏳') : '') + '</button>';
   h += '<button class="btn" onclick="criarSitePara(\'' + l.id + '\')">🎨 ' +
@@ -5443,6 +5448,7 @@ function modelos(l) {
   var cid = l.cidade || 'sua região';
   var preco = c.meuPreco || 'R$ 97';
   var plano = c.planoPreco || 'R$ 70';
+  var metade = dinheiro(numeroDoTexto(preco) / 2);
 
   return [
     { t: '👋 Primeiro contato', m:
@@ -5459,7 +5465,8 @@ function modelos(l) {
 
     { t: '💰 Proposta', m:
       'Fechado, ' + emp + '!\n\n' +
-      'O site sai por ' + preco + ', pagamento único. Está incluso:\n' +
+      'O site sai por ' + preco + ': você paga metade agora (' + metade + ') pra eu já começar, ' +
+      'e a outra metade só quando você aprovar o site pronto.\n\nEstá incluso:\n' +
       '• Site completo no celular e no computador\n' +
       '• Botão de WhatsApp\n' +
       '• Aparecer no Google\n' +
@@ -5469,7 +5476,7 @@ function modelos(l) {
     { t: '🎁 Site pronto', m:
       'Olha só, ' + emp + ' — ficou pronto!\n\n' +
       'Dá uma olhada e me fala o que quer mudar (cor, texto, foto, qualquer coisa). Eu ajusto sem cobrar nada a mais.\n\n' +
-      'Se gostou, é só me avisar que eu te mando o Pix de ' + preco + ' e coloco no ar.' },
+      'Se gostou, é só me avisar que eu te mando o Pix da outra metade (' + metade + ') e coloco no ar.' },
 
     { t: '🔁 Oferecer o plano', m:
       'Oi! Tudo certo com o site?\n\n' +
@@ -5558,16 +5565,50 @@ function gerarPix(valor, descricao) {
   });
 }
 
-function abrirCobranca(idLead, ehPlano) {
+/* Cobrança do site em duas etapas:
+   1) sinal (metade) pra começar → dispara o questionário
+   2) restante quando o cliente aprova o site pronto
+   ehPlano = cobrança de mensalidade; tudoDeUmaVez = valor cheio à vista */
+function abrirCobranca(idLead, ehPlano, tudoDeUmaVez) {
   var l = acharLead(idLead);
   if (!pixPronto()) {
     abrir('Falta o seu Pix', '<div class="aviso alerta">Antes de cobrar, cadastre seu Pix.</div>' +
       '<button class="btn principal" onclick="fechar();ir(\'ajustes\')">⚙️ Ir para Ajustes</button>');
     return;
   }
-  var valor = ehPlano
-    ? (l.plano && l.plano.valor || numeroDoTexto(BD.config.planoPreco))
-    : numeroDoTexto(BD.config.meuPreco);
+
+  var cheio = numeroDoTexto(BD.config.meuPreco);
+  var valor, legenda, oque, confirmar;
+
+  if (ehPlano) {
+    valor = l.plano && l.plano.valor || numeroDoTexto(BD.config.planoPreco);
+    legenda = 'mensalidade do plano';
+    oque = ' da mensalidade';
+    confirmar = '<button class="btn" onclick="marcarMensalidade(\'' + l.id + '\')">✅ Recebi a mensalidade</button>';
+  } else if (l.pago) {
+    abrir('Já pagou', '<div class="aviso bom">✅ ' + esc(l.nome || 'cliente') + ' já pagou o site (' +
+      dinheiro(cheio) + ').</div>' +
+      '<p class="ajuda">Próximo passo: oferecer o plano mensal. Pagando todo mês, você ajusta o que ele quiser no site.</p>' +
+      '<button class="btn principal" onclick="fechar();abrirPlano(\'' + l.id + '\')">🔁 Oferecer o plano mensal</button>');
+    return;
+  } else if (l.sinal && !tudoDeUmaVez) {
+    valor = Math.max(0, cheio - (l.sinal.valor || 0));
+    legenda = 'restante do site (sinal de ' + dinheiro(l.sinal.valor) + ' já pago)';
+    oque = ' do restante do site';
+    confirmar = '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o restante</button>';
+  } else if (!tudoDeUmaVez) {
+    valor = cheio / 2;
+    legenda = 'sinal — metade do site, pra começar';
+    oque = ' do sinal (metade). É com ele que eu já começo o seu site';
+    confirmar = '<button class="btn" onclick="marcarSinal(\'' + l.id + '\')">✅ Recebi o sinal (metade)</button>' +
+      '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\', false, true)">💵 Cobrar tudo de uma vez (' + dinheiro(cheio) + ')</button>';
+  } else {
+    valor = cheio;
+    legenda = 'valor do site (à vista)';
+    oque = ' do site';
+    confirmar = '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o pagamento</button>' +
+      '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">↩️ Voltar pra cobrança em duas vezes</button>';
+  }
 
   var codigo;
   try { codigo = gerarPix(valor, ehPlano ? 'Mensalidade' : 'Site'); }
@@ -5579,12 +5620,12 @@ function abrirCobranca(idLead, ehPlano) {
 
   var h = '<div class="meio"><div class="qr" id="qrAlvo"></div></div>';
   h += '<div class="meio" style="margin:12px 0"><b style="font-size:22px">' + dinheiro(valor) + '</b>' +
-       '<div class="mini">' + (ehPlano ? 'mensalidade do plano' : 'valor do site') + '</div></div>';
+       '<div class="mini">' + legenda + '</div></div>';
   h += '<label>Pix copia e cola</label><div class="codigo">' + esc(codigo) + '</div>';
   h += '<button class="btn principal" onclick="copiar(' + JSON.stringify(codigo) + ')">📋 Copiar o código Pix</button>';
   var nZap = numeroZap(l.telefone);
   if (nZap) {
-    var msg = 'Oi! Segue o Pix' + (ehPlano ? ' da mensalidade' : ' do site') + ': ' + dinheiro(valor) +
+    var msg = 'Oi! Segue o Pix' + oque + ': ' + dinheiro(valor) +
       '\n\nÉ só copiar o código abaixo e colar no seu aplicativo do banco:\n\n' + codigo;
     h += botaoLink(linkZap(nZap, msg), '💬 Mandar no WhatsApp', 'zap',
                    "marcarPixEnviado('" + l.id + "')");
@@ -5592,11 +5633,9 @@ function abrirCobranca(idLead, ehPlano) {
     h += '<div class="aviso alerta">Telefone sem DDD — complete na ficha para mandar pelo WhatsApp.</div>';
   }
   h += '<hr class="sep">';
-  h += ehPlano
-    ? '<button class="btn" onclick="marcarMensalidade(\'' + l.id + '\')">✅ Recebi a mensalidade</button>'
-    : '<button class="btn" onclick="marcarPago(\'' + l.id + '\')">✅ Recebi o pagamento</button>';
+  h += confirmar;
 
-  abrir('Cobrar ' + esc(l.nome), h);
+  abrir('Cobrar ' + esc(l.nome || 'cliente'), h);
 
   try {
     var q = qrcode(0, 'M'); q.addData(codigo); q.make();
@@ -5610,13 +5649,27 @@ function marcarPixEnviado(idLead) {
   return true;
 }
 
+/* Sinal recebido (metade): negócio fechado, questionário já sai
+   pro cliente responder enquanto você monta o site. */
+function marcarSinal(idLead) {
+  var l = acharLead(idLead);
+  var cheio = numeroDoTexto(BD.config.meuPreco);
+  l.sinal = { valor: cheio / 2, em: hoje() };
+  l.etapa = 'fechado';
+  anotar(l, '🟡 Pagou o sinal: ' + dinheiro(l.sinal.valor) + ' (metade de ' + dinheiro(cheio) + ')');
+  salvar(); fechar(); pintarClientes();
+  recado('🟡 Sinal registrado!');
+  prepararQuestionario(idLead);   /* já gera o questionário sozinho */
+}
+
 function marcarPago(idLead) {
   var l = acharLead(idLead);
   l.pago = true; l.etapa = 'fechado';
-  anotar(l, '✅ Pagou ' + BD.config.meuPreco);
+  if (l.sinal) anotar(l, '✅ Pagou o restante — total fechado em ' + BD.config.meuPreco);
+  else anotar(l, '✅ Pagou ' + BD.config.meuPreco);
   salvar(); fechar(); pintarClientes();
   recado('💰 Pagamento registrado!');
-  prepararQuestionario(idLead);   /* já gera o questionário sozinho */
+  if (!l.questionario) prepararQuestionario(idLead);   /* se pagou à vista */
 }
 
 /* ─────────── plano mensal ─────────── */
