@@ -4009,29 +4009,41 @@ ${c.pixel ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function()
    ============================================================ */
 
 
+/* Cada provedor tem um modelo principal e uma fila de RESERVAS.
+   Se o principal sumir (os serviços aposentam modelo de tempos em tempos,
+   sem avisar quem usa), o sistema desce a fila sozinho e o site continua
+   saindo. Foi exatamente isso que quebrou a Groq em 16/08/2026, quando o
+   llama-3.3-70b-versatile foi desligado. */
 const PROVEDORES = {
   openai: {
     nome: 'OpenAI',
     url: 'https://api.openai.com/v1/chat/completions',
     modeloPadrao: 'gpt-4o-mini',
+    reservas: ['gpt-4.1-mini', 'gpt-4o'],
     estilo: 'openai',
     ajuda: 'Chave em platform.openai.com/api-keys (pago, centavos por site).'
   },
   groq: {
     nome: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    modeloPadrao: 'llama-3.3-70b-versatile',
+    modeloPadrao: 'openai/gpt-oss-120b',
+    reservas: ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'],
     estilo: 'openai',
     ajuda: 'Chave em console.groq.com/keys (gratuito).'
   },
   gemini: {
     nome: 'Google Gemini',
     url: 'https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent',
-    modeloPadrao: 'gemini-2.0-flash',
+    modeloPadrao: 'gemini-3.6-flash',
+    reservas: ['gemini-3.5-flash', 'gemini-2.5-flash'],
     estilo: 'gemini',
     ajuda: 'Chave em aistudio.google.com/apikey (gratuito).'
   }
 };
+
+/* Guarda o modelo que respondeu por último em cada provedor, para não
+   pagar o pedágio da descoberta a cada chamada da mesma sessão. */
+const MODELO_QUE_FUNCIONOU = {};
 
 const TEMPO_LIMITE = 45000;
 
@@ -4161,64 +4173,153 @@ function problemas(t) {
 }
 
 /* ---------------- chamada a cada provedor ---------------- */
+
+/* O erro foi "esse modelo não existe mais"? Só nesse caso vale tentar o
+   próximo da fila. Chave errada, sem crédito ou serviço fora do ar não se
+   resolvem trocando de modelo — aí a reserva só faria o cliente esperar
+   três vezes mais pelo mesmo erro. */
+function ehProblemaDeModelo(status, corpo) {
+  if (status === 404) return true;
+  if (status !== 400 && status !== 403) return false;
+  return /model_decommissioned|model_not_found|decommission|no longer supported|does not exist|not found|deprecat|invalid.{0,15}model|unknown model|unsupported model/i
+    .test(String(corpo || ''));
+}
+
+/* A fila de modelos a tentar, na ordem. O que o Nataniel digitou nas
+   Configurações vem sempre primeiro; as reservas entram só se ele não
+   escolheu nada ou se a escolha dele saiu do ar. */
+function filaDeModelos(prov, escolhido) {
+  const fila = [];
+  const juntar = m => { if (m && fila.indexOf(m) < 0) fila.push(m); };
+  juntar(String(escolhido || '').trim());
+  juntar(MODELO_QUE_FUNCIONOU[prov.chaveId]);   /* o que respondeu antes nesta sessão */
+  juntar(prov.modeloPadrao);
+  (prov.reservas || []).forEach(juntar);
+  return fila;
+}
+
+/* monta o corpo do pedido já com os ajustes que cada serviço exige */
+function corpoDoPedido(prov, id, modelo, prompt, maxTokens) {
+  if (prov.estilo === 'openai') {
+    const corpo = {
+      model: modelo,
+      messages: [
+        { role: 'system', content: 'Você responde exclusivamente com JSON válido.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.8
+    };
+
+    if (id === 'groq') {
+      /* Os modelos novos da Groq "pensam" antes de responder, e esse
+         pensamento gasta tokens e viria grudado no texto. Escondo o
+         raciocínio (senão o JSON vem sujo) e dou folga no limite, senão a
+         resposta acaba no meio. */
+      corpo.max_completion_tokens = (maxTokens || 2000) + 2000;
+      corpo.reasoning_format = 'hidden';
+      if (/^openai\/gpt-oss/.test(modelo)) corpo.reasoning_effort = 'low';
+    } else {
+      corpo.max_tokens = maxTokens || 2000;
+    }
+    return corpo;
+  }
+
+  return {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: maxTokens || 2000,
+      responseMimeType: 'application/json'
+    }
+  };
+}
+
 async function chamar(cfg, prompt, maxTokens) {
   const chave = String(cfg.chave || '').trim();
   if (!chave) throw new Error('Nenhuma chave de IA configurada.');
 
-  const prov = PROVEDORES[cfg.provedor];
-  if (!prov) throw new Error('Provedor de IA desconhecido: ' + cfg.provedor);
-  const modelo = String(cfg.modelo || '').trim() || prov.modeloPadrao;
+  const id = cfg.provedor;
+  const prov = PROVEDORES[id];
+  if (!prov) throw new Error('Provedor de IA desconhecido: ' + id);
+  prov.chaveId = id;
 
-  let resp;
-  if (prov.estilo === 'openai') {
-    resp = await fetchLimitado(prov.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave },
-      body: JSON.stringify({
-        model: modelo,
-        messages: [
-          { role: 'system', content: 'Você responde exclusivamente com JSON válido.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.8,
-        max_tokens: maxTokens || 2000
-      })
-    });
-  } else {
-    const url = prov.url.replace('{modelo}', encodeURIComponent(modelo));
-    resp = await fetchLimitado(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: maxTokens || 2000, responseMimeType: 'application/json' }
-      })
-    });
+  const fila = filaDeModelos(prov, cfg.modelo);
+  let ultimoErro = null;
+
+  for (let i = 0; i < fila.length; i++) {
+    const modelo = fila[i];
+    let resp;
+
+    if (prov.estilo === 'openai') {
+      resp = await fetchLimitado(prov.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave },
+        body: JSON.stringify(corpoDoPedido(prov, id, modelo, prompt, maxTokens))
+      });
+    } else {
+      const url = prov.url.replace('{modelo}', encodeURIComponent(modelo));
+      resp = await fetchLimitado(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
+        body: JSON.stringify(corpoDoPedido(prov, id, modelo, prompt, maxTokens))
+      });
+    }
+
+    if (!resp.ok) {
+      const corpo = await resp.text().catch(() => '');
+      ultimoErro = new Error(traduzirErro(resp.status, corpo, prov.nome, modelo));
+
+      /* modelo aposentado e ainda tem reserva na fila? tenta a próxima */
+      if (ehProblemaDeModelo(resp.status, corpo) && i < fila.length - 1) {
+        console.warn('[ia] modelo "' + modelo + '" indisponível no ' + prov.nome +
+                     ' — tentando "' + fila[i + 1] + '"');
+        continue;
+      }
+      throw ultimoErro;
+    }
+
+    const j = await resp.json();
+    const texto = prov.estilo === 'openai'
+      ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content)
+      : (j.candidates && j.candidates[0] && j.candidates[0].content &&
+         j.candidates[0].content.parts && j.candidates[0].content.parts[0] &&
+         j.candidates[0].content.parts[0].text);
+
+    if (!texto) {
+      ultimoErro = new Error('A IA respondeu vazio.');
+      if (i < fila.length - 1) {
+        console.warn('[ia] "' + modelo + '" respondeu vazio — tentando "' + fila[i + 1] + '"');
+        continue;
+      }
+      throw ultimoErro;
+    }
+
+    MODELO_QUE_FUNCIONOU[id] = modelo;   /* deu certo: usa esse no resto da sessão */
+    return texto;
   }
 
-  if (!resp.ok) {
-    const corpo = await resp.text().catch(() => '');
-    throw new Error(traduzirErro(resp.status, corpo, prov.nome));
-  }
+  throw ultimoErro || new Error('Nenhum modelo de IA disponível no momento.');
+}
 
-  const j = await resp.json();
-  const texto = prov.estilo === 'openai'
-    ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content)
-    : (j.candidates && j.candidates[0] && j.candidates[0].content &&
-       j.candidates[0].content.parts && j.candidates[0].content.parts[0] &&
-       j.candidates[0].content.parts[0].text);
-
-  if (!texto) throw new Error('A IA respondeu vazio.');
-  return texto;
+/** Qual modelo está respondendo de fato neste provedor. */
+function modeloEmUso(cfg) {
+  const prov = PROVEDORES[cfg && cfg.provedor];
+  if (!prov) return '';
+  return MODELO_QUE_FUNCIONOU[cfg.provedor] ||
+         String((cfg && cfg.modelo) || '').trim() || prov.modeloPadrao;
 }
 
 /* mensagens de erro que o Nataniel entende, em vez do texto cru da API */
-function traduzirErro(status, corpo, nomeProv) {
+function traduzirErro(status, corpo, nomeProv, modelo) {
   const c = String(corpo).slice(0, 300);
+  const qual = modelo ? ` (modelo "${modelo}")` : '';
   if (status === 401 || status === 403) return `Chave do ${nomeProv} recusada. Confira se copiou inteira e se ainda está ativa.`;
   if (status === 429) return `${nomeProv} pediu para esperar (limite de uso atingido). Tente de novo em alguns minutos ou troque de serviço.`;
   if (status === 402 || /quota|billing|insufficient/i.test(c)) return `${nomeProv} está sem crédito na conta.`;
-  if (status === 404) return `Modelo não encontrado no ${nomeProv}. Verifique o nome do modelo nas Configurações.`;
+  if (ehProblemaDeModelo(status, c)) {
+    return `Nenhum modelo do ${nomeProv} está disponível${qual}. ` +
+           `Se você digitou um modelo à mão nas Configurações, apague o campo para o LeadSite escolher sozinho.`;
+  }
   if (status >= 500) return `${nomeProv} está instável no momento (erro ${status}).`;
   return `${nomeProv} recusou a chamada (erro ${status}). ${c}`;
 }
@@ -4234,7 +4335,7 @@ async function testar(cfg) {
   return {
     ok: true,
     provedor: PROVEDORES[cfg.provedor].nome,
-    modelo: String(cfg.modelo || '').trim() || PROVEDORES[cfg.provedor].modeloPadrao,
+    modelo: modeloEmUso(cfg),          /* o que respondeu de verdade, não o que se pediu */
     ms: Date.now() - inicio,
     resposta: parsed || String(txt).slice(0, 120)
   };
@@ -4291,7 +4392,7 @@ function montarSaida(j) {
 
 /* chamarBruto: usado pelo time de IAs (equipe.js) para fazer perguntas próprias */
 return { PROVEDORES, testar, gerarTextos, extrairJSON, montarPrompt, problemas, CLICHES,
-                   chamarBruto: chamar };
+                   modeloEmUso, chamarBruto: chamar };
 
 });
 
@@ -7410,8 +7511,13 @@ async function testarIA() {
   alvo.innerHTML = '<div class="rodando-tela"><div class="roda"></div><b>Testando…</b></div>';
   try {
     var r = await IA.testar(configIA());
+    var pedido = (BD.config.iaModelo || '').trim();
+    var trocou = pedido && r.modelo && pedido !== r.modelo;
     alvo.innerHTML = '<div class="aviso bom"><b>✅ IA funcionando</b><br>' +
-      esc(r.modelo || BD.config.iaProvedor) + ' respondeu certinho.</div>';
+      esc(r.modelo || BD.config.iaProvedor) + ' respondeu certinho.' +
+      (trocou ? '<br><small>O modelo "' + esc(pedido) + '" não estava disponível, ' +
+                'então usei uma reserva. Pode deixar assim.</small>' : '') +
+      '</div>';
   } catch (e) {
     alvo.innerHTML = '<div class="aviso ruim"><b>Não funcionou</b><br>' + esc(e.message) + '</div>';
   }
