@@ -327,6 +327,7 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
 <section class="tela" id="tela-clientes">
   <div class="placar" id="cPlacar"></div>
   <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
+  <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas dos clientes</button>
   <div class="chips" id="cFiltros" style="margin:12px 0"></div>
   <div id="cLista"></div>
 </section>
@@ -5480,9 +5481,9 @@ function pintarClientes() {
       '<button class="btn" onclick="novoCliente()">✍️ Ou cadastrar na mão</button></div>';
     return;
   }
-  if (!lista.length) { $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
+  if (!lista.length) { $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + painelEsquecidos() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
 
-  $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() +
+  $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + painelEsquecidos() +
     '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
     lista.map(function (l) {
     var e = ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo;
@@ -5581,6 +5582,29 @@ function lembrarMensalidade(idLead) {
   anotar(l, '🔔 Lembrete de mensalidade enviado');
   salvar();
   abrirLink(linkZap(n, msg));
+}
+
+/* Clientes que ficaram pra trás: sem contato há mais de 7 dias. */
+function painelEsquecidos() {
+  var corte = Date.now() - 7 * 86400000;
+  var esquecidos = BD.leads.filter(function (l) {
+    if (l.pago || l.etapa === 'fechado' || l.etapa === 'perdido') return false;
+    var h = l.historico || [];
+    if (!h.length) return true;
+    return new Date(h[h.length - 1].data).getTime() < corte;
+  }).slice(0, 6);
+  if (!esquecidos.length) return '';
+
+  var h = '<div class="carta" style="outline:1px solid #8b5cf666;margin-bottom:12px">';
+  h += '<h3>💤 Clientes esquecidos</h3>';
+  h += esquecidos.map(function (l) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · ' +
+      (ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo).rotulo.toLowerCase() + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirMensagens(\'' + l.id + '\')">💬 Retomar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
 }
 
 function filtrar(k) { FILTRO = k; pintarClientes(); }
@@ -6321,26 +6345,16 @@ function receberRespostas(idLead) {
   abrir('📥 Receber respostas' + (l && l.nome ? ' de ' + esc(l.nome) : ''), h);
 }
 
-function importarRespostas(idLead) {
-  var l = acharLead(idLead);
-  var alvo = $('#qImportaErro');
-  var texto = $('#qCola') ? $('#qCola').value : '';
-  var m = String(texto).match(/LSR1\.([A-Za-z0-9_-]+)/);
-  if (!m) {
-    alvo.innerHTML = '<div class="aviso ruim">Não achei o código LSR1 na mensagem. Confira se colou tudo.</div>';
-    return;
-  }
-  var d;
-  try { d = JSON.parse(b64uDecodificar(m[1])); }
-  catch (e) {
-    alvo.innerHTML = '<div class="aviso ruim">Código incompleto ou corrompido — peça pro cliente copiar de novo.</div>';
-    return;
-  }
-  /* se o código foi gerado pra outro cliente, avisa mas deixa importar */
-  if (d.lid && d.lid !== l.id && acharLead(d.lid)) {
-    alvo.innerHTML = '<div class="aviso alerta">Esse código era do cliente <b>' + esc(acharLead(d.lid).nome) +
-      '</b> — estou importando na ficha aberta mesmo assim.</div>';
-  }
+/* Decodifica a mensagem que o cliente devolve no WhatsApp. */
+function decodificarCodigoRespostas(texto) {
+  var m = String(texto || '').match(/LSR1\.([A-Za-z0-9_-]+)/);
+  if (!m) return { erro: 'Não achei o código LSR1 na mensagem. Confira se colou tudo.' };
+  try { return { dados: JSON.parse(b64uDecodificar(m[1])) }; }
+  catch (e) { return { erro: 'Código incompleto ou corrompido — peça pro cliente copiar de novo.' }; }
+}
+
+/* Grava as respostas na ficha do cliente. Devolve false se veio vazio. */
+function aplicarRespostas(l, d) {
   var r = d.r || {};
   var ps = (l.questionario && l.questionario.perguntas) || [];
   var respostas = ps.map(function (p) {
@@ -6351,10 +6365,7 @@ function importarRespostas(idLead) {
       respostas.push({ id: k, pergunta: '(pergunta extra)', resposta: String(r[k]).trim() });
     }
   });
-  if (!respostas.length) {
-    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
-    return;
-  }
+  if (!respostas.length) return false;
   if (d.contato) l.contato = d.contato;
   if (!l.questionario) l.questionario = { perguntas: ps, link: '' };
   l.questionario.status = 'respondido';
@@ -6362,9 +6373,86 @@ function importarRespostas(idLead) {
   l.questionario.respostas = respostas;
   anotar(l, '📥 Respostas do questionário importadas (' + respostas.length + ')');
   salvar();
+  return true;
+}
+
+function importarRespostas(idLead) {
+  var l = acharLead(idLead);
+  var alvo = $('#qImportaErro');
+  var texto = $('#qCola') ? $('#qCola').value : '';
+  var dec = decodificarCodigoRespostas(texto);
+  if (dec.erro) { alvo.innerHTML = '<div class="aviso ruim">' + esc(dec.erro) + '</div>'; return; }
+  var d = dec.dados;
+  /* se o código foi gerado pra outro cliente, avisa mas deixa importar */
+  if (d.lid && d.lid !== l.id && acharLead(d.lid)) {
+    alvo.innerHTML = '<div class="aviso alerta">Esse código era do cliente <b>' + esc(acharLead(d.lid).nome) +
+      '</b> — estou importando na ficha aberta mesmo assim.</div>';
+  }
+  if (!aplicarRespostas(l, d)) {
+    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
+    return;
+  }
   fechar();
   abrirQuestionario(idLead);
   recado('📥 Respostas salvas!');
+}
+
+/* ─────────── caixa de respostas ───────────
+   Tudo que voltou do WhatsApp num lugar só: cola a mensagem do
+   cliente e o código (LSR1...) já diz de quem é — entra na ficha
+   certa sozinho. */
+function abrirCaixaRespostas() {
+  var h = '<p class="ajuda">Cole aqui a mensagem que o cliente devolveu no WhatsApp. ' +
+    'O código já diz de quem é — entra na ficha certa sozinho.</p>';
+  h += '<textarea id="cxCola" style="min-height:110px" placeholder="cole aqui a mensagem do cliente"></textarea>';
+  h += '<button class="btn principal" onclick="importarDaCaixa()">📥 Importar</button>';
+  h += '<div id="cxAviso"></div>';
+  h += '<hr class="sep">';
+
+  var respondidos = BD.leads
+    .filter(function (l) { return l.questionario && l.questionario.status === 'respondido'; })
+    .sort(function (a, b) { return (b.questionario.respondidoEm || '').localeCompare(a.questionario.respondidoEm || ''); });
+
+  if (!respondidos.length) {
+    h += '<div class="vazio"><p><b>Ninguém respondeu ainda.</b></p>' +
+      '<p>Quando um cliente devolver as respostas no WhatsApp, cole aqui em cima.</p></div>';
+  } else {
+    h += '<b style="font-size:14px">Respostas recebidas (' + respondidos.length + ')</b>';
+    h += respondidos.map(function (l) {
+      var q = l.questionario;
+      var resumo = (q.respostas && q.respostas[0]) ? q.respostas[0].resposta.slice(0, 70) : '';
+      return '<div class="carta" style="margin:10px 0" onclick="fechar();abrirFicha(\'' + l.id + '\')">' +
+        '<h3>' + esc(l.nome || 'cliente') + '</h3>' +
+        '<div class="meta">respondeu em ' + dataCurta(q.respondidoEm) + ' · ' + (q.respostas || []).length + ' respostas</div>' +
+        (resumo ? '<div class="mini">' + esc(resumo) + '…</div>' : '') +
+        '<div class="linha-btn">' +
+          '<button class="btn pequeno" onclick="event.stopPropagation();fechar();abrirQuestionario(\'' + l.id + '\')">👀 Ver respostas</button>' +
+          '<button class="btn pequeno" onclick="event.stopPropagation();fechar();rascunhoDasRespostas(\'' + l.id + '\')">🪄 Montar site</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  abrir('📥 Caixa de respostas', h);
+}
+
+function importarDaCaixa() {
+  var alvo = $('#cxAviso');
+  var dec = decodificarCodigoRespostas($('#cxCola').value);
+  if (dec.erro) { alvo.innerHTML = '<div class="aviso ruim">' + esc(dec.erro) + '</div>'; return; }
+  var d = dec.dados;
+  var l = d.lid ? acharLead(d.lid) : null;
+  if (!l) {
+    alvo.innerHTML = '<div class="aviso alerta">Esse código não bate com nenhum cliente daqui ' +
+      '(pode ter sido gerado em outro aparelho). Importe pela ficha do cliente: 📝 Questionário → 📥 colar respostas.</div>';
+    return;
+  }
+  if (!aplicarRespostas(l, d)) {
+    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
+    return;
+  }
+  alvo.innerHTML = '<div class="aviso bom"><b>✅ Respostas de ' + esc(l.nome || 'cliente') + ' salvas!</b> ' +
+    'Abra a caixa de novo pra ver ou montar o site.</div>';
+  $('#cxCola').value = '';
+  recado('📥 Respostas importadas');
 }
 
 /* Pega as respostas e deixa o site do cliente pré-montado:
