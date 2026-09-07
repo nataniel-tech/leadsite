@@ -310,6 +310,8 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
     </div>
 
     <button class="btn principal" id="btnBuscar" onclick="buscar()">🔍 Buscar agora</button>
+    <button class="btn" id="btnRegiao" onclick="buscarRegiao()">🗺️ Caçar na região (cidades até ~300 km)</button>
+    <p class="mini" id="fonteBusca" style="text-align:center"></p>
   </div>
 
   <div id="bResultado">
@@ -4603,6 +4605,7 @@ var VAZIO = {
     pixCodigo: '00020101021126360014br.gov.bcb.pix0114+55669995125755204000053039865802BR5920NATANIEL DA S SANTOS6012RONDONOPOLIS62070503***6304FF74', pixChave: '', pixNome: '', pixCidade: '',
     iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: false,
     cidadePadrao: 'Rondonópolis',
+    gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
   },
   leads: [], sites: []
@@ -4880,6 +4883,152 @@ function pontuar(b) {
     (b.endereco ? 10 : 0) + (b.email ? 10 : 0) + (b.horario ? 5 : 0);
 }
 
+/* ─────────── Google Places (busca rica, opcional) ───────────
+   O mapa gratuito (OpenStreetMap) tem pouca empresa em cidade pequena.
+   Com a chave do Google Places a busca acha muito mais — com telefone
+   e dizendo quem já tem site. Sem chave, o app segue no mapa grátis. */
+
+/* Cidades num raio de ~300 km de Rondonópolis (MT, GO e MS). */
+var CIDADES_REGIAO = [
+  'Rondonópolis', 'Pedra Preta', 'Alto Araguaia', 'Alto Garças', 'Alto Taquari',
+  'Santa Rita do Araguaia', 'Portelândia', 'Mineiros', 'Guiratinga', 'Tesouro',
+  'General Carneiro', 'Poxoréu', 'Juscimeira', 'Jaciara', 'Dom Aquino',
+  'Campo Verde', 'Primavera do Leste', 'Paranatinga', 'Santo Antônio do Leverger',
+  'Cuiabá', 'Várzea Grande', 'Chapada dos Guimarães', 'Barra do Garças',
+  'Pontal do Araguaia', 'Torixoréu', 'Ribeirãozinho', 'Araguaiana',
+  'Montividiu', 'Rio Verde', 'Santo Antônio da Barra', 'Serranópolis', 'Jataí',
+  'Itumbiara', 'Cachoeira Dourada', 'Inaciolândia', 'Paraíso das Águas', 'Chapadão do Sul'
+];
+
+function googlePronto() { return !!BD.config.gmapsChave; }
+
+async function placesBusca(texto) {
+  var r = await comTempo(fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': BD.config.gmapsChave,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,' +
+        'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri,' +
+        'places.primaryTypeDisplayName'
+    },
+    body: JSON.stringify({ textQuery: texto, languageCode: 'pt-BR', regionCode: 'BR', maxResultCount: 20 })
+  }), 25000, 'consultando o Google');
+  if (!r.ok) {
+    var corpo = await r.text(), msg = '';
+    try { msg = JSON.parse(corpo).error.message; } catch (e) {}
+    if (r.status === 401 || r.status === 403) {
+      throw new Error('O Google recusou a chave. Confira em Ajustes se ela está inteira ' +
+        'e se a "Places API (New)" está ativada no projeto.' + (msg ? ' (' + msg + ')' : ''));
+    }
+    throw new Error('Google respondeu erro ' + r.status + (msg ? ': ' + msg : ''));
+  }
+  var j = await r.json();
+  return j.places || [];
+}
+
+function lugarParaAchado(p, cidade, rotulo) {
+  var nome = (p.displayName && p.displayName.text) || '';
+  if (!nome) return null;
+  var tel = p.internationalPhoneNumber || p.nationalPhoneNumber || null;
+  if (tel) tel = tel.replace(/[^0-9+]/g, '');
+  var b = {
+    osmId: 'g:' + p.id,
+    nome: nome,
+    categoria: rotulo || (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || 'outro',
+    telefone: tel, email: null,
+    endereco: p.formattedAddress || null,
+    cidade: cidade,
+    site: p.websiteUri || null, temSite: !!p.websiteUri,
+    temRedeSocial: false, horario: null
+  };
+  b.score = pontuar(b);
+  return b;
+}
+
+/* Busca cada categoria numa cidade. Mostra o andamento no aviso. */
+async function buscarGoogleEm(cidade, cats, aviso) {
+  var lista = [], vistos = {};
+  for (var i = 0; i < cats.length; i++) {
+    var rotulo = CATEGORIAS[cats[i]] ? CATEGORIAS[cats[i]].rotulo.replace(/^\S+\s*/, '') : cats[i];
+    if (aviso) aviso('Google: procurando ' + rotulo.toLowerCase() + ' em ' + cidade + '…');
+    var lugares = await placesBusca(rotulo + ' em ' + cidade + ', Brasil');
+    lugares.forEach(function (p) {
+      var b = lugarParaAchado(p, cidade, rotulo);
+      if (!b) return;
+      var ch = b.nome.toLowerCase().trim() + '|' + cidade.toLowerCase();
+      if (vistos[ch]) return;
+      vistos[ch] = 1;
+      lista.push(b);
+    });
+    await new Promise(function (r) { setTimeout(r, 250); });
+  }
+  return lista;
+}
+
+/* Qual fonte está em uso — aparece embaixo dos botões de busca. */
+function atualizarFonteBusca() {
+  var el = $('#fonteBusca');
+  if (el) el.textContent = googlePronto()
+    ? '🟢 Busca usando o Google Places (muito mais empresas)'
+    : '⚪ Busca no mapa gratuito (OpenStreetMap). Com a chave do Google em Ajustes acha muito mais.';
+}
+
+/* Caçada em todas as cidades da região de uma vez. */
+async function buscarRegiao() {
+  if (!googlePronto()) {
+    abrir('Caçada na região usa o Google',
+      '<p class="ajuda">Procurar em ' + CIDADES_REGIAO.length + ' cidades de uma vez pesa demais pro mapa gratuito. ' +
+      'Por isso a caçada usa o Google Places — cole a chave em Ajustes (os primeiros US$ 200 por mês são grátis).</p>' +
+      '<button class="btn principal" onclick="fechar();ir(\'ajustes\')">⚙️ Colocar a chave</button>' +
+      '<button class="btn" onclick="fechar()">Continuar no mapa gratuito, uma cidade por vez</button>');
+    return;
+  }
+  var cats = $$('#chips .chip.on').map(function (c) { return c.dataset.cat; });
+  if (!cats.length) cats = ['salao', 'oficina', 'mercado', 'construcao'];
+
+  var painel = $('#bResultado');
+  painel.innerHTML = '<div class="rodando-tela"><div class="roda"></div>' +
+    '<b id="regiaoPasso">Começando a caçada…</b>' +
+    '<p class="mini">' + CIDADES_REGIAO.length + ' cidades × ' + cats.length + ' tipos. Pode levar alguns minutos.</p></div>';
+  $('#btnRegiao').disabled = true;
+
+  var todos = [], vistos = {}, falhas = 0;
+  try {
+    for (var i = 0; i < CIDADES_REGIAO.length; i++) {
+      var cid = CIDADES_REGIAO[i];
+      var passo = $('#regiaoPasso');
+      if (passo) passo.textContent = '🗺️ Caçando em ' + cid + ' (' + (i + 1) + '/' + CIDADES_REGIAO.length + ')…';
+      try {
+        var ach = await buscarGoogleEm(cid, cats);
+        ach.forEach(function (b) {
+          var ch = b.nome.toLowerCase().trim() + '|' + cid.toLowerCase();
+          if (!vistos[ch]) { vistos[ch] = 1; todos.push(b); }
+        });
+      } catch (e) {
+        /* erro de chave cancela tudo; sobrecarga segue adiante */
+        if (/recusou a chave|Places API/.test(e.message)) throw e;
+        falhas++;
+      }
+    }
+  } catch (e) {
+    painel.innerHTML = '<div class="aviso ruim"><b>A caçada parou</b><br>' + esc(e.message) + '</div>' +
+      '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Rever a chave</button>';
+    $('#btnRegiao').disabled = false;
+    return;
+  }
+
+  var soSemSite = $('#bSoSemSite').checked;
+  if (soSemSite) todos = todos.filter(function (b) { return !b.temSite; });
+  todos.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
+  ACHADOS = todos;
+  pintarAchados(
+    { nome: 'Região de Rondonópolis — ' + CIDADES_REGIAO.length + ' cidades' + (falhas ? ' (' + falhas + ' com falha)' : '') },
+    { fonteGoogle: true, soSemSite: soSemSite }
+  );
+  $('#btnRegiao').disabled = false;
+}
+
 async function buscar() {
   var cidade = $('#bCidade').value.trim();
   if (!cidade) { recado('Escreva a cidade'); return; }
@@ -4897,6 +5046,25 @@ async function buscar() {
     '<b>Procurando em ' + esc(cidade) + '…</b>' +
     '<p class="mini">Isso leva de 10 a 40 segundos. Não feche a tela.</p></div>';
   $('#btnBuscar').disabled = true;
+
+  /* com a chave do Google ligada, a busca vai pra lá — muito mais empresas */
+  if (googlePronto()) {
+    try {
+      var listaG = await buscarGoogleEm(cidade, cats, function (msg) {
+        var b = $('#bResultado .rodando-tela b');
+        if (b) b.textContent = msg;
+      });
+      if (soSemSite) listaG = listaG.filter(function (b) { return !b.temSite; });
+      listaG.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
+      ACHADOS = listaG;
+      pintarAchados({ nome: cidade + ' (Google Places)' }, { fonteGoogle: true, soSemSite: soSemSite });
+    } catch (e) {
+      painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(e.message || String(e)) + '</div>' +
+        '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
+    }
+    $('#btnBuscar').disabled = false;
+    return;
+  }
 
   try {
     var local = await acharCidade(cidade);
@@ -5004,7 +5172,9 @@ function pintarAchados(local, info) {
       h += '<p>O mapa tem ' + info.brutos + ' pontos por aqui, mas nenhum com nome cadastrado. ' +
            'Tente outros tipos de negócio.</p></div>';
     } else {
-      h += '<p>O OpenStreetMap não tem esses tipos de negócio cadastrados nessa área.</p></div>';
+      h += '<p>' + (info.fonteGoogle
+        ? 'O Google não devolveu esses tipos de negócio nessa área. Tente outros tipos ou outra cidade.'
+        : 'O OpenStreetMap não tem esses tipos de negócio cadastrados nessa área.') + '</p></div>';
       h += '<div class="aviso alerta"><b>Tente assim</b><br>' +
            '• Marque mais tipos de uma vez<br>' +
            '• Use "A cidade toda" em vez de um raio<br>' +
@@ -6860,6 +7030,17 @@ function pintarAjustes() {
   h += '<label>Sua cidade</label><input id="aCidade" value="' + esc(c.cidadePadrao) + '">';
   h += '</div>';
 
+  h += '<div class="bloco"><h2>🔍 Busca de clientes</h2>';
+  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito (poucas empresas em cidade pequena). ' +
+    'Com a chave do Google Places ela acha MUITO mais — com telefone e dizendo quem já tem site.</p>';
+  h += '<label>Chave do Google Places (opcional)</label>' +
+    '<input id="aGmaps" type="password" value="' + esc(c.gmapsChave) + '" placeholder="AIza…" autocapitalize="none">';
+  h += '<p class="ajuda mini">De graça: console.cloud.google.com → crie um projeto → ative <b>Places API (New)</b> → ' +
+    'Credenciais → criar chave. Os primeiros US$ 200 por mês o Google não cobra.</p>';
+  h += '<button class="btn" onclick="testarGmaps()">🔍 Testar a chave</button>';
+  h += '<div id="aGmapsResultado"></div>';
+  h += '</div>';
+
   h += '<div class="bloco"><h2>💰 Pix</h2>';
   h += '<p class="ajuda">Abra seu banco, gere um Pix copia e cola e cole aqui. É o jeito mais seguro.</p>';
   h += '<label>Pix copia e cola</label><textarea id="aPixCodigo" placeholder="00020126...">' + esc(c.pixCodigo) + '</textarea>';
@@ -6932,6 +7113,7 @@ function salvarAjustes() {
   c.meuPreco = $('#aPreco').value.trim() || 'R$ 97';
   c.planoPreco = $('#aPlano').value.trim() || 'R$ 70';
   c.cidadePadrao = $('#aCidade').value.trim();
+  c.gmapsChave = $('#aGmaps').value.trim();
   c.pixCodigo = $('#aPixCodigo').value.trim();
   c.pixChave = $('#aPixChave').value.trim();
   c.pixNome = $('#aPixNome').value.trim();
@@ -6947,6 +7129,21 @@ function salvarAjustes() {
   salvar();
   recado('💾 Salvo');
   if ($('#bCidade') && !$('#bCidade').value) $('#bCidade').value = c.cidadePadrao;
+  atualizarFonteBusca();
+}
+
+async function testarGmaps() {
+  salvarAjustes();
+  var alvo = $('#aGmapsResultado');
+  if (!BD.config.gmapsChave) { alvo.innerHTML = '<div class="aviso alerta">Cole a chave primeiro.</div>'; return; }
+  alvo.innerHTML = '<div class="rodando-tela"><div class="roda"></div><b>Consultando o Google…</b></div>';
+  try {
+    var lugares = await placesBusca('padaria em Rondonópolis, Brasil');
+    alvo.innerHTML = '<div class="aviso bom"><b>✅ Google Places funcionando!</b><br>' +
+      'Achei ' + lugares.length + ' padarias em Rondonópolis num instante. A busca agora usa ele.</div>';
+  } catch (e) {
+    alvo.innerHTML = '<div class="aviso ruim"><b>Ainda não funcionou</b><br>' + esc(e.message) + '</div>';
+  }
 }
 
 function testarPix() {
@@ -7108,6 +7305,7 @@ function iniciar() {
   }
 
   pintarChips();
+  atualizarFonteBusca();
   $('#bCidade').value = BD.config.cidadePadrao || '';
   $('#fundoModal').onclick = fechar;
   $$('.abas button').forEach(function (b) {
