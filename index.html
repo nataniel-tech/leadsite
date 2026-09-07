@@ -5181,9 +5181,9 @@ function pintarClientes() {
       '<button class="btn" onclick="novoCliente()">✍️ Ou cadastrar na mão</button></div>';
     return;
   }
-  if (!lista.length) { $('#cLista').innerHTML = painelQuestionarios() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
+  if (!lista.length) { $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
 
-  $('#cLista').innerHTML = painelQuestionarios() +
+  $('#cLista').innerHTML = painelMensalidades() + painelQuestionarios() +
     '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
     lista.map(function (l) {
     var e = ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo;
@@ -5237,6 +5237,51 @@ function painelQuestionarios() {
   }).join('');
   h += '</div>';
   return h;
+}
+
+/* Painel: planos cuja mensalidade deste mês ainda não veio —
+   avisa quem está perto de vencer e quem já passou. */
+function painelMensalidades() {
+  var ref = hoje().slice(0, 7);
+  var hojeDia = new Date().getDate();
+  var itens = [];
+  BD.leads.forEach(function (l) {
+    if (!(l.plano && l.plano.ativo)) return;
+    var pagoEsteMes = (l.plano.mensalidades || []).some(function (m) { return m.referencia === ref; });
+    if (pagoEsteMes) return;
+    var dia = l.plano.diaVencimento || 1;
+    itens.push({ l: l, atraso: hojeDia - dia });   /* >0 = já venceu */
+  });
+  if (!itens.length) return '';
+  itens.sort(function (a, b) { return b.atraso - a.atraso; });
+
+  var h = '<div class="carta" style="outline:1px solid #38bdf866;margin-bottom:12px">';
+  h += '<h3>🔁 Mensalidades deste mês</h3>';
+  h += itens.map(function (it) {
+    var quando = it.atraso > 0 ? '⚠️ vencida há ' + it.atraso + ' dia(s)'
+      : it.atraso === 0 ? '⏰ vence hoje'
+      : '📅 vence em ' + (-it.atraso) + ' dia(s)';
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(it.l.nome || 'cliente') + '</b> · ' +
+      dinheiro(it.l.plano.valor) + ' · ' + quando + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="lembrarMensalidade(\'' + it.l.id + '\')">💬 Avisar</button>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirCobranca(\'' + it.l.id + '\', true)">💰 Cobrar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
+}
+
+/* Manda o lembrete da mensalidade no WhatsApp do cliente. */
+function lembrarMensalidade(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.plano) return;
+  var n = numeroZap(l.telefone);
+  if (!n) { recado('Cliente sem telefone com DDD'); return; }
+  var msg = 'Oi, ' + (l.nome || '') + '! Passando pra avisar da mensalidade do site desse mês: ' +
+    dinheiro(l.plano.valor) + '.\n\nSe quiser, já te mando o Pix por aqui. Qualquer mudança no site é só me chamar.';
+  anotar(l, '🔔 Lembrete de mensalidade enviado');
+  salvar();
+  abrirLink(linkZap(n, msg));
 }
 
 function filtrar(k) { FILTRO = k; pintarClientes(); }
