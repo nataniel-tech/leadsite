@@ -5178,9 +5178,10 @@ function pintarClientes() {
       '<button class="btn" onclick="novoCliente()">✍️ Ou cadastrar na mão</button></div>';
     return;
   }
-  if (!lista.length) { $('#cLista').innerHTML = '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
+  if (!lista.length) { $('#cLista').innerHTML = painelQuestionarios() + '<div class="vazio"><p>Nada com esse filtro.</p></div>'; return; }
 
-  $('#cLista').innerHTML = '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
+  $('#cLista').innerHTML = painelQuestionarios() +
+    '<button class="btn" onclick="novoCliente()" style="margin-bottom:12px">✍️ Cadastrar empresa na mão</button>' +
     lista.map(function (l) {
     var e = ETAPAS_CRM[l.etapa] || ETAPAS_CRM.novo;
     return '<div class="carta" onclick="abrirFicha(\'' + l.id + '\')">' +
@@ -5192,6 +5193,8 @@ function pintarClientes() {
       '<div>' +
         '<span class="selo ' + e.cor + '">' + e.rotulo + '</span>' +
         (l.pago ? '<span class="selo pago">✅ pagou</span>' : '') +
+        (l.questionario && l.questionario.status === 'respondido' ? '<span class="selo pago">📝 respondeu</span>'
+          : l.questionario && l.questionario.status === 'enviado' ? '<span class="selo quente">⏳ questionário</span>' : '') +
         (l.plano && l.plano.ativo ? '<span class="selo plano">🔁 ' + dinheiro(l.plano.valor) + '/mês</span>' : '') +
         (l.siteUrl ? '<span class="selo plano">🌐 no ar</span>'
                    : l.siteSlug ? '<span class="selo etapa">🎨 site pronto</span>' : '') +
@@ -5202,6 +5205,34 @@ function pintarClientes() {
         : '') +
     '</div>';
   }).join('');
+}
+
+/* Painel no topo da lista: quem pagou e ainda não respondeu o
+   questionário (e quem pagou mas nem recebeu ainda). */
+function painelQuestionarios() {
+  var aguardando = BD.leads.filter(function (l) {
+    return l.pago && l.questionario && l.questionario.status === 'enviado';
+  });
+  var semEnviar = BD.leads.filter(function (l) { return l.pago && !l.questionario; });
+  if (!aguardando.length && !semEnviar.length) return '';
+
+  var h = '<div class="carta" style="outline:1px solid #f59e0b66;margin-bottom:12px">';
+  h += '<h3>🤖 Questionários pendentes</h3>';
+  h += aguardando.map(function (l) {
+    var dias = Math.max(0, Math.floor((Date.now() - new Date(l.questionario.enviadoEm).getTime()) / 86400000)) || 0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · ' +
+      (dias === 0 ? 'enviado hoje' : 'esperando há ' + dias + ' dia(s)') + '</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="lembrarQuestionario(\'' + l.id + '\')">💬 Lembrar</button>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="abrirQuestionario(\'' + l.id + '\')">📥</button></div>';
+  }).join('');
+  h += semEnviar.map(function (l) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:8px 0">' +
+      '<span class="mini" style="flex:1;text-align:left"><b>' + esc(l.nome || 'cliente') + '</b> · pagou, ainda sem questionário</span>' +
+      '<button class="btn pequeno" style="width:auto;flex:0 0 auto" onclick="prepararQuestionario(\'' + l.id + '\')">📝 Enviar</button></div>';
+  }).join('');
+  h += '</div>';
+  return h;
 }
 
 function filtrar(k) { FILTRO = k; pintarClientes(); }
@@ -5330,6 +5361,8 @@ function abrirFicha(idLead) {
 
   h += '<button class="btn zap" onclick="abrirMensagens(\'' + l.id + '\')">💬 Mandar mensagem pronta</button>';
   h += '<button class="btn" onclick="abrirCobranca(\'' + l.id + '\')">💰 Cobrar ' + esc(BD.config.meuPreco) + '</button>';
+  h += '<button class="btn" onclick="abrirQuestionario(\'' + l.id + '\')">📝 Questionário' +
+       (l.questionario ? (l.questionario.status === 'respondido' ? ' ✅' : ' ⏳') : '') + '</button>';
   h += '<button class="btn" onclick="criarSitePara(\'' + l.id + '\')">🎨 ' +
        (l.siteSlug ? 'Abrir o site dele' : 'Montar o site dele') + '</button>';
   if (l.siteUrl && zap) {
@@ -5583,6 +5616,7 @@ function marcarPago(idLead) {
   anotar(l, '✅ Pagou ' + BD.config.meuPreco);
   salvar(); fechar(); pintarClientes();
   recado('💰 Pagamento registrado!');
+  prepararQuestionario(idLead);   /* já gera o questionário sozinho */
 }
 
 /* ─────────── plano mensal ─────────── */
@@ -5661,6 +5695,340 @@ function registrarManutencao(idLead) {
   anotar(l, '🔧 ' + oQue);
   salvar(); abrirPlano(idLead);
   recado('🔧 Revisão registrada');
+}
+
+/* ══════════════════════════════════════════════════════════
+   2b. QUESTIONÁRIO — pagou o Pix, o cliente responde sozinho
+   ──────────────────────────────────────────────────────────────
+   Fluxo: você toca em "Recebi o pagamento" → a IA monta perguntas
+   pro ramo do cliente → sai um link da página questionario.html
+   com as perguntas dentro do próprio link → o cliente responde no
+   celular dele e devolve um código (LSR1...) no WhatsApp → você
+   cola o código aqui e as respostas entram na ficha do cliente.
+   ══════════════════════════════════════════════════════════ */
+
+/* base64 que cabe em link (sem +, / ou =) */
+function b64uCodificar(txt) {
+  return paraBase64(txt).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64uDecodificar(s) {
+  var b = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* Onde mora a página do questionário. Se o GitHub estiver ligado,
+   é no GitHub Pages; senão, tenta a mesma pasta onde o app está. */
+function baseQuestionario() {
+  var c = BD.config;
+  if (c.ghUsuario && c.ghRepo) {
+    return 'https://' + c.ghUsuario + '.github.io/' + c.ghRepo + '/questionario.html';
+  }
+  return location.href.replace(/[^/]*$/, '') + 'questionario.html';
+}
+
+/* Perguntas padrão — usadas quando a IA está desligada ou falhou. */
+function perguntasBasicas() {
+  return [
+    { id: 'q1', t: 'Qual o nome do negócio e o que ele faz de principal?', tipo: 'area' },
+    { id: 'q2', t: 'Quais serviços ou produtos vocês oferecem? Pode listar, com preço se quiser.', tipo: 'area' },
+    { id: 'q3', t: 'Qual o horário de funcionamento?', tipo: 'texto' },
+    { id: 'q4', t: 'Qual o endereço? (rua, número e bairro)', tipo: 'texto' },
+    { id: 'q5', t: 'Qual o ponto forte de vocês? O que têm de diferente dos outros?', tipo: 'area' },
+    { id: 'q6', t: 'Tem preferência de cor ou estilo pro site? (cores da logo, moderno, clássico…)', tipo: 'texto' },
+    { id: 'q7', t: 'Você tem fotos dos produtos e logotipo? Depois me manda aqui no WhatsApp.', tipo: 'texto' }
+  ];
+}
+
+/* A IA adapta as perguntas pro ramo de cada cliente. */
+async function perguntasComIA(l) {
+  var prompt =
+    'Você cria questionários para donos de pequenos negócios brasileiros responderem ' +
+    'antes de ganhar um site profissional.\n' +
+    'Negócio: ' + (l.nome || 'sem nome') + '\nRamo: ' + (l.categoria || 'não informado') +
+    '\nCidade: ' + (l.cidade || BD.config.cidadePadrao || 'não informada') + '\n\n' +
+    'Crie de 6 a 8 perguntas simples, em português informal e direto, específicas pra esse ramo. ' +
+    'Elas precisam descobrir: o que o negócio faz de principal, serviços ou produtos (com preço se tiver), ' +
+    'horário de funcionamento, endereço, ponto forte/diferencial, estilo visual desejado e se tem fotos e logotipo.\n' +
+    'Responda APENAS JSON válido neste formato:\n' +
+    '{"perguntas":[{"id":"q1","t":"texto da pergunta","tipo":"texto"},{"id":"q2","t":"outra pergunta","tipo":"area"}]}\n' +
+    'Use "area" só pra pergunta de resposta longa. Sem emojis.';
+  var bruto = await IA.chamarBruto(configIA(), prompt, 800);
+  var j = IA.extrairJSON(bruto);
+  var ps = (j.perguntas || []).filter(function (p) { return p && p.t; }).slice(0, 10)
+    .map(function (p, i) {
+      return { id: 'q' + (i + 1), t: String(p.t).trim(), tipo: p.tipo === 'area' ? 'area' : 'texto' };
+    });
+  if (ps.length < 4) throw new Error('a IA devolveu poucas perguntas');
+  return ps;
+}
+
+/* Gera o questionário do cliente e abre a tela de envio.
+   Chamada sozinha assim que o pagamento é registrado. */
+async function prepararQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l) return;
+  var usarIA = BD.config.iaAtiva && BD.config.iaChave;
+  if (usarIA) {
+    abrir('🤖 Montando o questionário…', '<div class="rodando-tela"><div class="roda"></div>' +
+      '<b>A IA está criando perguntas pro ramo de ' + esc(l.nome || 'cliente') + '…</b></div>');
+  }
+  var ps = perguntasBasicas(), deIA = false;
+  if (usarIA) {
+    try { ps = await perguntasComIA(l); deIA = true; }
+    catch (e) { /* IA falhou: segue com as perguntas padrão */ }
+  }
+  var payload = { v: 1, lid: l.id, neg: l.nome || '', dono: BD.config.meuWhats || '', ps: ps };
+  var link = baseQuestionario() + '#d=' + b64uCodificar(JSON.stringify(payload));
+  l.questionario = {
+    status: 'enviado', enviadoEm: hoje(), respondidoEm: null, respostas: null,
+    perguntas: ps, link: link, deIA: deIA
+  };
+  anotar(l, '📝 Questionário pronto (' + ps.length + ' perguntas' + (deIA ? ', feitas pela IA' : ' padrão') + ')');
+  salvar();
+  abrirEnviarQuestionario(idLead);
+}
+
+function mensagemDoQuestionario(l) {
+  return 'Oi, tudo bem? Aqui é o ' + (BD.config.meuNome || 'Nataniel') + '! 🎉\n\n' +
+    'Pagamento recebido, muito obrigado! Agora me ajuda com umas perguntas rápidas ' +
+    'pra eu montar o site do seu jeito. É só tocar no link:\n\n' +
+    l.questionario.link + '\n\n' +
+    'São 2 minutinhos. Qualquer dúvida é só me chamar aqui.';
+}
+
+function abrirEnviarQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario) return;
+  var q = l.questionario;
+  var n = numeroZap(l.telefone);
+
+  var h = '<div class="aviso bom"><b>✅ Pagamento registrado — questionário pronto!</b><br>' +
+    (q.deIA ? 'A IA criou as perguntas pro ramo do cliente.' : 'Usei as perguntas padrão (a IA está desligada ou falhou).') + '</div>';
+  if (!BD.config.meuWhats) {
+    h += '<div class="aviso alerta"><b>Falta o seu WhatsApp em Ajustes.</b> Sem ele, o cliente até responde, ' +
+      'mas as respostas não voltam pra você. Coloque seu número e gere o questionário de novo.</div>';
+  }
+  h += '<label>Link do questionário</label><div class="codigo" style="font-size:11px">' + esc(q.link) + '</div>';
+  h += '<button class="btn" onclick="copiar(' + JSON.stringify(q.link) + ')">📋 Copiar link</button>';
+
+  if (n) {
+    var msg = mensagemDoQuestionario(l);
+    h += '<label>Mandar no WhatsApp</label>' +
+      '<textarea id="msgTexto" style="min-height:150px" oninput="atualizarLinkZap(\'' + n + '\')">' + esc(msg) + '</textarea>';
+    h += '<a class="btn zap" id="linkZap" href="' + linkZap(n, msg) + '" target="_blank" rel="noopener" ' +
+      'onclick="return questionarioEnviado(\'' + l.id + '\')">💬 Enviar pro cliente</a>';
+  } else {
+    h += '<div class="aviso alerta">Cliente sem telefone com DDD — copie o link acima e mande por onde preferir.</div>';
+  }
+  h += '<div id="qDisponivel"></div>';
+  h += '<button class="btn" onclick="fechar()">Fechar</button>';
+  abrir('📝 Questionário de ' + esc(l.nome || 'cliente'), h);
+  conferirPaginaQuestionario();
+}
+
+function questionarioEnviado(idLead) {
+  var l = acharLead(idLead);
+  if (l) { anotar(l, '📤 Questionário enviado no WhatsApp'); salvar(); }
+  return true;
+}
+
+/* Aviso caso a página ainda não esteja publicada no GitHub Pages. */
+async function conferirPaginaQuestionario() {
+  var alvo = $('#qDisponivel');
+  if (!alvo) return;
+  try {
+    var r = await fetchLimitado(baseQuestionario(), { method: 'HEAD' }, 8000);
+    if (r.status === 404) {
+      alvo.innerHTML = '<div class="aviso alerta">⚠️ A página do questionário ainda não está no ar no seu GitHub. ' +
+        'O arquivo questionario.html precisa ser publicado junto com o app para o link abrir.</div>';
+    }
+  } catch (e) { /* sem internet ou bloqueio de navegador: não atrapalha */ }
+}
+
+/* Central do questionário na ficha do cliente: mostra o estado
+   (sem / esperando / respondido) e resolve a partir dali. */
+function abrirQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l) return;
+  var q = l.questionario;
+  var h = '';
+
+  if (!q) {
+    h += '<p class="ajuda">Depois que o cliente paga, você gera um link de perguntas. Ele responde sozinho ' +
+      'no celular dele e as respostas voltam pra cá. Se a IA estiver ligada, ela adapta as perguntas pro ramo dele.</p>';
+    h += '<button class="btn principal" onclick="prepararQuestionario(\'' + l.id + '\')">🪄 Gerar questionário</button>';
+    abrir('📝 Questionário', h);
+    return;
+  }
+
+  if (q.status === 'respondido') {
+    h += '<div class="aviso bom"><b>✅ Respondeu em ' + dataCurta(q.respondidoEm) + '</b></div>';
+    h += (q.respostas || []).map(function (r) {
+      return '<div style="margin-bottom:10px"><b style="font-size:13px">' + esc(r.pergunta) + '</b>' +
+        '<div class="codigo" style="margin-top:4px">' + esc(r.resposta || '(não respondeu)') + '</div></div>';
+    }).join('');
+    h += '<button class="btn principal" onclick="fechar();rascunhoDasRespostas(\'' + l.id + '\')">🪄 Montar o site com essas respostas</button>';
+    h += '<button class="btn" onclick="prepararQuestionario(\'' + l.id + '\')">🔄 Gerar questionário de novo</button>';
+    abrir('📝 Respostas de ' + esc(l.nome || 'cliente'), h);
+    return;
+  }
+
+  /* status === 'enviado' */
+  h += '<div class="aviso alerta">Enviado em ' + dataCurta(q.enviadoEm) + ' — ainda sem respostas.</div>';
+  h += '<label>Link</label><div class="codigo" style="font-size:11px">' + esc(q.link) + '</div>';
+  h += '<button class="btn" onclick="copiar(' + JSON.stringify(q.link) + ')">📋 Copiar link</button>';
+  var n = numeroZap(l.telefone);
+  if (n) {
+    h += botaoLink(linkZap(n, mensagemLembrete(l)), '💬 Lembrar o cliente', 'zap',
+                   "questionarioEnviado('" + l.id + "')");
+  }
+  h += '<button class="btn principal" onclick="receberRespostas(\'' + l.id + '\')">📥 Ele já respondeu? Colar respostas aqui</button>';
+  h += '<button class="btn" onclick="prepararQuestionario(\'' + l.id + '\')">🔄 Gerar questionário de novo</button>';
+  abrir('📝 Questionário de ' + esc(l.nome || 'cliente'), h);
+}
+
+function dataCurta(iso) {
+  var d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+}
+
+function mensagemLembrete(l) {
+  return 'Oi! Passando pra lembrar do questionário do seu site — são só 2 minutinhos:\n\n' +
+    l.questionario.link + '\n\n' +
+    'Assim que você responder eu já começo a montar. 😊';
+}
+
+/* Atalho do painel de clientes: cobra quem ainda não respondeu. */
+function lembrarQuestionario(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario) return;
+  var n = numeroZap(l.telefone);
+  if (!n) { abrirQuestionario(idLead); return; }
+  anotar(l, '🔔 Lembrete do questionário enviado');
+  salvar();
+  abrirLink(linkZap(n, mensagemLembrete(l)));
+}
+
+/* Cola aqui a mensagem que o cliente devolveu no WhatsApp. */
+function receberRespostas(idLead) {
+  var l = acharLead(idLead);
+  var h = '<p class="ajuda">Quando o cliente responder, chega no seu WhatsApp uma mensagem com um código ' +
+    'que começa com <b>LSR1.</b> — pode vir no meio da conversa, não tem problema. Cole a mensagem inteira aqui.</p>';
+  h += '<textarea id="qCola" style="min-height:140px" placeholder="cole aqui a mensagem do cliente"></textarea>';
+  h += '<button class="btn principal" onclick="importarRespostas(\'' + l.id + '\')">📥 Importar respostas</button>';
+  h += '<div id="qImportaErro"></div>';
+  abrir('📥 Receber respostas' + (l && l.nome ? ' de ' + esc(l.nome) : ''), h);
+}
+
+function importarRespostas(idLead) {
+  var l = acharLead(idLead);
+  var alvo = $('#qImportaErro');
+  var texto = $('#qCola') ? $('#qCola').value : '';
+  var m = String(texto).match(/LSR1\.([A-Za-z0-9_-]+)/);
+  if (!m) {
+    alvo.innerHTML = '<div class="aviso ruim">Não achei o código LSR1 na mensagem. Confira se colou tudo.</div>';
+    return;
+  }
+  var d;
+  try { d = JSON.parse(b64uDecodificar(m[1])); }
+  catch (e) {
+    alvo.innerHTML = '<div class="aviso ruim">Código incompleto ou corrompido — peça pro cliente copiar de novo.</div>';
+    return;
+  }
+  /* se o código foi gerado pra outro cliente, avisa mas deixa importar */
+  if (d.lid && d.lid !== l.id && acharLead(d.lid)) {
+    alvo.innerHTML = '<div class="aviso alerta">Esse código era do cliente <b>' + esc(acharLead(d.lid).nome) +
+      '</b> — estou importando na ficha aberta mesmo assim.</div>';
+  }
+  var r = d.r || {};
+  var ps = (l.questionario && l.questionario.perguntas) || [];
+  var respostas = ps.map(function (p) {
+    return { id: p.id, pergunta: p.t, resposta: String(r[p.id] == null ? '' : r[p.id]).trim() };
+  }).filter(function (x) { return x.resposta; });
+  Object.keys(r).forEach(function (k) {
+    if (!ps.some(function (p) { return p.id === k; }) && String(r[k]).trim()) {
+      respostas.push({ id: k, pergunta: '(pergunta extra)', resposta: String(r[k]).trim() });
+    }
+  });
+  if (!respostas.length) {
+    alvo.innerHTML = '<div class="aviso ruim">O código veio, mas sem respostas dentro.</div>';
+    return;
+  }
+  if (d.contato) l.contato = d.contato;
+  if (!l.questionario) l.questionario = { perguntas: ps, link: '' };
+  l.questionario.status = 'respondido';
+  l.questionario.respondidoEm = hoje();
+  l.questionario.respostas = respostas;
+  anotar(l, '📥 Respostas do questionário importadas (' + respostas.length + ')');
+  salvar();
+  fechar();
+  abrirQuestionario(idLead);
+  recado('📥 Respostas salvas!');
+}
+
+/* Pega as respostas e deixa o site do cliente pré-montado:
+   a IA transforma as respostas em textos, serviços e FAQ. */
+async function rascunhoDasRespostas(idLead) {
+  var l = acharLead(idLead);
+  if (!l || !l.questionario || !l.questionario.respostas) return;
+  criarSitePara(idLead);   /* prepara o cfg e vai pra tela do site */
+
+  if (!(BD.config.iaAtiva && BD.config.iaChave)) {
+    recado('Site aberto — ligue a IA pra ela preencher os textos sozinha.');
+    return;
+  }
+
+  abrir('🪄 A IA está lendo as respostas…', '<div class="rodando-tela"><div class="roda"></div>' +
+    '<b>Transformando respostas em site…</b></div>');
+
+  try {
+    var qa = l.questionario.respostas.map(function (r) {
+      return 'Pergunta: ' + r.pergunta + '\nResposta: ' + r.resposta;
+    }).join('\n\n');
+    var paletas = Object.keys(SiteGen.PALETAS), fontes = Object.keys(SiteGen.FONTES);
+    var prompt =
+      'Um cliente respondeu um questionário para ganhar um site. Respostas dele:\n\n' + qa + '\n\n' +
+      'Negócio: ' + (l.nome || cfg.nome) + '. Cidade: ' + (l.cidade || cfg.cidade || '') + '.\n' +
+      'Monte o conteúdo do site em português do Brasil, com texto natural e sem frases genéricas.\n' +
+      'Responda APENAS JSON válido:\n' +
+      '{"titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
+      '"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
+      '"servicos":[{"nome":"...","descricao":"uma frase"}],' +
+      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"horario":"horário por extenso",' +
+      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '"}\n' +
+      'Inclua de 4 a 6 serviços e de 4 a 5 perguntas frequentes, baseados SÓ nas respostas acima. ' +
+      'Se uma cor foi pedida nas respostas, escolha a paleta mais parecida.';
+    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2200));
+
+    if (j.titulo) cfg.titulo = String(j.titulo);
+    if (j.subtitulo) cfg.subtitulo = String(j.subtitulo);
+    if (j.sobre) cfg.sobreTexto = String(j.sobre);
+    if (Array.isArray(j.servicos) && j.servicos.length) {
+      cfg.servicos = j.servicos.filter(function (s) { return s && s.nome; })
+        .map(function (s) { return { nome: String(s.nome), descricao: String(s.descricao || '') }; });
+    }
+    if (Array.isArray(j.faq) && j.faq.length) {
+      cfg.faq = j.faq.filter(function (f) { return f && f.p; })
+        .map(function (f) { return { p: String(f.p), r: String(f.r || '') }; });
+    }
+    if (j.horario) cfg.horario = String(j.horario);
+    if (j.paleta && SiteGen.PALETAS[j.paleta]) cfg.paleta = j.paleta;
+    if (j.fonte && SiteGen.FONTES[j.fonte]) cfg.fonte = j.fonte;
+
+    salvarRascunho();
+    anotar(l, '🪄 Site pré-montado a partir das respostas do questionário');
+    salvar();
+    fechar();
+    pintarSite();
+    recado('🪄 Pronto! Revise e publique.');
+  } catch (e) {
+    fechar();
+    recado('A IA não respondeu agora — o formulário está aberto pra preencher na mão.');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -6385,6 +6753,8 @@ function pintarAjustes() {
 
   h += '<div class="bloco"><h2>👤 Você</h2>';
   h += '<label>Seu nome (aparece nas mensagens)</label><input id="aNome" value="' + esc(c.meuNome) + '">';
+  h += '<label>Seu WhatsApp (com DDD)</label><input id="aWhats" inputmode="numeric" value="' + esc(c.meuWhats) + '" placeholder="66999998888">';
+  h += '<p class="ajuda mini">É pra onde o cliente envia as respostas do questionário depois que paga o Pix.</p>';
   h += '<div class="dupla">' +
     '<div><label>Preço do site</label><input id="aPreco" value="' + esc(c.meuPreco) + '"></div>' +
     '<div><label>Plano por mês</label><input id="aPlano" value="' + esc(c.planoPreco) + '"></div>' +
@@ -6460,6 +6830,7 @@ function pintarAjustes() {
 function salvarAjustes() {
   var c = BD.config;
   c.meuNome = $('#aNome').value.trim() || 'Nataniel';
+  c.meuWhats = soNumero($('#aWhats').value);
   c.meuPreco = $('#aPreco').value.trim() || 'R$ 97';
   c.planoPreco = $('#aPlano').value.trim() || 'R$ 70';
   c.cidadePadrao = $('#aCidade').value.trim();
