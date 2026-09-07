@@ -4605,7 +4605,7 @@ var VAZIO = {
     pixCodigo: '00020101021126360014br.gov.bcb.pix0114+55669995125755204000053039865802BR5920NATANIEL DA S SANTOS6012RONDONOPOLIS62070503***6304FF74', pixChave: '', pixNome: '', pixCidade: '',
     iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: false,
     cidadePadrao: 'Rondonópolis',
-    geoapifyChave: '', gmapsChave: '',
+    geoapifyChave: 'aec5b014ccc54d76be718a03ab50c632', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
   },
   leads: [], sites: []
@@ -4622,6 +4622,7 @@ function carregar() {
     /* dados que já vêm com o app: completam aparelhos com config antiga vazia */
     if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
     if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
+    if (!d.config.geoapifyChave) d.config.geoapifyChave = VAZIO.config.geoapifyChave;
     d.leads = d.leads || []; d.sites = d.sites || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
