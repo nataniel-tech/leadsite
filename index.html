@@ -129,6 +129,44 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .bloco > h2 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 7px; }
 .bloco > p.ajuda { font-size: 13px; color: var(--fraco); margin: 0 0 6px; }
 
+
+/* ─────────── construtor de sites ─────────── */
+.site-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.site-resumo div {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 12px; padding: 12px 10px;
+}
+.site-resumo b { display: block; font-size: 14px; color: var(--texto); }
+.site-resumo span { display: block; font-size: 11px; color: var(--fraco); margin-top: 3px; }
+.modelo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.modelo-site {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 14px; padding: 13px;
+  min-height: 110px; cursor: pointer;
+}
+.modelo-site.on { border-color: var(--verde); box-shadow: inset 0 0 0 1px #10b98155; }
+.modelo-site b { display: block; font-size: 14px; margin-bottom: 5px; }
+.modelo-site p { margin: 0; font-size: 12px; color: var(--fraco); }
+.modelo-site .mini { margin-top: 8px; display: block; }
+.site-passo {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+}
+.site-passo h3 { margin: 0 0 5px; font-size: 15px; display:flex; align-items:center; gap:8px; }
+.site-passo p { margin: 0; font-size: 12.5px; color: var(--fraco); }
+.lista-preview { display: grid; gap: 8px; margin-top: 10px; }
+.lista-preview div {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #0b1220; border: 1px solid #334155; border-radius: 12px; padding: 11px 12px;
+}
+.lista-preview i { font-style: normal; font-size: 18px; line-height: 1.1; }
+.lista-preview b { display: block; font-size: 13px; margin-bottom: 2px; }
+.lista-preview span { font-size: 12px; color: var(--fraco); }
+.area-mini { min-height: 72px; }
+@media (max-width: 520px) {
+  .modelo-grade, .site-resumo { grid-template-columns: 1fr; }
+}
+
 /* ─────────── selos ─────────── */
 .selo {
   display: inline-block; font-size: 11px; font-weight: 700;
@@ -3393,14 +3431,14 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     }).filter(function (s) { return s.titulo; });
   }
   function normalizarSecoes(v) {
-    const base = { numeros:false, sobre:false, servicos:false, galeria:false, equipe:false, depoimentos:false, faq:false, horario:false, contato:false };
+    const base = { numeros:false, sobre:false, processo:false, servicos:false, galeria:false, equipe:false, depoimentos:false, faq:false, horario:false, contato:false };
     if (Array.isArray(v)) {
       v.forEach(function (k) { k = String(k || '').toLowerCase().trim(); if (k in base) base[k] = true; });
     } else if (v && typeof v === 'object') {
       Object.keys(base).forEach(function (k) { base[k] = !!v[k]; });
     }
     if (!Object.keys(base).some(function (k) { return base[k]; })) {
-      ['numeros','sobre','servicos','depoimentos','faq','contato'].forEach(function (k) { base[k] = true; });
+      ['numeros','sobre','processo','servicos','depoimentos','faq','contato'].forEach(function (k) { base[k] = true; });
     }
     return base;
   }
@@ -3414,6 +3452,11 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
       var m = linha.match(/^([^:]+):\s*(.+)$/);
       return m ? { dia: m[1].trim(), hora: m[2].trim() } : { dia: 'Atendimento', hora: linha };
     }).filter(function (h) { return h.dia && h.hora; });
+  }
+  function normalizarEtapas(v) {
+    return linhas(v).map(function (linha, i) {
+      return { titulo: linha, detalhe: i === 0 ? 'primeiro contato' : i === 1 ? 'entendimento do pedido' : i === 2 ? 'fechamento do atendimento' : 'etapa do processo' };
+    }).filter(function (e) { return e.titulo; }).slice(0, 5);
   }
 
   const I = {
@@ -3477,6 +3520,8 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const horarios  = normalizarHorarios(c.horarios || c.horario);
     const difs      = linhas(c.diferenciais);
     const heroDestaques = linhas(c.heroDestaques).slice(0, 4);
+    const etapasVenda = normalizarEtapas(c.etapasVenda || c.processo || []);
+    const tipoSite = String(c.tipoSite || 'conversao');
     let pontosHero = (difs.length
       ? difs
       : servicos.map(s => s.titulo + (s.preco ? ' · ' + s.preco : ''))).slice(0, 4);
@@ -3485,6 +3530,8 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const textoCta = c.textoCta || 'Chamar no WhatsApp';
     const ctaTitulo = c.ctaTitulo || 'Atendimento rápido pelo WhatsApp';
     const ctaTexto = c.ctaTexto || c.servicosSub || c.slogan || 'Tire dúvidas, peça preço e receba atendimento direto da equipe.';
+    const processoTitulo = c.processoTitulo || (tipoSite === 'agenda' ? 'Como agendar' : tipoSite === 'cardapio' ? 'Como pedir' : 'Como funciona');
+    const processoSub = c.processoSub || (c.objetivoSite || 'Veja o caminho mais rápido para falar com a equipe e resolver o que você precisa.');
     const contatoRapido = [
       c.endereco ? String(c.endereco).split(' - ').slice(-1)[0] : '',
       horarios.length ? (horarios[0].dia + ': ' + horarios[0].hora) : '',
@@ -3502,6 +3549,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
 
     const nav = [];
     if (sec.sobre)       nav.push(['#sobre','Sobre']);
+    if (sec.processo && etapasVenda.length) nav.push(['#processo', processoTitulo]);
     if (sec.servicos && servicos.length) nav.push(['#servicos', c.rotuloServicos || 'Serviços']);
     if (sec.galeria && galeria.length)   nav.push(['#galeria','Galeria']);
     if (sec.equipe && equipe.length)     nav.push(['#equipe','Equipe']);
@@ -3665,6 +3713,14 @@ section{padding:${est.sec} 0;position:relative}
 .plist{list-style:none;margin-top:26px;display:grid;gap:13px}
 .plist li{display:flex;gap:13px;align-items:flex-start;font-weight:620}
 .plist svg{color:var(--p);width:21px;height:21px;margin-top:4px}
+
+/* ── processo ── */
+.proc{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.proc-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:28px;position:relative;overflow:hidden}
+.proc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--p),var(--a))}
+.proc-num{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:${pal.p}14;color:var(--p);font-weight:800;margin-bottom:16px}
+.proc-card h3{font-size:1.08rem;margin-bottom:8px}
+.proc-card p{color:var(--mute);font-size:.95rem}
 
 /* ── cards ── */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:26px}
@@ -3864,6 +3920,24 @@ ${sec.sobre ? `
     ${waLink ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta || 'Falar conosco')}</span></a></div>` : ''}
    </div>
    ${c.sobreImagem ? `<div class="foto"${rv}><img src="${attr(c.sobreImagem)}" alt="Ambiente da ${attr(nome)}" loading="lazy" decoding="async"></div>` : ''}
+  </div>
+ </div>
+</section>` : ''}
+
+${sec.processo && etapasVenda.length ? `
+<section id="processo" class="alt">
+ <div class="wrap">
+  <div class="cab"${rv}>
+   <div class="kick">Passo a passo</div>
+   <h2>${esc(processoTitulo)}</h2>
+   <p>${esc(processoSub)}</p>
+  </div>
+  <div class="proc">
+   ${etapasVenda.map((et, i) => `<article class="proc-card"${rv}>
+    <span class="proc-num">${i + 1}</span>
+    <h3>${esc(et.titulo)}</h3>
+    <p>${esc(et.detalhe || '')}</p>
+   </article>`).join('\n   ')}
   </div>
  </div>
 </section>` : ''}
@@ -4208,6 +4282,7 @@ const REGRAS = `COMO ESCREVER (siga à risca):
    - heroDestaques: 3 frases bem curtas para dar vida ao hero
    - textoCta: texto do botão principal
    - ctaTitulo e ctaTexto: chamada final da seção de contato
+   - etapasVenda: 3 passos curtos explicando como a pessoa fecha pelo site
 
 13. Se faltarem dados, escreva de forma elegante sem denunciar que faltou informação.`;
 
@@ -4215,12 +4290,15 @@ function montarPrompt(d, correcoes) {
   const dados = [
     ['Nome do negócio', d.nome],
     ['Ramo', d.segmento],
+    ['Modelo do site', d.tipoSite],
+    ['Objetivo do site', d.objetivoSite],
     ['Cidade', d.cidade],
     ['O que vende / faz', d.oQueFaz],
     ['Diferenciais', d.diferenciais],
     ['Público', d.publico],
     ['Tom de voz desejado', d.tom],
     ['Serviços já listados', Array.isArray(d.servicos) ? d.servicos.join('; ') : d.servicos],
+    ['Etapas do atendimento', d.etapasVenda],
     ['Anos de mercado', d.anos],
     ['Observações do dono', d.observacoes]
   ].filter(([, v]) => v).map(([k, v]) => `- ${k}: ${v}`).join('\n');
@@ -4247,6 +4325,7 @@ Responda SOMENTE com um JSON válido, sem comentários e sem texto fora do JSON:
   "sobre": "2 parágrafos curtos separados por \\n\\n, no máximo 600 caracteres no total",
   "servicos": [{"titulo": "nome curto", "descricao": "1 frase concreta", "preco": "faixa de preço somente se foi informada"}],
   "faq": [{"p": "pergunta que o cliente realmente faria", "r": "resposta objetiva de 1 a 2 frases"}],
+  "etapasVenda": ["3 passos curtos mostrando como funciona"],
   "metaDescricao": "resumo de até 155 caracteres para o Google",
   "palavras": "6 a 10 palavras-chave separadas por vírgula, incluindo a cidade",
   "textoCta": "texto do botão principal com 2 a 4 palavras",
@@ -4276,6 +4355,7 @@ function problemas(t) {
   if ((t.sobre || '').length < 120) p.push('O texto "sobre" ficou curto demais.');
   if ((t.heroSubtitulo || '').length < 40) p.push('O subtítulo ficou curto demais.');
   if ((t.heroDestaques || []).length < 2) p.push('Traga pelo menos 3 destaques curtos para o topo.');
+  if ((t.etapasVenda || []).length < 2) p.push('Traga 3 passos curtos explicando como funciona.');
   if ((t.servicos || []).length < 3) p.push('Traga pelo menos 4 serviços.');
   if ((t.faq || []).length < 3) p.push('Traga pelo menos 4 perguntas frequentes.');
   if (/\bemoji|😀|🙂|🎉|🔥/.test(tudo)) p.push('Tirou os emojis dos textos do site.');
@@ -4490,6 +4570,7 @@ function montarSaida(j) {
     heroSubtitulo: txt(j.heroSubtitulo, 220),
     heroDestaques: lista(j.heroDestaques).slice(0, 4).map(x => txt(x, 40)).filter(Boolean),
     sobre: txt(j.sobre, 1200),
+    etapasVenda: lista(j.etapasVenda).slice(0, 5).map(x => txt(x, 70)).filter(Boolean),
     metaDescricao: txt(j.metaDescricao, 180),
     palavras: txt(j.palavras, 240),
     textoCta: txt(j.textoCta, 50),
@@ -4560,8 +4641,11 @@ Antes de escrever qualquer texto, defina a estratégia do site deste negócio.
 NEGÓCIO:
 - Nome: ${d.nome || '(sem nome)'}
 - Ramo: ${d.segmento || '(não informado)'}
+- Modelo do site: ${d.tipoSite || '(não informado)'}
+- Objetivo do site: ${d.objetivoSite || '(não informado)'}
 - Cidade: ${d.cidade || '(não informada)'}
 - O que faz: ${d.oQueFaz || '(não informado)'}
+- Etapas do atendimento: ${d.etapasVenda || '(não informado)'}
 - Observações do dono: ${d.observacoes || '(nenhuma)'}
 
 Pense em quem mora nessa cidade e realmente compra desse tipo de negócio.
@@ -4574,7 +4658,7 @@ Responda SOMENTE com JSON:
   "objecoes": ["3 dúvidas ou medos que fazem a pessoa NÃO comprar"],
   "provas": ["3 coisas que o site deve mostrar para vencer essas objeções"],
   "tom": "como o texto deve soar, em poucas palavras",
-  "secoesRecomendadas": ["escolha entre: numeros, sobre, servicos, galeria, equipe, depoimentos, faq, horario, contato"],
+  "secoesRecomendadas": ["escolha entre: numeros, sobre, processo, servicos, galeria, equipe, depoimentos, faq, horario, contato"],
   "erroComum": "o erro que sites desse ramo costumam cometer e que vamos evitar"
 }`, 900);
 
@@ -4656,10 +4740,12 @@ Responda SOMENTE com JSON:
 async function revisor(cfg, d, estrategia, textos, arte) {
   const resumo = `NEGÓCIO: ${d.nome || ''} — ${d.segmento || ''} em ${d.cidade || ''}
 PROMESSA: ${estrategia.promessa || '(não definida)'}
+OBJETIVO: ${d.objetivoSite || '(não definido)'}
 CHAMADA: ${textos.heroTitulo || ''}
 SUBTÍTULO: ${textos.heroSubtitulo || ''}
 SOBRE: ${(textos.sobre || '').slice(0, 400)}
 SERVIÇOS: ${(textos.servicos || []).map(s => (s.titulo || s.nome || '') + ' — ' + s.descricao).join(' | ').slice(0, 600)}
+COMO FUNCIONA: ${(textos.etapasVenda || []).join(' | ').slice(0, 300)}
 PERGUNTAS: ${(textos.faq || []).map(f => f.p).join(' | ').slice(0, 400)}
 VISUAL: paleta ${arte.paleta || '(padrão)'}, fonte ${arte.fonte || '(padrão)'}, estilo ${arte.estilo || '(padrão)'}
 DADOS QUE O DONO NÃO FORNECEU: ${camposVazios(d).join(', ') || 'nenhum'}`;
@@ -6736,10 +6822,10 @@ async function rascunhoDasRespostas(idLead) {
       '{"badge":"selo curto","titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
       '"heroDestaques":["3 frases curtas"],"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
       '"servicos":[{"titulo":"...","descricao":"uma frase","preco":"só se foi informado"}],' +
-      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"horario":"horário por extenso",' +
+      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"etapasVenda":["3 passos curtos"],"horario":"horário por extenso",' +
       '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '",' +
       '"textoCta":"texto do botão principal","ctaTitulo":"título curto da chamada final","ctaTexto":"frase curta para fechar o contato"}\n' +
-      'Inclua de 4 a 6 serviços e de 4 a 5 perguntas frequentes, baseados SÓ nas respostas acima. ' +
+      'Inclua de 4 a 6 serviços, de 4 a 5 perguntas frequentes e 3 passos curtos de atendimento, baseados SÓ nas respostas acima. ' +
       'Se uma cor foi pedida nas respostas, escolha a paleta mais parecida.';
     var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2800));
 
@@ -6747,6 +6833,7 @@ async function rascunhoDasRespostas(idLead) {
     if (j.titulo) cfg.titulo = String(j.titulo);
     if (j.subtitulo) cfg.subtitulo = String(j.subtitulo);
     if (Array.isArray(j.heroDestaques) && j.heroDestaques.length) cfg.heroDestaques = j.heroDestaques;
+    if (Array.isArray(j.etapasVenda) && j.etapasVenda.length) cfg.etapasVenda = j.etapasVenda;
     if (j.sobre) cfg.sobreTexto = String(j.sobre);
     if (Array.isArray(j.servicos) && j.servicos.length) {
       cfg.servicos = normalizarListaServicos(j.servicos);
@@ -6782,23 +6869,205 @@ var LEAD_DO_SITE = null;
 var ULTIMO_TURBO = null;
 var ETAPAS_TURBO = null;   // fica na tela mesmo depois que o time termina
 
+var TIPOS_SITE = {
+  conversao: {
+    rotulo: '💬 Captação',
+    desc: 'Feito para chamar no WhatsApp e transformar visita em conversa rápido.',
+    badge: 'Resposta rápida no WhatsApp',
+    cta: 'Pedir orçamento',
+    ctaTitulo: 'Fale com a equipe hoje',
+    ctaTexto: 'Mande sua dúvida, peça preço e receba resposta sem enrolação.',
+    destaques: ['Resposta rápida', 'Atendimento direto', 'Orçamento fácil'],
+    etapas: ['Chame no WhatsApp', 'Explique o que você precisa', 'Receba o orçamento e feche'],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'depoimentos', 'faq', 'contato']
+  },
+  cardapio: {
+    rotulo: '🍽️ Cardápio',
+    desc: 'Ideal para restaurante, lanchonete, padaria e delivery que quer vender no celular.',
+    badge: 'Peça sem complicação',
+    cta: 'Fazer pedido',
+    ctaTitulo: 'Peça pelo WhatsApp',
+    ctaTexto: 'Veja o que a casa faz hoje e mande seu pedido em poucos toques.',
+    destaques: ['Pedido rápido', 'Entrega ou retirada', 'Cardápio no celular'],
+    etapas: ['Escolha o que vai pedir', 'Chame no WhatsApp', 'Receba ou retire no combinado'],
+    secoes: ['numeros', 'servicos', 'processo', 'depoimentos', 'horario', 'faq', 'contato']
+  },
+  agenda: {
+    rotulo: '📅 Agendamento',
+    desc: 'Para salão, clínica, oficina e serviços que dependem de horário ou avaliação.',
+    badge: 'Agende seu atendimento',
+    cta: 'Agendar agora',
+    ctaTitulo: 'Reserve seu horário',
+    ctaTexto: 'Fale com a equipe, tire dúvidas e combine o melhor horário para você.',
+    destaques: ['Agendamento fácil', 'Atendimento organizado', 'Confirmação rápida'],
+    etapas: ['Chame no WhatsApp', 'Escolha o melhor horário', 'Confirme seu atendimento'],
+    secoes: ['sobre', 'processo', 'servicos', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
+  },
+  vitrine: {
+    rotulo: '🛍️ Vitrine',
+    desc: 'Para mostrar produtos, coleções, portfólio e chamar para orçamento.',
+    badge: 'Catálogo no celular',
+    cta: 'Ver catálogo',
+    ctaTitulo: 'Peça seu orçamento',
+    ctaTexto: 'Conheça os produtos, escolha o que gostou e fale com a loja pelo WhatsApp.',
+    destaques: ['Produtos em destaque', 'Fotos e catálogo', 'Atendimento pelo WhatsApp'],
+    etapas: ['Veja os destaques', 'Escolha o que gostou', 'Fale com a loja no WhatsApp'],
+    secoes: ['numeros', 'sobre', 'servicos', 'galeria', 'depoimentos', 'faq', 'contato']
+  },
+  premium: {
+    rotulo: '🏛️ Institucional',
+    desc: 'Para passar confiança, explicar bem o serviço e valorizar a marca.',
+    badge: 'Presença forte na internet',
+    cta: 'Falar com a equipe',
+    ctaTitulo: 'Vamos conversar?',
+    ctaTexto: 'Entenda como o negócio funciona e fale com a equipe para tirar dúvidas.',
+    destaques: ['Marca mais forte', 'Mais confiança', 'Contato direto'],
+    etapas: ['Conheça o serviço', 'Tire suas dúvidas', 'Fale com a equipe'],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'equipe', 'depoimentos', 'faq', 'contato']
+  }
+};
+
+function tipoSiteSugerido(perfil) {
+  return {
+    restaurante: 'cardapio', lanchonete: 'cardapio', padaria: 'cardapio', bar_cafe: 'cardapio',
+    salao: 'agenda', clinica: 'agenda', academia: 'agenda', oficina: 'agenda', hotel: 'agenda', veterinaria: 'agenda',
+    roupas: 'vitrine', moveis: 'vitrine', eletronicos: 'vitrine', papelaria: 'vitrine', floricultura: 'vitrine', autopecas: 'vitrine', mercado: 'vitrine',
+    advocacia: 'premium', imobiliaria: 'premium', escola: 'premium', construcao: 'premium',
+    farmacia: 'conversao', generico: 'conversao'
+  }[perfil] || 'conversao';
+}
+
+function modeloDoSite(tipo) {
+  return TIPOS_SITE[tipo] || TIPOS_SITE.conversao;
+}
+
+function secoesAtivasDoSite() {
+  if (!cfg || !cfg.secoes) return [];
+  if (Array.isArray(cfg.secoes)) return cfg.secoes.slice();
+  return Object.keys(cfg.secoes).filter(function (k) { return cfg.secoes[k]; });
+}
+
+function rotuloSecaoSite(k) {
+  return {
+    numeros: 'números', sobre: 'sobre', processo: 'como funciona', servicos: 'serviços',
+    galeria: 'galeria', equipe: 'equipe', depoimentos: 'depoimentos', faq: 'dúvidas',
+    horario: 'horário', contato: 'contato'
+  }[k] || k;
+}
+
+function resumirLista(lista, qtd) {
+  return (Array.isArray(lista) ? lista : []).slice(0, qtd || 3).join(' · ');
+}
+
+function preencherSeVazio(chave, valor) {
+  if (!cfg[chave]) cfg[chave] = valueOf(valor);
+}
+function valueOf(v) { return typeof v === 'function' ? v() : v; }
+
+function aplicarTipoSite(tipo, preservar) {
+  if (!cfg) cfg = cfgNovo();
+  var modelo = modeloDoSite(tipo);
+  cfg.tipoSite = tipo;
+  cfg.secoes = modelo.secoes.slice();
+  cfg.badge = (preservar && cfg.badge) ? cfg.badge : modelo.badge;
+  cfg.textoCta = (preservar && cfg.textoCta) ? cfg.textoCta : modelo.cta;
+  cfg.ctaTitulo = (preservar && cfg.ctaTitulo) ? cfg.ctaTitulo : modelo.ctaTitulo;
+  cfg.ctaTexto = (preservar && cfg.ctaTexto) ? cfg.ctaTexto : modelo.ctaTexto;
+  if (!preservar || !Array.isArray(cfg.heroDestaques) || !cfg.heroDestaques.length) cfg.heroDestaques = modelo.destaques.slice();
+  if (!preservar || !Array.isArray(cfg.etapasVenda) || !cfg.etapasVenda.length) cfg.etapasVenda = modelo.etapas.slice();
+}
+
+function montarEstruturaBase() {
+  lerFormulario();
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil);
+  var modelo = modeloDoSite(cfg.tipoSite);
+  var lead = LEAD_DO_SITE ? acharLead(LEAD_DO_SITE) : null;
+  var servs = normalizarListaServicos(cfg.servicos || []);
+
+  aplicarTipoSite(cfg.tipoSite, true);
+
+  if (!cfg.badge) cfg.badge = cfg.cidade ? 'Atendimento em ' + cfg.cidade : modelo.badge;
+  if (!cfg.objetivoSite) cfg.objetivoSite = modelo.desc;
+  if (!cfg.textoCta) cfg.textoCta = modelo.cta;
+  if (!cfg.ctaTitulo) cfg.ctaTitulo = modelo.ctaTitulo;
+  if (!cfg.ctaTexto) cfg.ctaTexto = modelo.ctaTexto;
+  if (!cfg.titulo) cfg.titulo = cfg.nome || 'Seu próximo cliente pode te achar aqui';
+  if (!cfg.subtitulo) {
+    var resumoServ = servs.slice(0, 3).map(function (s) { return s.titulo; }).join(', ');
+    cfg.subtitulo = resumoServ
+      ? resumoServ + (cfg.cidade ? ' em ' + cfg.cidade : '') + '.'
+      : modelo.desc;
+  }
+  if (!cfg.sobreTexto) {
+    cfg.sobreTexto = lead && lead.obs
+      ? lead.obs
+      : 'Atendimento direto, apresentação clara do que o negócio faz e um jeito fácil de falar pelo WhatsApp.';
+  }
+  if (!cfg.horario && lead && lead.horario) cfg.horario = lead.horario;
+  if ((!cfg.heroDestaques || !cfg.heroDestaques.length) && servs.length) {
+    cfg.heroDestaques = servs.slice(0, 3).map(function (s) { return s.preco ? s.titulo + ' · ' + s.preco : s.titulo; });
+  }
+  if ((!cfg.etapasVenda || !cfg.etapasVenda.length)) cfg.etapasVenda = modelo.etapas.slice();
+  if (lead && !cfg.endereco) cfg.endereco = lead.endereco || '';
+  if (lead && !cfg.whatsapp) cfg.whatsapp = soNumero(lead.telefone);
+  if (lead && !cfg.telefone) cfg.telefone = soNumero(lead.telefone);
+
+  salvarRascunho();
+  pintarSite();
+  recado('⚡ Criação renovada');
+}
+
+function htmlTiposSite() {
+  return Object.keys(TIPOS_SITE).map(function (k) {
+    var m = TIPOS_SITE[k];
+    return '<div class="modelo-site' + (cfg.tipoSite === k ? ' on' : '') + '" onclick="selecionarTipoSite(\'' + k + '\')">' +
+      '<b>' + m.rotulo + '</b>' +
+      '<p>' + esc(m.desc) + '</p>' +
+      '<span class="mini">' + esc(m.cta) + ' · ' + esc(m.secoes.slice(0, 3).map(rotuloSecaoSite).join(' • ')) + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function selecionarTipoSite(tipo) {
+  if (!cfg) cfg = cfgNovo();
+  cfg.tipoSite = tipo;
+  aplicarTipoSite(tipo, false);
+  salvarRascunho();
+  pintarSite();
+  recado('Modelo do site: ' + modeloDoSite(tipo).rotulo);
+}
+
 function cfgNovo() {
   var c = {
     nome: '', slogan: '', telefone: '', whatsapp: '', email: '', endereco: '', cidade: '',
     paleta: 'oceano', fonte: 'moderna', estilo: 'moderno', heroAlinhamento: 'esquerda',
     titulo: '', subtitulo: '', sobreTexto: '', servicos: [], faq: [],
     badge: '', heroDestaques: [], textoCta: '', ctaTitulo: '', ctaTexto: '',
-    secoes: ['numeros', 'sobre', 'servicos', 'depoimentos', 'faq', 'horario', 'contato'],
+    objetivoSite: '', tipoSite: 'conversao', etapasVenda: [],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'depoimentos', 'faq', 'contato'],
     horario: '', botaoFlutuante: true, animacoes: true, lgpd: true
   };
   try { Perfis.aplicar(c, 'generico'); } catch (e) {}
-  c.nome = ''; c.titulo = ''; c.servicos = [];
+  var modelo = modeloDoSite(c.tipoSite);
+  c.secoes = modelo.secoes.slice();
+  c.badge = modelo.badge;
+  c.textoCta = modelo.cta;
+  c.ctaTitulo = modelo.ctaTitulo;
+  c.ctaTexto = modelo.ctaTexto;
+  c.heroDestaques = modelo.destaques.slice();
+  c.etapasVenda = modelo.etapas.slice();
+  c.nome = ''; c.titulo = ''; c.subtitulo = ''; c.servicos = [];
   return c;
 }
 
 function pintarSite() {
   if (!cfg) cfg = cfgNovo();
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil || 'generico');
+  if (!cfg.secoes || !secoesAtivasDoSite().length) aplicarTipoSite(cfg.tipoSite, true);
+  var modelo = modeloDoSite(cfg.tipoSite);
   var perfis = (typeof Perfis !== 'undefined' && Perfis.PERFIS) ? Object.keys(Perfis.PERFIS) : ['generico'];
+  var servs = normalizarListaServicos(cfg.servicos || []);
+  var secoesAtivas = secoesAtivasDoSite();
   var h = '';
 
   if (LEAD_DO_SITE) {
@@ -6807,39 +7076,82 @@ function pintarSite() {
       '<span onclick="soltarLead()" style="float:right;text-decoration:underline">trocar</span></div>';
   }
 
+  h += '<div class="site-passo">';
+  h += '<h3>🚀 Nova criação de sites</h3>';
+  h += '<p>Agora o site nasce por objetivo: captar no WhatsApp, vender cardápio, mostrar catálogo, agendar ou passar confiança.</p>';
+  h += '<div class="site-resumo">' +
+    '<div><b>' + esc(modelo.rotulo) + '</b><span>modelo atual</span></div>' +
+    '<div><b>' + servs.length + '</b><span>serviços no site</span></div>' +
+    '<div><b>' + secoesAtivas.length + '</b><span>seções ligadas</span></div>' +
+    '</div>';
+  h += '</div>';
+
   h += '<div class="bloco">';
-  h += '<h2>1. O básico</h2>';
+  h += '<h2>1. Escolher o jeito do site vender</h2>';
+  h += '<p class="ajuda">Cada modelo muda a estrutura, a chamada principal e a ordem das seções.</p>';
+  h += '<div class="modelo-grade">' + htmlTiposSite() + '</div>';
+  h += '<div class="lista-preview">' +
+    '<div><i>🎯</i><div><b>Objetivo</b><span>' + esc(cfg.objetivoSite || modelo.desc) + '</span></div></div>' +
+    '<div><i>🧱</i><div><b>Seções ligadas</b><span>' + esc(secoesAtivas.map(rotuloSecaoSite).join(' • ')) + '</span></div></div>' +
+    '<div><i>⚡</i><div><b>CTA principal</b><span>' + esc(cfg.textoCta || modelo.cta) + '</span></div></div>' +
+    '</div>';
+  h += '</div>';
+
+  h += '<div class="bloco">';
+  h += '<h2>2. Estratégia e promessa</h2>';
   h += '<label>Nome do negócio</label><input id="sNome" value="' + esc(cfg.nome) + '" placeholder="Padaria do Zé">';
   h += '<div class="dupla">' +
-    '<div><label>Tipo</label><select id="sPerfil">' +
+    '<div><label>Tipo do negócio</label><select id="sPerfil">' +
       perfis.map(function (p) {
         return '<option value="' + p + '"' + (cfg.perfil === p ? ' selected' : '') + '>' + p.replace(/_/g, ' ') + '</option>';
       }).join('') + '</select></div>' +
     '<div><label>Cidade</label><input id="sCidade" value="' + esc(cfg.cidade) + '" placeholder="Rondonópolis"></div>' +
     '</div>';
-  h += '<label>WhatsApp (só números)</label><input id="sWhats" inputmode="numeric" value="' + esc(cfg.whatsapp) + '" placeholder="66999998888">';
-  h += '<label>O que o negócio faz (uma linha por serviço)</label>';
-  h += '<textarea id="sServicos" placeholder="Bolos de aniversário&#10;Pão francês quentinho&#10;Salgados para festa">' +
-       esc(normalizarListaServicos(cfg.servicos || []).map(function (s) { return s.titulo; }).join('\n')) + '</textarea>';
-  h += '<button class="btn pequeno" onclick="aplicarPerfil()">🎨 Usar o modelo desse tipo de negócio</button>';
+  h += '<div class="dupla">' +
+    '<div><label>WhatsApp (só números)</label><input id="sWhats" inputmode="numeric" value="' + esc(cfg.whatsapp) + '" placeholder="66999998888"></div>' +
+    '<div><label>Texto do botão</label><input id="sTextoCta" value="' + esc(cfg.textoCta || modelo.cta) + '" placeholder="Pedir orçamento"></div>' +
+    '</div>';
+  h += '<label>Selo do topo</label><input id="sBadge" value="' + esc(cfg.badge || modelo.badge) + '" placeholder="Resposta rápida no WhatsApp">';
+  h += '<label>Qual é o objetivo desse site?</label><textarea id="sObjetivo" class="area-mini" placeholder="Ex.: fazer a pessoa chamar no WhatsApp e pedir orçamento">' + esc(cfg.objetivoSite || modelo.desc) + '</textarea>';
+  h += '<label>Subtítulo principal</label><textarea id="sSubtitulo" class="area-mini" placeholder="Explique em uma frase curta o que a pessoa encontra nesse site">' + esc(cfg.subtitulo || '') + '</textarea>';
+  h += '<div class="linha-btn">' +
+    '<button class="btn pequeno" onclick="aplicarPerfil()">🎨 Puxar base do segmento</button>' +
+    '<button class="btn pequeno principal" onclick="montarEstruturaBase()">⚡ Renovar a estrutura</button>' +
+    '</div>';
   h += '</div>';
 
   h += '<div class="bloco">';
-  h += '<h2>2. Deixar a IA trabalhar</h2>';
+  h += '<h2>3. Conteúdo que vende</h2>';
+  h += '<p class="ajuda">Preencha o que aparece logo de cara e o que faz a pessoa confiar.</p>';
+  h += '<label>Serviços / produtos (uma linha por item)</label>';
+  h += '<textarea id="sServicos" placeholder="Bolos de aniversário&#10;Pão francês quentinho&#10;Salgados para festa">' +
+       esc(servs.map(function (s) { return s.titulo; }).join('\n')) + '</textarea>';
+  h += '<label>Destaques do topo (uma linha por destaque curto)</label>';
+  h += '<textarea id="sDestaques" class="area-mini" placeholder="Entrega rápida&#10;Orçamento sem enrolação&#10;Atendimento pelo WhatsApp">' + esc((cfg.heroDestaques || []).join('\n')) + '</textarea>';
+  h += '<label>Como funciona (uma linha por etapa)</label>';
+  h += '<textarea id="sEtapas" class="area-mini" placeholder="Chame no WhatsApp&#10;Explique o que você precisa&#10;Receba o orçamento">' + esc((cfg.etapasVenda || []).join('\n')) + '</textarea>';
+  h += '<label>Sobre o negócio</label>';
+  h += '<textarea id="sSobre" placeholder="Conte de forma simples por que esse negócio merece confiança">' + esc(cfg.sobreTexto || '') + '</textarea>';
+  h += '<label>Horário de funcionamento</label>';
+  h += '<textarea id="sHorario" class="area-mini" placeholder="Segunda a sexta: 8h às 18h&#10;Sábado: 8h às 12h">' + esc(Array.isArray(cfg.horarios) ? cfg.horarios.map(function (x) { return x.dia + ': ' + x.hora; }).join('\n') : (cfg.horario || '')) + '</textarea>';
+  h += '</div>';
+
+  h += '<div class="bloco">';
+  h += '<h2>4. Deixar a IA trabalhar</h2>';
   if (!BD.config.iaAtiva || !BD.config.iaChave) {
     h += '<div class="aviso alerta">A IA está desligada. Cadastre uma chave em Ajustes — a da Groq é grátis.</div>' +
          '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Ligar a IA</button>';
   } else {
-    h += '<p class="ajuda">Quatro IAs trabalham em sequência: estrategista, redator, diretor de arte e revisor. No fim você recebe a lista do que melhorar.</p>';
-    h += '<button class="btn turbo" onclick="rodarTurbo()">🚀 Modo turbo</button>';
+    h += '<p class="ajuda">Agora o turbo decide melhor a estratégia, a promessa, o CTA e a estrutura do site.</p>';
+    h += '<button class="btn turbo" onclick="rodarTurbo()">🚀 Turbo completo</button>';
     h += '<button class="btn pequeno" onclick="soTextos()">✍️ Só reescrever os textos</button>';
   }
   h += '<div id="turboPainel"></div>';
   h += '</div>';
 
   h += '<div class="bloco">';
-  h += '<h2>3. Aparência</h2>';
-  h += '<p class="ajuda">Agora dá para escolher o clima do site: mais limpo, elegante ou mais chamativo.</p>';
+  h += '<h2>5. Visual</h2>';
+  h += '<p class="ajuda">Escolha o clima visual depois da estratégia.</p>';
   var paletas = (typeof SiteGen !== 'undefined' && SiteGen.PALETAS) ? Object.keys(SiteGen.PALETAS) : ['oceano'];
   var fontes = (typeof SiteGen !== 'undefined' && SiteGen.FONTES) ? Object.keys(SiteGen.FONTES) : ['moderna'];
   var estilos = (typeof SiteGen !== 'undefined' && SiteGen.ESTILOS) ? Object.keys(SiteGen.ESTILOS) : ['moderno'];
@@ -6850,9 +7162,9 @@ function pintarSite() {
       return '<option value="' + f + '"' + (cfg.fonte === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select></div>' +
     '</div>';
   h += '<div class="dupla">' +
-    '<div><label>Estilo</label><select id="sEstilo">' + estilos.map(function (e) {
+    '<div><label>Estilo visual</label><select id="sEstilo">' + estilos.map(function (e) {
       return '<option value="' + e + '"' + (cfg.estilo === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></div>' +
-    '<div><label>Topo</label><select id="sAlinhamento">' + ['esquerda', 'centro'].map(function (a) {
+    '<div><label>Alinhamento do topo</label><select id="sAlinhamento">' + ['esquerda', 'centro'].map(function (a) {
       return '<option value="' + a + '"' + (cfg.heroAlinhamento === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></div>' +
     '</div>';
   h += '</div>';
@@ -6932,6 +7244,14 @@ function lerFormulario() {
   if ($('#sEstilo')) cfg.estilo = $('#sEstilo').value;
   if ($('#sAlinhamento')) cfg.heroAlinhamento = $('#sAlinhamento').value;
   if ($('#sPerfil')) cfg.perfil = $('#sPerfil').value;
+  if ($('#sTextoCta')) cfg.textoCta = $('#sTextoCta').value.trim();
+  if ($('#sBadge')) cfg.badge = $('#sBadge').value.trim();
+  if ($('#sObjetivo')) cfg.objetivoSite = $('#sObjetivo').value.trim();
+  if ($('#sSubtitulo')) cfg.subtitulo = $('#sSubtitulo').value.trim();
+  if ($('#sSobre')) cfg.sobreTexto = $('#sSobre').value.trim();
+  if ($('#sHorario')) cfg.horario = $('#sHorario').value.trim();
+  if ($('#sDestaques')) cfg.heroDestaques = $('#sDestaques').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 4);
+  if ($('#sEtapas')) cfg.etapasVenda = $('#sEtapas').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 5);
   if ($('#sServicos')) {
     var linhas = $('#sServicos').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
     var antigos = normalizarListaServicos(cfg.servicos || []);
@@ -6940,6 +7260,7 @@ function lerFormulario() {
       return { titulo: n, descricao: antigo.descricao || '', preco: antigo.preco || '' };
     });
   }
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil);
   if (!cfg.titulo) cfg.titulo = cfg.nome;
   cfg.telefone = cfg.whatsapp || cfg.telefone;
 }
@@ -6951,6 +7272,8 @@ function aplicarPerfil() {
   try { Perfis.aplicar(cfg, p); } catch (e) { recado('Modelo indisponível'); return; }
   cfg.nome = nome; cfg.cidade = cidade; cfg.whatsapp = whats;
   if (servicos && servicos.length) cfg.servicos = servicos;
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(p);
+  aplicarTipoSite(cfg.tipoSite || tipoSiteSugerido(p), true);
   salvarRascunho();
   pintarSite();
   recado('🎨 Modelo aplicado');
@@ -6968,15 +7291,19 @@ function criarSitePara(idLead) {
     cfg.nome = l.nome;
     cfg.cidade = l.cidade || BD.config.cidadePadrao;
     cfg.whatsapp = soNumero(l.telefone);
+    cfg.telefone = soNumero(l.telefone);
     cfg.endereco = l.endereco || '';
     try {
       var perfil = (typeof Perfis !== 'undefined' && Perfis.paraCategoria) ? Perfis.paraCategoria(l.categoria) : 'generico';
       var nome = cfg.nome, cid = cfg.cidade, wa = cfg.whatsapp;
       Perfis.aplicar(cfg, perfil);
-      cfg.nome = nome; cfg.cidade = cid; cfg.whatsapp = wa;
+      cfg.nome = nome; cfg.cidade = cid; cfg.whatsapp = wa; cfg.telefone = wa;
+      cfg.tipoSite = tipoSiteSugerido(perfil);
+      aplicarTipoSite(cfg.tipoSite, true);
     } catch (e) {}
   }
   fechar(); ir('site');
+  montarEstruturaBase();
   recado('Montando o site de ' + l.nome);
 }
 
@@ -6994,16 +7321,24 @@ function dadosDoNegocio() {
   return {
     nome: cfg.nome,
     segmento: (cfg.perfil || 'generico').replace(/_/g, ' '),
+    tipoSite: cfg.tipoSite || tipoSiteSugerido(cfg.perfil || 'generico'),
+    objetivoSite: cfg.objetivoSite || '',
     cidade: cfg.cidade || BD.config.cidadePadrao,
     oQueFaz: servs.map(function (s) { return s.titulo; }).join(', '),
     servicos: servs.map(function (s) { return s.titulo; }),
-    diferenciais: Array.isArray(cfg.diferenciais) ? cfg.diferenciais.join('; ') : String(cfg.diferenciais || ''),
+    diferenciais: [
+      Array.isArray(cfg.diferenciais) ? cfg.diferenciais.join('; ') : String(cfg.diferenciais || ''),
+      Array.isArray(cfg.heroDestaques) ? cfg.heroDestaques.join('; ') : ''
+    ].filter(Boolean).join('; '),
     telefone: cfg.whatsapp || (l ? l.telefone : ''),
     endereco: cfg.endereco || (l ? l.endereco : ''),
     horario: primeiraLinhaHorarios(cfg.horarios || cfg.horario || (l ? l.horario : '')),
+    etapasVenda: (cfg.etapasVenda || []).join(' | '),
     temFotos: !!(cfg.heroImagem || cfg.sobreImagem || (cfg.galeria && String(cfg.galeria).trim())),
     temLogo: !!cfg.logo,
     observacoes: [
+      cfg.subtitulo ? 'Subtítulo atual: ' + cfg.subtitulo : '',
+      cfg.textoCta ? 'CTA atual: ' + cfg.textoCta : '',
       l && l.obs ? 'Anotações: ' + l.obs : '',
       l && l.contato ? 'Contato do negócio: ' + l.contato : '',
       respostasDoQuestionario(l)
@@ -7029,7 +7364,7 @@ async function rodarTurbo() {
   var opcoes = {
     paletas: Object.keys(SiteGen.PALETAS), fontes: Object.keys(SiteGen.FONTES),
     estilos: Object.keys(SiteGen.ESTILOS || { moderno: 1 }),
-    secoes: ['numeros', 'sobre', 'servicos', 'galeria', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'galeria', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
   };
 
   try {
@@ -7062,6 +7397,7 @@ function aplicarTurbo(r) {
   if (t.ctaTitulo) cfg.ctaTitulo = t.ctaTitulo;
   if (t.ctaTexto) cfg.ctaTexto = t.ctaTexto;
   if (t.ctaWhatsapp) cfg.whatsappMsg = t.ctaWhatsapp;
+  if (t.etapasVenda && t.etapasVenda.length) cfg.etapasVenda = t.etapasVenda;
   if (t.servicos && t.servicos.length) cfg.servicos = normalizarListaServicos(t.servicos);
   if (t.faq && t.faq.length) cfg.faq = t.faq;
 
@@ -7230,9 +7566,11 @@ function baixarPacote() {
   d.push('');
   d.push('- **Nome:** ' + (cfg.nome || '—'));
   d.push('- **Tipo:** ' + (cfg.perfil || '—'));
+  d.push('- **Modelo do site:** ' + (cfg.tipoSite || '—'));
+  d.push('- **Objetivo:** ' + (cfg.objetivoSite || '—'));
   d.push('- **Cidade:** ' + (cfg.cidade || '—'));
   d.push('- **WhatsApp:** ' + (cfg.whatsapp || '—'));
-  d.push('- **Visual:** paleta ' + cfg.paleta + ', fonte ' + cfg.fonte);
+  d.push('- **Visual:** paleta ' + cfg.paleta + ', fonte ' + cfg.fonte + ', estilo ' + (cfg.estilo || 'moderno'));
   d.push('');
   d.push('## 2. Estratégia do time');
   d.push('');
