@@ -5526,6 +5526,7 @@ function apagarBuscaSalva(chave) {
   if ((BD.buscas || []).length !== antes) {
     salvar();
     pintarBuscasSalvas();
+    sincronizarBuscasOnlineSilencioso();
     recado('🗑️ Busca removida do banco local');
   }
 }
@@ -5536,6 +5537,7 @@ function limparBuscasSalvas() {
   BD.buscas = [];
   salvar();
   pintarBuscasSalvas();
+  sincronizarBuscasOnlineSilencioso();
   recado('🧹 Banco local de buscas limpo');
 }
 
@@ -5589,11 +5591,14 @@ function pintarBuscasSalvas() {
   var alvo = $('#buscasSalvas');
   if (!alvo) return;
   var buscas = (BD.buscas || []).slice().sort(function (a, b) { return (b.atualizadoEm || 0) - (a.atualizadoEm || 0); });
+  var topo = githubPronto()
+    ? '<div class="aviso info"><b>☁️ Banco online pronto</b><br>Suas buscas podem ser sincronizadas com o GitHub para abrir em outro aparelho também.<div class="linha-btn" style="margin-top:10px"><button class="btn pequeno principal" onclick="sincronizarBuscasOnline()">☁️ Sincronizar agora</button></div></div><div id="buscaOnlineStatus"></div>'
+    : '<div class="aviso alerta"><b>Banco online desligado</b><br>Preencha o GitHub em Ajustes para compartilhar as buscas entre aparelhos.</div><div id="buscaOnlineStatus"></div>';
   if (!buscas.length) {
-    alvo.innerHTML = '<div class="vazio"><span class="emoji">🗂️</span><b>Nenhuma busca salva ainda</b><p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p></div>';
+    alvo.innerHTML = topo + '<div class="vazio"><span class="emoji">🗂️</span><b>Nenhuma busca salva ainda</b><p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p></div>';
     return;
   }
-  alvo.innerHTML = '<div class="cache-buscas">' + buscas.map(function (b) {
+  alvo.innerHTML = topo + '<div class="cache-buscas">' + buscas.map(function (b) {
     var semSite = (b.achados || []).filter(function (x) { return !x.temSite; }).length;
     var comTel = (b.achados || []).filter(function (x) { return !!x.telefone; }).length;
     return '<div class="cache-item">' +
@@ -5824,12 +5829,24 @@ async function buscarOSMEm(cidade, cats, raio, soSemSite, aviso) {
 async function enriquecerAchados(cidade, cats, raio, listaBase, fonteBase, aviso) {
   var lista = (listaBase || []).slice();
   var enriquecida = false;
+  var melhorouTelefone = false;
 
   if (fonteBase === 'geoapify' && googlePronto()) {
     try {
       if (aviso) aviso('Google: puxando telefone e site para completar a busca…');
       lista = mesclarAchados(lista, await buscarGoogleEm(cidade, cats), cidade);
       enriquecida = true;
+    } catch (e) {}
+  }
+
+  if (googlePronto()) {
+    try {
+      var googlePontual = await enriquecerTelefonesComGoogle(cidade, lista, aviso);
+      lista = googlePontual.lista;
+      if (googlePontual.melhorou) {
+        enriquecida = true;
+        melhorouTelefone = true;
+      }
     } catch (e) {}
   }
 
@@ -5840,7 +5857,7 @@ async function enriquecerAchados(cidade, cats, raio, listaBase, fonteBase, aviso
     if (osm.lista.length) enriquecida = true;
   } catch (e) {}
 
-  return { lista: lista, enriquecida: enriquecida };
+  return { lista: lista, enriquecida: enriquecida, melhorouTelefone: melhorouTelefone };
 }
 
 /* ─────────── Google Places (busca rica, opcional) ───────────
@@ -5920,21 +5937,26 @@ async function geoapifyBusca(catsGeo, lon, lat, raioM) {
 
 function lugarGeoapifyParaAchado(f, cidade, rotulo) {
   var p = f.properties || {};
-  var nome = p.name;
+  var raw = ((p.datasource || {}).raw) || {};
+  var nome = p.name || raw.name || raw.brand;
   if (!nome) return null;
-  var tel = p.phone || p['contact:phone'] || p.contact__phone || null;
-  var site = p.website || p.url || null;
-  var rua = [p.street, p.housenumber].filter(Boolean).join(', ');
+  var tel = p.phone || p['contact:phone'] || p.contact__phone ||
+    raw.phone || raw['contact:phone'] || raw['contact:mobile'] || raw.mobile || raw['contact:whatsapp'] || null;
+  var site = p.website || p.url || raw.website || raw['contact:website'] || raw.url || null;
+  var rua = [p.street || raw['addr:street'], p.housenumber || raw['addr:housenumber']].filter(Boolean).join(', ');
   var b = {
     osmId: 'ga:' + (p.place_id || nome + p.lat + p.lon),
     nome: nome,
     categoria: rotulo || (p.categories && p.categories[0]) || 'outro',
-    telefone: tel, email: p.email || null,
-    endereco: [rua, p.suburb].filter(Boolean).join(' - ') || p.address_line1 || null,
-    cidade: p.city || cidade,
+    telefone: tel ? String(tel).replace(/[^0-9+]/g, '') : null,
+    email: p.email || raw.email || raw['contact:email'] || null,
+    endereco: [rua, p.suburb || raw['addr:suburb'] || raw['addr:neighbourhood']].filter(Boolean).join(' - ') || p.address_line1 || raw.formatted || null,
+    cidade: p.city || raw['addr:city'] || cidade,
     site: site, temSite: !!site,
-    temRedeSocial: false, horario: p.opening_hours || null,
-    lat: p.lat, lon: p.lon
+    temRedeSocial: !!(raw['contact:facebook'] || raw.facebook || raw['contact:instagram'] || raw.instagram),
+    horario: p.opening_hours || raw.opening_hours || null,
+    lat: p.lat || f.geometry && f.geometry.coordinates && f.geometry.coordinates[1],
+    lon: p.lon || f.geometry && f.geometry.coordinates && f.geometry.coordinates[0]
   };
   b.score = pontuar(b);
   return b;
@@ -5975,7 +5997,7 @@ function fonteBuscaAtiva() {
   return 'osm';
 }
 
-async function placesBusca(texto) {
+async function placesBusca(texto, limite) {
   var r = await comTempo(fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
@@ -5985,7 +6007,12 @@ async function placesBusca(texto) {
         'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri,' +
         'places.primaryTypeDisplayName'
     },
-    body: JSON.stringify({ textQuery: texto, languageCode: 'pt-BR', regionCode: 'BR', maxResultCount: 20 })
+    body: JSON.stringify({
+      textQuery: texto,
+      languageCode: 'pt-BR',
+      regionCode: 'BR',
+      maxResultCount: Math.max(1, Math.min(20, Number(limite) || 20))
+    })
   }), 25000, 'consultando o Google');
   if (!r.ok) {
     var corpo = await r.text(), msg = '';
@@ -6017,6 +6044,57 @@ function lugarParaAchado(p, cidade, rotulo) {
   };
   b.score = pontuar(b);
   return b;
+}
+
+function scoreNomeParecido(nomeA, nomeB) {
+  var a = textoBuscaNormalizado(nomeA);
+  var b = textoBuscaNormalizado(nomeB);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return 70;
+  var pa = a.split(' '), pb = b.split(' '), iguais = 0;
+  pa.forEach(function (p) { if (p && pb.indexOf(p) >= 0) iguais++; });
+  return iguais * 15;
+}
+
+async function enriquecerTelefonesComGoogle(cidade, lista, aviso) {
+  if (!googlePronto()) return { lista: lista || [], melhorou: false, consultas: 0 };
+  var pendentes = (lista || []).filter(function (b) {
+    return !!b && (!b.telefone || !b.site || !b.endereco);
+  }).slice(0, 10);
+  if (!pendentes.length) return { lista: lista || [], melhorou: false, consultas: 0 };
+
+  var mapa = {};
+  (lista || []).forEach(function (b) { mapa[chaveDoAchado(b, cidade)] = b; });
+  var melhorou = false;
+
+  for (var i = 0; i < pendentes.length; i++) {
+    var item = pendentes[i];
+    if (aviso) aviso('Google: tentando completar telefone e site de ' + item.nome + '…');
+    try {
+      var lugares = await placesBusca(item.nome + ' em ' + cidade + ', Brasil', 5);
+      var melhor = null, notaMelhor = 0;
+      lugares.forEach(function (p) {
+        var nome = (p.displayName && p.displayName.text) || '';
+        var nota = scoreNomeParecido(item.nome, nome);
+        if (nota > notaMelhor) { notaMelhor = nota; melhor = p; }
+      });
+      if (melhor && notaMelhor >= 60) {
+        var atual = mapa[chaveDoAchado(item, cidade)];
+        var antes = JSON.stringify({ telefone: atual.telefone || '', site: atual.site || '', endereco: atual.endereco || '' });
+        mapa[chaveDoAchado(item, cidade)] = fundirAchado(atual, lugarParaAchado(melhor, cidade, item.categoria));
+        var depois = JSON.stringify({ telefone: mapa[chaveDoAchado(item, cidade)].telefone || '', site: mapa[chaveDoAchado(item, cidade)].site || '', endereco: mapa[chaveDoAchado(item, cidade)].endereco || '' });
+        if (antes !== depois) melhorou = true;
+      }
+    } catch (e) {}
+    await new Promise(function (r) { setTimeout(r, 180); });
+  }
+
+  return {
+    lista: (lista || []).map(function (b) { return mapa[chaveDoAchado(b, cidade)] || b; }),
+    melhorou: melhorou,
+    consultas: pendentes.length
+  };
 }
 
 /* Busca cada categoria numa cidade. Mostra o andamento no aviso. */
@@ -6144,6 +6222,7 @@ async function buscar(forcar) {
   $('#btnBuscar').disabled = true;
 
   try {
+    var melhorouTelefone = false;
     var avisoFn = function (msg) {
       var b = $('#bResultado .rodando-tela b');
       var p = $('#bResultado .rodando-tela p');
@@ -6160,6 +6239,7 @@ async function buscar(forcar) {
       var reforco = await enriquecerAchados(cidade, cats, raio, listaBruta, fonte, avisoFn);
       listaBruta = reforco.lista;
       enriquecida = reforco.enriquecida;
+      var melhorouTelefone = !!reforco.melhorouTelefone;
     } else {
       pacote = await buscarOSMEm(cidade, cats, raio, false, function (msg) {
         var p = $('#bResultado .rodando-tela p');
@@ -6181,12 +6261,14 @@ async function buscar(forcar) {
       achados: listaBruta
     });
     pintarBuscasSalvas();
+    sincronizarBuscasOnlineSilencioso();
 
     ACHADOS = ordenarAchados(filtrarAchadosSemSite(listaBruta, soSemSite));
     pintarAchados(pacote.local || { nome: cidade }, Object.assign({}, pacote.info || {}, {
       fonte: fonte,
       fonteRica: fonte !== 'osm',
       enriquecida: !!enriquecida,
+      melhorouTelefone: !!melhorouTelefone,
       cacheId: chave,
       cacheEm: Date.now(),
       gravadoAgora: true,
@@ -6228,6 +6310,7 @@ function pintarAchados(local, info) {
       (info.totalOriginal ? ' · ' + info.totalOriginal + ' achados brutos' : '') +
       (info.cacheEm ? ' · ' + dataHoraBonita(info.cacheEm) : '') +
       (info.enriquecida ? '<br>O app cruzou fontes para tentar puxar telefone, site, horário e endereço quando houver.' : '') +
+      (info.melhorouTelefone ? '<br>☎️ O reforço do Google conseguiu completar parte dos telefones/sites que faltavam.' : '') +
       (info.cacheId ? '<div class="linha-btn" style="margin-top:10px"><button class="btn pequeno" onclick="atualizarBuscaSalva(' + JSON.stringify(info.cacheId) + ')">🔄 Atualizar esta busca</button></div>' : '') +
       '</div>';
   }
@@ -8278,6 +8361,99 @@ function erroGithub(status) {
   return 'O GitHub respondeu erro ' + status + '.';
 }
 
+function deBase64(txt) {
+  var b = String(txt || '').replace(/\s+/g, '');
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+var CAMINHO_BUSCAS_ONLINE = '/contents/dados/buscas.json';
+
+function normalizarBancoOnlineBuscas(dados) {
+  if (Array.isArray(dados)) return dados;
+  if (dados && Array.isArray(dados.buscas)) return dados.buscas;
+  return [];
+}
+
+function mesclarBancoBuscas(local, remoto) {
+  var mapa = {};
+  (local || []).forEach(function (b) { if (b && b.id) mapa[b.id] = b; });
+  (remoto || []).forEach(function (b) {
+    if (!b || !b.id) return;
+    var atual = mapa[b.id];
+    if (!atual || Number(b.atualizadoEm || 0) >= Number(atual.atualizadoEm || 0)) mapa[b.id] = b;
+  });
+  return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) {
+    return Number(b.atualizadoEm || 0) - Number(a.atualizadoEm || 0);
+  }).slice(0, LIMITE_BUSCAS_SALVAS * 4);
+}
+
+function atualizarStatusBuscaOnline(html) {
+  var el = $('#buscaOnlineStatus');
+  if (el) el.innerHTML = html || '';
+}
+
+async function lerBuscasOnline() {
+  if (!githubPronto()) throw new Error('Ligue o GitHub em Ajustes para usar o banco online.');
+  var r = await github(CAMINHO_BUSCAS_ONLINE, { method: 'GET' });
+  if (r.status === 404) return { sha: null, buscas: [] };
+  if (!r.ok) throw new Error(erroGithub(r.status));
+  var j = await r.json();
+  var txt = deBase64(j.content || '');
+  var dados = [];
+  try { dados = normalizarBancoOnlineBuscas(JSON.parse(txt || '[]')); } catch (e) { dados = []; }
+  return { sha: j.sha || null, buscas: dados };
+}
+
+async function salvarBuscasOnline(buscas, sha) {
+  if (!githubPronto()) throw new Error('Ligue o GitHub em Ajustes para usar o banco online.');
+  var corpo = {
+    message: 'Sincroniza banco de buscas do LeadSite',
+    content: paraBase64(JSON.stringify({ atualizadoEm: hoje(), buscas: buscas || [] }, null, 2))
+  };
+  if (sha) corpo.sha = sha;
+  var r = await github(CAMINHO_BUSCAS_ONLINE, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if (!r.ok) throw new Error(erroGithub(r.status));
+  return r.json();
+}
+
+async function sincronizarBuscasOnline(silencioso) {
+  if (!githubPronto()) {
+    atualizarStatusBuscaOnline('<div class="aviso alerta">Preencha o GitHub em Ajustes para compartilhar as buscas entre aparelhos.</div>');
+    if (!silencioso) recado('Falta ligar o GitHub');
+    return;
+  }
+
+  atualizarStatusBuscaOnline('<div class="rodando-tela"><div class="roda"></div><b>Sincronizando banco online…</b></div>');
+  try {
+    var remoto = await lerBuscasOnline();
+    var mescladas = mesclarBancoBuscas(BD.buscas || [], remoto.buscas || []);
+    BD.buscas = mescladas;
+    salvar();
+    await salvarBuscasOnline(mescladas, remoto.sha);
+    pintarBuscasSalvas();
+    atualizarStatusBuscaOnline('<div class="aviso bom"><b>☁️ Banco online sincronizado</b><br>' +
+      (mescladas.length) + ' buscas guardadas no GitHub para reutilizar em outros aparelhos.</div>');
+    if (!silencioso) recado('☁️ Banco online sincronizado');
+    return mescladas;
+  } catch (e) {
+    atualizarStatusBuscaOnline('<div class="aviso ruim"><b>Banco online falhou</b><br>' + esc(e.message || String(e)) + '</div>');
+    if (!silencioso) recado('Não consegui sincronizar o banco online');
+    throw e;
+  }
+}
+
+function sincronizarBuscasOnlineSilencioso() {
+  if (!githubPronto()) return;
+  sincronizarBuscasOnline(true).catch(function () {});
+}
+
 async function publicar() {
   if (!githubPronto()) {
     abrir('Falta ligar o GitHub',
@@ -8533,9 +8709,9 @@ function pintarAjustes() {
   h += '<div id="aIaResultado"></div>';
   h += '</div>';
 
-  h += '<div class="bloco"><h2>🌐 Pôr sites no ar (GitHub)</h2>';
+  h += '<div class="bloco"><h2>🌐 Pôr sites no ar e guardar buscas online (GitHub)</h2>';
   h += '<p class="ajuda">De graça e para sempre. Preencha uma vez e depois é só tocar em Publicar. ' +
-       'O passo a passo está no arquivo CELULAR-COMECE-AQUI.</p>';
+       'Esse mesmo GitHub também vira seu banco online das buscas salvas.</p>';
   h += '<div class="dupla">' +
     '<div><label>Seu usuário</label><input id="aGhUsuario" value="' + esc(c.ghUsuario) + '" placeholder="natanielsilva" autocapitalize="none"></div>' +
     '<div><label>Repositório</label><input id="aGhRepo" value="' + esc(c.ghRepo) + '" placeholder="leadsite" autocapitalize="none"></div>' +
@@ -8799,6 +8975,7 @@ function iniciar() {
   atualizarFonteBusca();
   pintarBuscasSalvas();
   $('#bCidade').value = BD.config.cidadePadrao || '';
+  if (githubPronto() && !(BD.buscas || []).length) sincronizarBuscasOnlineSilencioso();
   $('#fundoModal').onclick = fechar;
   $$('.abas button').forEach(function (b) {
     b.onclick = function () { ir(b.dataset.aba); };
