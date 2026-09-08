@@ -11,90 +11,224 @@
 <title>LeadSite</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <style>
-/* LeadSite Celular — visual feito para tela pequena e dedo grande.
-   Nada de hover: tudo funciona no toque. Alvos de no mínimo 48px. */
+
+/* LeadSite Premium — dashboard novo mantendo a mesma lógica do app. */
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --fundo:    #0f172a;
-  --carta:    #1e293b;
-  --carta2:   #334155;
-  --borda:    #334155;
-  --texto:    #f1f5f9;
-  --fraco:    #94a3b8;
-  --verde:    #10b981;
-  --verde-e:  #059669;
-  --azul:     #38bdf8;
-  --amarelo:  #fbbf24;
+  --fundo: #07111f;
+  --fundo2: #0b1628;
+  --fundo3: #101d33;
+  --carta: rgba(15, 23, 42, .72);
+  --carta2: rgba(30, 41, 59, .88);
+  --vidro: rgba(148, 163, 184, .08);
+  --borda: rgba(148, 163, 184, .14);
+  --texto: #f8fbff;
+  --fraco: #93a4bc;
+  --verde: #22c55e;
+  --verde-e: #16a34a;
+  --azul: #38bdf8;
+  --amarelo: #fbbf24;
   --vermelho: #f87171;
-  --roxo:     #a78bfa;
-  --barra:    64px;
+  --roxo: #8b5cf6;
+  --sombra: 0 20px 60px rgba(0, 0, 0, .28);
+  --sombra2: 0 10px 32px rgba(0, 0, 0, .20);
+  --barra: 78px;
 }
 
 html, body {
   margin: 0; padding: 0;
-  background: var(--fundo); color: var(--texto);
-  font-family: -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, .15), transparent 26%),
+    radial-gradient(circle at top right, rgba(139, 92, 246, .14), transparent 22%),
+    linear-gradient(180deg, var(--fundo), var(--fundo2) 44%, #060d19 100%);
+  color: var(--texto);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px; line-height: 1.5;
   overscroll-behavior-y: none;
 }
-
-body { padding-bottom: calc(var(--barra) + env(safe-area-inset-bottom, 0px)); }
+body {
+  min-height: 100vh;
+  padding-bottom: calc(var(--barra) + 24px + env(safe-area-inset-bottom, 0px));
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(circle at 15% 18%, rgba(34, 197, 94, .08), transparent 18%),
+    radial-gradient(circle at 84% 12%, rgba(56, 189, 248, .08), transparent 20%);
+}
 
 /* ─────────── topo ─────────── */
 .topo {
   position: sticky; top: 0; z-index: 40;
-  background: rgba(15, 23, 42, .96);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--borda);
-  padding: 14px 16px 12px;
-  display: flex; align-items: center; gap: 10px;
+  padding: 14px 14px 8px;
+  background: linear-gradient(180deg, rgba(4, 9, 19, .92), rgba(4, 9, 19, .55));
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(148, 163, 184, .08);
 }
-.topo h1 { font-size: 19px; margin: 0; font-weight: 700; flex: 1; }
-.topo .sub { font-size: 12px; color: var(--fraco); font-weight: 400; display: block; margin-top: 1px; }
+.topo-linha {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 10px;
+}
+.marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.marca-icone {
+  width: 44px; height: 44px; border-radius: 15px;
+  display: grid; place-items: center; font-size: 23px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, .24), rgba(56, 189, 248, .25));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: var(--sombra2);
+  flex: 0 0 auto;
+}
+.marca-txt { min-width: 0; }
+.marca-txt strong { display: block; font-size: 19px; letter-spacing: -.02em; }
+.topo .sub { font-size: 12px; color: var(--fraco); display: block; margin-top: 2px; }
+.status-pilulas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 32px; padding: 0 12px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--borda);
+  color: var(--fraco); font-size: 11.5px; font-weight: 700;
+}
+.pill.destaque {
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.16));
+  color: #dcfce7; border-color: rgba(34,197,94,.22);
+}
+.painel-topo { display: grid; gap: 10px; }
+.painel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.painel-card {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .88), rgba(12, 20, 35, .82));
+  border: 1px solid var(--borda); border-radius: 16px; padding: 12px;
+  box-shadow: var(--sombra2);
+}
+.painel-card b { display: block; font-size: 16px; color: var(--texto); }
+.painel-card span { display: block; margin-top: 4px; color: var(--fraco); font-size: 11px; }
+.atalhos-topo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.atalho-topo {
+  width: 100%; min-height: 44px; border-radius: 14px;
+  background: rgba(255,255,255,.05); color: var(--texto);
+  border: 1px solid var(--borda); font: inherit; font-size: 12.5px; font-weight: 700;
+}
 
 /* ─────────── telas ─────────── */
-.tela { display: none; padding: 14px 14px 24px; }
-.tela.ativa { display: block; animation: entra .18s ease; }
-@keyframes entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.tela {
+  display: none;
+  position: relative; z-index: 1;
+  padding: 18px 14px 28px;
+}
+.tela.ativa { display: block; animation: entra .22s ease; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.hero-app, .site-passo {
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, .12), rgba(139, 92, 246, .10)),
+    linear-gradient(180deg, rgba(15, 23, 42, .92), rgba(10, 17, 29, .9));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--sombra);
+}
+.hero-app .tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 30px; padding: 0 12px; border-radius: 999px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: #dbeafe; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+}
+.hero-app h2, .site-passo h3 { margin: 12px 0 8px; font-size: 22px; line-height: 1.14; letter-spacing: -.02em; }
+.hero-app p, .site-passo p { margin: 0; font-size: 13.5px; color: var(--fraco); }
+.hero-linhas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.hero-linhas span {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(148,163,184,.14); font-size: 12px; color: #dbeafe;
+}
+.site-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.site-resumo div {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.12);
+  border-radius: 14px; padding: 12px 10px;
+}
+.site-resumo b { display: block; font-size: 14px; }
+.site-resumo span { display: block; font-size: 11px; color: var(--fraco); margin-top: 3px; }
+.modelo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.modelo-site {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.14); border-radius: 16px;
+  padding: 14px; min-height: 112px; cursor: pointer; box-shadow: var(--sombra2);
+}
+.modelo-site.on { border-color: rgba(34,197,94,.32); background: linear-gradient(135deg, rgba(34,197,94,.11), rgba(56,189,248,.10)); }
+.modelo-site b { display: block; font-size: 14px; margin-bottom: 5px; }
+.modelo-site p { margin: 0; font-size: 12px; color: var(--fraco); }
+.modelo-site .mini { margin-top: 8px; display: block; }
+.lista-preview { display: grid; gap: 8px; margin-top: 10px; }
+.lista-preview div {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.12);
+  border-radius: 14px; padding: 11px 12px;
+}
+.lista-preview i { font-style: normal; font-size: 18px; line-height: 1.1; }
+.lista-preview b { display: block; font-size: 13px; margin-bottom: 2px; }
+.lista-preview span { font-size: 12px; color: var(--fraco); }
+.area-mini { min-height: 72px; }
+.bloco-topo { margin-bottom: 10px; }
+.bloco-topo h2 { margin: 0 0 4px; font-size: 16px; }
+.bloco-topo p { margin: 0; color: var(--fraco); font-size: 12.5px; }
 
 /* ─────────── barra de abas ─────────── */
 .abas {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 50;
   height: calc(var(--barra) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: #0b1220; border-top: 1px solid var(--borda);
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(7, 17, 31, .82);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 24px;
   display: grid; grid-template-columns: repeat(4, 1fr);
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
 }
 .abas button {
-  background: none; border: 0; color: var(--fraco);
-  font-size: 11px; font-family: inherit;
+  position: relative;
+  background: transparent; border: 0; color: var(--fraco);
+  border-radius: 18px; font-size: 11px; font-family: inherit; font-weight: 700;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; cursor: pointer; padding: 0;
+  gap: 4px; cursor: pointer; padding: 0;
 }
-.abas button i { font-size: 21px; font-style: normal; line-height: 1; }
-.abas button.on { color: var(--verde); }
+.abas button i { font-size: 20px; font-style: normal; line-height: 1; }
+.abas button.on {
+  color: #f8fbff;
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.18));
+  border: 1px solid rgba(56,189,248,.16);
+}
 .abas button .bolha {
-  position: absolute; margin: -22px 0 0 22px;
-  background: var(--vermelho); color: #fff; font-size: 10px; font-weight: 700;
-  min-width: 17px; height: 17px; border-radius: 9px; padding: 0 4px;
+  position: absolute; right: 12px; top: 8px;
+  background: linear-gradient(135deg, #ef4444, #f97316); color: #fff; font-size: 10px; font-weight: 800;
+  min-width: 18px; height: 18px; border-radius: 99px; padding: 0 5px;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 20px rgba(239,68,68,.28);
 }
 
 /* ─────────── formulários ─────────── */
-label { display: block; font-size: 13px; color: var(--fraco); margin: 14px 0 6px; font-weight: 600; }
+label { display: block; font-size: 12.5px; color: #c7d2fe; margin: 14px 0 7px; font-weight: 700; letter-spacing: .01em; }
 input, select, textarea {
-  width: 100%; padding: 13px 14px;
-  background: var(--carta); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 12px;
-  font-size: 16px; /* 16px evita o zoom automático do Android */
-  font-family: inherit;
+  width: 100%; padding: 14px 14px;
+  background: rgba(8, 15, 27, .82); color: var(--texto);
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 14px;
+  font-size: 16px; font-family: inherit;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
 }
 textarea { min-height: 92px; resize: vertical; }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--verde); border-color: transparent; }
-select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fraco) 50%), linear-gradient(135deg, var(--fraco) 50%, transparent 50%); background-position: calc(100% - 18px) 22px, calc(100% - 13px) 22px; background-size: 5px 5px; background-repeat: no-repeat; }
-
+input::placeholder, textarea::placeholder { color: #6b7a91; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, .42);
+  box-shadow: 0 0 0 3px rgba(56,189,248,.12);
+}
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fraco) 50%), linear-gradient(135deg, var(--fraco) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 23px, calc(100% - 13px) 23px;
+  background-size: 5px 5px; background-repeat: no-repeat;
+}
 .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dupla label { margin-top: 14px; }
 
@@ -102,94 +236,164 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; min-height: 50px; padding: 13px 16px;
-  background: var(--carta2); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 12px;
-  font-size: 15px; font-weight: 600; font-family: inherit;
+  background: linear-gradient(180deg, rgba(30, 41, 59, .96), rgba(16, 24, 37, .96));
+  color: var(--texto);
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 14px;
+  font-size: 15px; font-weight: 700; font-family: inherit;
   cursor: pointer; margin-top: 10px; text-decoration: none;
+  box-shadow: var(--sombra2);
 }
-.btn:active { transform: scale(.985); filter: brightness(1.15); }
-.btn.principal { background: var(--verde-e); border-color: var(--verde); color: #fff; }
-.btn.turbo { background: linear-gradient(135deg, #7c3aed, #2563eb); border: 0; color: #fff; }
-.btn.zap { background: #128C7E; border: 0; color: #fff; }
-.btn.perigo { background: transparent; border-color: #7f1d1d; color: var(--vermelho); }
-.btn.pequeno { min-height: 42px; font-size: 13.5px; padding: 9px 12px; margin-top: 8px; }
+.btn:active { transform: scale(.985); }
+.btn.principal {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border-color: rgba(34,197,94,.35); color: #fff;
+}
+.btn.turbo {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border: 0; color: #fff;
+}
+.btn.zap {
+  background: linear-gradient(135deg, #128C7E, #25D366);
+  border: 0; color: #fff;
+}
+.btn.perigo { background: rgba(127, 29, 29, .18); border-color: rgba(248,113,113,.22); color: #fecaca; }
+.btn.pequeno { min-height: 42px; font-size: 13px; padding: 10px 12px; margin-top: 8px; }
 .btn:disabled { opacity: .5; }
 .linha-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .linha-btn .btn { margin-top: 8px; }
 
 /* ─────────── cartões ─────────── */
-.carta {
-  background: var(--carta); border: 1px solid var(--borda);
-  border-radius: 14px; padding: 14px; margin-bottom: 10px;
+.carta, .bloco, .etapa, .melhoria {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .90), rgba(8, 15, 27, .90));
+  border: 1px solid rgba(148, 163, 184, .14);
+  box-shadow: var(--sombra2);
 }
-.carta h3 { margin: 0 0 4px; font-size: 16px; }
+.carta {
+  border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; overflow: hidden;
+}
+.carta::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+}
+.carta h3 { margin: 0 0 5px; font-size: 16px; }
 .carta .meta { font-size: 13px; color: var(--fraco); }
-
-.bloco { background: var(--carta); border: 1px solid var(--borda); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-.bloco > h2 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 7px; }
+.bloco { border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+.bloco > h2 { font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 7px; }
 .bloco > p.ajuda { font-size: 13px; color: var(--fraco); margin: 0 0 6px; }
+.bloco-resultado { padding-top: 14px; }
+
+
+/* ─────────── construtor de sites ─────────── */
+.site-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.site-resumo div {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 12px; padding: 12px 10px;
+}
+.site-resumo b { display: block; font-size: 14px; color: var(--texto); }
+.site-resumo span { display: block; font-size: 11px; color: var(--fraco); margin-top: 3px; }
+.modelo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.modelo-site {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 14px; padding: 13px;
+  min-height: 110px; cursor: pointer;
+}
+.modelo-site.on { border-color: var(--verde); box-shadow: inset 0 0 0 1px #10b98155; }
+.modelo-site b { display: block; font-size: 14px; margin-bottom: 5px; }
+.modelo-site p { margin: 0; font-size: 12px; color: var(--fraco); }
+.modelo-site .mini { margin-top: 8px; display: block; }
+.site-passo {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border: 1px solid #334155; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+}
+.site-passo h3 { margin: 0 0 5px; font-size: 15px; display:flex; align-items:center; gap:8px; }
+.site-passo p { margin: 0; font-size: 12.5px; color: var(--fraco); }
+.lista-preview { display: grid; gap: 8px; margin-top: 10px; }
+.lista-preview div {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #0b1220; border: 1px solid #334155; border-radius: 12px; padding: 11px 12px;
+}
+.lista-preview i { font-style: normal; font-size: 18px; line-height: 1.1; }
+.lista-preview b { display: block; font-size: 13px; margin-bottom: 2px; }
+.lista-preview span { font-size: 12px; color: var(--fraco); }
+.area-mini { min-height: 72px; }
+@media (max-width: 520px) {
+  .modelo-grade, .site-resumo { grid-template-columns: 1fr; }
+}
 
 /* ─────────── selos ─────────── */
 .selo {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  padding: 3px 8px; border-radius: 20px; margin: 4px 4px 0 0;
+  display: inline-block; font-size: 11px; font-weight: 800;
+  padding: 4px 9px; border-radius: 999px; margin: 4px 4px 0 0;
+  border: 1px solid transparent;
 }
-.selo.semsite  { background: #7f1d1d; color: #fecaca; }
-.selo.comsite  { background: #334155; color: var(--fraco); }
-.selo.quente   { background: #78350f; color: #fed7aa; }
-.selo.plano    { background: #064e3b; color: #6ee7b7; }
-.selo.pago     { background: #065f46; color: #a7f3d0; }
-.selo.etapa    { background: #1e3a8a; color: #bfdbfe; }
-.selo.atraso   { background: #7f1d1d; color: #fecaca; }
+.selo.semsite  { background: rgba(127, 29, 29, .34); color: #fecaca; border-color: rgba(248,113,113,.22); }
+.selo.comsite  { background: rgba(51, 65, 85, .55); color: #cbd5e1; border-color: rgba(148,163,184,.14); }
+.selo.quente   { background: rgba(120, 53, 15, .45); color: #fed7aa; border-color: rgba(251,191,36,.2); }
+.selo.plano    { background: rgba(6, 78, 59, .38); color: #86efac; border-color: rgba(34,197,94,.18); }
+.selo.pago     { background: rgba(20, 83, 45, .45); color: #bbf7d0; border-color: rgba(34,197,94,.18); }
+.selo.etapa    { background: rgba(30, 58, 138, .38); color: #bfdbfe; border-color: rgba(56,189,248,.14); }
+.selo.atraso   { background: rgba(127, 29, 29, .34); color: #fecaca; border-color: rgba(248,113,113,.22); }
 
 /* nota do lead */
-.nota { float: right; font-size: 21px; font-weight: 800; color: var(--verde); line-height: 1; }
-.nota small { display: block; font-size: 9px; color: var(--fraco); font-weight: 600; text-align: center; }
+.nota {
+  float: right; min-width: 54px; text-align: center;
+  font-size: 22px; font-weight: 900; color: #34d399; line-height: 1;
+  background: rgba(16, 185, 129, .08); padding: 8px 8px 6px; border-radius: 14px;
+  border: 1px solid rgba(16,185,129,.12);
+}
+.nota small { display: block; font-size: 9px; color: var(--fraco); font-weight: 700; text-align: center; margin-top: 3px; }
 
 /* ─────────── chips de categoria ─────────── */
-.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .chip {
-  padding: 9px 13px; border-radius: 20px;
-  background: var(--carta); border: 1px solid var(--borda);
-  color: var(--fraco); font-size: 13.5px; cursor: pointer; user-select: none;
+  padding: 10px 13px; border-radius: 999px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.14);
+  color: #cbd5e1; font-size: 13px; cursor: pointer; user-select: none;
 }
-.chip.on { background: var(--verde-e); border-color: var(--verde); color: #fff; font-weight: 600; }
+.chip.on {
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.18));
+  border-color: rgba(56,189,248,.22); color: #fff; font-weight: 700;
+}
 
 /* ─────────── modal que sobe de baixo ─────────── */
 .fundo-modal {
   position: fixed; inset: 0; z-index: 60;
-  background: rgba(0, 0, 0, .6); display: none;
+  background: rgba(1, 6, 14, .66); display: none;
+  backdrop-filter: blur(6px);
 }
 .fundo-modal.on { display: block; }
 .folha {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
   max-height: 92vh; overflow-y: auto;
-  background: var(--fundo); border-radius: 20px 20px 0 0;
-  border-top: 1px solid var(--borda);
+  background: linear-gradient(180deg, #0b1425, #08111f);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid rgba(148,163,184,.16);
   padding: 8px 16px calc(28px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%); transition: transform .22s ease;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.35);
 }
 .folha.on { transform: none; }
-.puxador { width: 42px; height: 4px; background: var(--carta2); border-radius: 3px; margin: 6px auto 12px; }
+.puxador { width: 44px; height: 5px; background: #31435f; border-radius: 4px; margin: 8px auto 14px; }
 .folha h2 { font-size: 18px; margin: 0 0 12px; }
 
 /* ─────────── avisos ─────────── */
 .aviso {
-  padding: 11px 13px; border-radius: 11px; font-size: 13.5px;
-  margin: 10px 0; border-left: 3px solid;
+  padding: 12px 13px; border-radius: 14px; font-size: 13.5px;
+  margin: 10px 0; border: 1px solid transparent; border-left: 3px solid;
 }
-.aviso.info  { background: #0c4a6e33; border-color: var(--azul); color: #bae6fd; }
-.aviso.bom   { background: #064e3b33; border-color: var(--verde); color: #a7f3d0; }
-.aviso.alerta{ background: #78350f33; border-color: var(--amarelo); color: #fde68a; }
-.aviso.ruim  { background: #7f1d1d33; border-color: var(--vermelho); color: #fecaca; }
+.aviso.info  { background: rgba(12, 74, 110, .26); border-color: rgba(56,189,248,.14); color: #bae6fd; }
+.aviso.bom   { background: rgba(6, 78, 59, .28); border-color: rgba(34,197,94,.22); color: #a7f3d0; }
+.aviso.alerta{ background: rgba(120, 53, 15, .28); border-color: rgba(251,191,36,.22); color: #fde68a; }
+.aviso.ruim  { background: rgba(127, 29, 29, .28); border-color: rgba(248,113,113,.22); color: #fecaca; }
 
 /* ─────────── recadinho flutuante ─────────── */
 #recado {
   position: fixed; left: 14px; right: 14px; z-index: 90;
-  bottom: calc(var(--barra) + 16px + env(safe-area-inset-bottom, 0px));
-  background: #0b1220; border: 1px solid var(--verde);
-  color: var(--texto); padding: 13px 15px; border-radius: 12px;
-  font-size: 14px; text-align: center; box-shadow: 0 8px 28px #000a;
+  bottom: calc(var(--barra) + 24px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #0a1424, #08101d);
+  border: 1px solid rgba(34,197,94,.26);
+  color: var(--texto); padding: 14px 15px; border-radius: 14px;
+  font-size: 14px; text-align: center; box-shadow: 0 12px 32px rgba(0,0,0,.36);
   opacity: 0; transform: translateY(14px); pointer-events: none;
   transition: all .22s ease;
 }
@@ -198,91 +402,144 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 /* ─────────── etapas do time de IA ─────────── */
 .etapa {
   display: flex; align-items: center; gap: 11px;
-  padding: 12px 13px; border-radius: 12px;
-  background: var(--carta); border: 1px solid var(--borda); margin-bottom: 8px;
+  padding: 13px; border-radius: 16px; margin-bottom: 9px;
 }
-.etapa .ico { font-size: 21px; width: 26px; text-align: center; }
+.etapa .ico { font-size: 21px; width: 28px; text-align: center; }
 .etapa .txt { flex: 1; min-width: 0; }
 .etapa .txt b { display: block; font-size: 14.5px; }
 .etapa .txt span { font-size: 12px; color: var(--fraco); }
 .etapa .estado { font-size: 18px; }
-.etapa.rodando { border-color: var(--azul); background: #0c4a6e22; }
+.etapa.rodando { border-color: rgba(56,189,248,.26); background: rgba(12,74,110,.18); }
 .etapa.rodando .estado { animation: girando 1s linear infinite; }
 @keyframes girando { to { transform: rotate(360deg); } }
-.etapa.ok { border-color: var(--verde); }
-.etapa.falhou { border-color: var(--vermelho); opacity: .7; }
+.etapa.ok { border-color: rgba(34,197,94,.24); }
+.etapa.falhou { border-color: rgba(248,113,113,.24); opacity: .78; }
 
 /* ─────────── melhorias ─────────── */
 .nota-site {
-  text-align: center; font-size: 40px; font-weight: 800;
-  color: var(--verde); line-height: 1; margin: 6px 0 2px;
+  text-align: center; font-size: 40px; font-weight: 900;
+  color: #34d399; line-height: 1; margin: 6px 0 4px;
 }
-.nota-site small { display: block; font-size: 12px; color: var(--fraco); font-weight: 600; }
+.nota-site small { display: block; font-size: 12px; color: var(--fraco); font-weight: 700; }
 .melhoria {
-  background: var(--carta); border: 1px solid var(--borda);
   border-left: 3px solid var(--fraco);
-  border-radius: 11px; padding: 12px; margin-bottom: 9px;
+  border-radius: 16px; padding: 13px; margin-bottom: 10px;
 }
 .melhoria.alta  { border-left-color: var(--vermelho); }
 .melhoria.media { border-left-color: var(--amarelo); }
 .melhoria.baixa { border-left-color: var(--fraco); }
 .melhoria.feita { opacity: .45; }
-.melhoria b { font-size: 14.5px; display: block; margin-bottom: 3px; }
+.melhoria b { font-size: 14.5px; display: block; margin-bottom: 4px; }
 .melhoria p { margin: 4px 0; font-size: 13px; color: var(--fraco); }
 .melhoria .quem { font-size: 11px; font-weight: 700; }
 
 /* ─────────── vazio ─────────── */
-.vazio { text-align: center; padding: 44px 20px; color: var(--fraco); }
-.vazio .emoji { font-size: 46px; display: block; margin-bottom: 12px; opacity: .7; }
+.vazio {
+  text-align: center; padding: 42px 20px; color: var(--fraco);
+  background: rgba(255,255,255,.03); border: 1px dashed rgba(148,163,184,.16); border-radius: 18px;
+}
+.vazio .emoji { font-size: 46px; display: block; margin-bottom: 12px; opacity: .85; }
 .vazio b { display: block; color: var(--texto); margin-bottom: 6px; font-size: 16px; }
 .vazio p { font-size: 13.5px; margin: 0; }
 
 /* ─────────── carregando ─────────── */
-.rodando-tela { text-align: center; padding: 40px 20px; }
+.rodando-tela { text-align: center; padding: 42px 20px; }
 .roda {
-  width: 38px; height: 38px; margin: 0 auto 16px;
-  border: 3px solid var(--carta2); border-top-color: var(--verde);
+  width: 40px; height: 40px; margin: 0 auto 16px;
+  border: 3px solid rgba(148,163,184,.18); border-top-color: var(--verde);
   border-radius: 50%; animation: girando .8s linear infinite;
 }
 
 /* ─────────── QR do Pix ─────────── */
-.qr { background: #fff; padding: 12px; border-radius: 14px; display: inline-block; margin: 0 auto; }
+.qr { background: #fff; padding: 12px; border-radius: 18px; display: inline-block; margin: 0 auto; }
 .qr img, .qr canvas, .qr table { display: block; width: 190px; height: 190px; }
 .meio { text-align: center; }
 
 .codigo {
-  background: #0b1220; border: 1px solid var(--borda); border-radius: 10px;
-  padding: 11px; font-family: ui-monospace, monospace; font-size: 11px;
-  word-break: break-all; color: #94e2c4; max-height: 96px; overflow-y: auto;
+  background: rgba(5, 11, 20, .94); border: 1px solid rgba(148,163,184,.12); border-radius: 14px;
+  padding: 12px; font-family: ui-monospace, monospace; font-size: 11px;
+  word-break: break-all; color: #a7f3d0; max-height: 110px; overflow-y: auto;
   -webkit-user-select: all; user-select: all;
 }
 
 /* números do topo */
 .placar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .placar div {
-  background: var(--carta); border: 1px solid var(--borda);
-  border-radius: 12px; padding: 11px 6px; text-align: center;
+  background: linear-gradient(180deg, rgba(12,20,35,.95), rgba(8,14,25,.95));
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 16px; padding: 13px 8px; text-align: center; box-shadow: var(--sombra2);
 }
-.placar b { display: block; font-size: 19px; color: var(--verde); }
+.placar b { display: block; font-size: 19px; color: #34d399; }
 .placar span { font-size: 10.5px; color: var(--fraco); }
 
-hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
+.cache-buscas { display: grid; gap: 10px; }
+.cache-item {
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(10,17,30,.92), rgba(8,14,25,.88));
+  box-shadow: var(--sombra2);
+}
+.cache-item-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cache-item-topo b { font-size: 14px; display: block; }
+.cache-item-topo span { font-size: 11px; color: var(--fraco); }
+.cache-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cache-tags .pill { font-size: 10.5px; }
+
+hr.sep { border: 0; border-top: 1px solid rgba(148,163,184,.12); margin: 18px 0; }
 .mini { font-size: 12px; color: var(--fraco); }
+
+@media (max-width: 720px) {
+  .topo-linha { align-items: flex-start; flex-direction: column; }
+  .status-pilulas { justify-content: flex-start; }
+}
+@media (max-width: 560px) {
+  .dupla, .linha-btn, .painel-grid, .atalhos-topo { grid-template-columns: 1fr; }
+  .abas { left: 10px; right: 10px; }
+}
 
 </style>
 </head>
 <body>
 
 <header class="topo">
-  <span style="font-size:22px">🚀</span>
-  <h1>LeadSite<span class="sub" id="subtitulo">seu escritório no bolso</span></h1>
+  <div class="topo-linha">
+    <div class="marca">
+      <span class="marca-icone" id="iconeTopo">🚀</span>
+      <div class="marca-txt">
+        <strong>LeadSite</strong>
+        <span class="sub" id="subtitulo">dashboard de prospecção e criação de sites</span>
+      </div>
+    </div>
+    <div class="status-pilulas">
+      <span class="pill">premium escuro</span>
+      <span class="pill destaque" id="statusRapido">0 clientes</span>
+    </div>
+  </div>
+  <div class="painel-topo" id="painelTopo"></div>
 </header>
 
 <!-- ═══════════ BUSCAR ═══════════ -->
 <section class="tela" id="tela-buscar">
+  <div class="hero-app">
+    <span class="tag">Buscar leads</span>
+    <h2>Caçar empresas e puxar conversa mais rápido</h2>
+    <p>Escolha a cidade, filtre quem não tem site e monte uma fila de contatos pronta para hoje.</p>
+    <div class="hero-linhas">
+      <span>🗺️ busca por cidade</span>
+      <span>🔥 pontuação automática</span>
+      <span>💬 atalho pro WhatsApp</span>
+    </div>
+  </div>
+
   <div class="bloco">
     <h2>🔍 Achar empresas sem site</h2>
-    <p class="ajuda">Busca de verdade no mapa do OpenStreetMap. Quem não tem site é cliente em potencial.</p>
+    <p class="ajuda">Busca de verdade no mapa. Quem não tem site vira oportunidade boa de abordagem.</p>
 
     <label>Cidade</label>
     <input id="bCidade" placeholder="Rondonópolis" autocomplete="off">
@@ -314,21 +571,58 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
     <p class="mini" id="fonteBusca" style="text-align:center"></p>
   </div>
 
-  <div id="bResultado">
-    <div class="vazio">
-      <span class="emoji">🗺️</span>
-      <b>Escolha a cidade e o tipo</b>
-      <p>Em menos de um minuto você tem uma lista de empresas para chamar hoje.</p>
+  <div class="bloco">
+    <div class="bloco-topo">
+      <h2>💾 Banco local de buscas</h2>
+      <p>As pesquisas por cidade ficam guardadas no aparelho. Se você já buscou Rondonópolis, pode abrir em segundos sem consultar a internet de novo.</p>
+    </div>
+    <div id="buscasSalvas">
+      <div class="vazio">
+        <span class="emoji">🗂️</span>
+        <b>Nenhuma busca salva ainda</b>
+        <p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloco bloco-resultado">
+    <div class="bloco-topo">
+      <h2>Resultados da busca</h2>
+      <p>Os melhores leads aparecem aqui já com nota, telefone e ação rápida.</p>
+    </div>
+    <div id="bResultado">
+      <div class="vazio">
+        <span class="emoji">🗺️</span>
+        <b>Escolha a cidade e o tipo</b>
+        <p>Em menos de um minuto você tem uma lista de empresas para chamar hoje.</p>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ CLIENTES ═══════════ -->
 <section class="tela" id="tela-clientes">
-  <div class="placar" id="cPlacar"></div>
-  <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
-  <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas dos clientes</button>
-  <div class="chips" id="cFiltros" style="margin:12px 0"></div>
+  <div class="hero-app">
+    <span class="tag">CRM rápido</span>
+    <h2>Organizar clientes, respostas e cobranças</h2>
+    <p>Veja quem respondeu, quem pagou, quem esfriou e quem já pode receber o site.</p>
+    <div class="hero-linhas">
+      <span>📋 pipeline simples</span>
+      <span>💰 cobrança por Pix</span>
+      <span>📝 questionário embutido</span>
+    </div>
+  </div>
+
+  <div class="bloco">
+    <div class="placar" id="cPlacar"></div>
+    <label>Procurar cliente</label>
+    <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
+    <div class="linha-btn">
+      <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas</button>
+      <button class="btn" style="margin-top:10px" onclick="ir('site')">🎨 Criar site</button>
+    </div>
+    <div class="chips" id="cFiltros" style="margin:12px 0"></div>
+  </div>
   <div id="cLista"></div>
 </section>
 
@@ -3378,7 +3672,48 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const attr = esc;
   const soDigitos = (s) => String(s || '').replace(/\D/g, '');
-  const linhas = (s) => Array.isArray(s) ? s.filter(Boolean) : String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const linhas = (s) => Array.isArray(s)
+    ? s.map(x => String(x == null ? '' : x).trim()).filter(Boolean)
+    : String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const tituloServico = (s) => String(s && (s.titulo || s.nome || s.servico || s.label || s) || '').trim();
+  function normalizarServicos(lista) {
+    return (Array.isArray(lista) ? lista : linhas(lista)).map(function (s) {
+      if (typeof s === 'string') return { titulo: s.trim(), descricao: '', preco: '' };
+      return {
+        titulo: tituloServico(s),
+        descricao: String(s && s.descricao || '').trim(),
+        preco: String(s && s.preco || '').trim()
+      };
+    }).filter(function (s) { return s.titulo; });
+  }
+  function normalizarSecoes(v) {
+    const base = { numeros:false, sobre:false, processo:false, servicos:false, galeria:false, equipe:false, depoimentos:false, faq:false, horario:false, contato:false };
+    if (Array.isArray(v)) {
+      v.forEach(function (k) { k = String(k || '').toLowerCase().trim(); if (k in base) base[k] = true; });
+    } else if (v && typeof v === 'object') {
+      Object.keys(base).forEach(function (k) { base[k] = !!v[k]; });
+    }
+    if (!Object.keys(base).some(function (k) { return base[k]; })) {
+      ['numeros','sobre','processo','servicos','depoimentos','faq','contato'].forEach(function (k) { base[k] = true; });
+    }
+    return base;
+  }
+  function normalizarHorarios(v) {
+    if (Array.isArray(v)) {
+      return v.map(function (h) {
+        return { dia: String(h && h.dia || '').trim(), hora: String(h && h.hora || '').trim() };
+      }).filter(function (h) { return h.dia && h.hora; });
+    }
+    return linhas(v).map(function (linha) {
+      var m = linha.match(/^([^:]+):\s*(.+)$/);
+      return m ? { dia: m[1].trim(), hora: m[2].trim() } : { dia: 'Atendimento', hora: linha };
+    }).filter(function (h) { return h.dia && h.hora; });
+  }
+  function normalizarEtapas(v) {
+    return linhas(v).map(function (linha, i) {
+      return { titulo: linha, detalhe: i === 0 ? 'primeiro contato' : i === 1 ? 'entendimento do pedido' : i === 2 ? 'fechamento do atendimento' : 'etapa do processo' };
+    }).filter(function (e) { return e.titulo; }).slice(0, 5);
+  }
 
   const I = {
     check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
@@ -3424,7 +3759,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const pal = PALETAS[c.paleta] || PALETAS.esmeralda;
     const fnt = FONTES[c.fonte] || FONTES.moderna;
     const est = ESTILOS[c.estilo] || ESTILOS.moderno;
-    const sec = c.secoes || {};
+    const sec = normalizarSecoes(c.secoes);
     const dark = !!c.escuro && c.escuro !== '0';
 
     const tel = soDigitos(c.whatsapp);
@@ -3432,14 +3767,33 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const waMsg = c.whatsappMsg || `Olá! Vim pelo site e gostaria de mais informações.`;
     const waLink = waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(waMsg)}` : '';
 
-    const servicos  = (c.servicos || []).filter(s => s && s.titulo);
+    const servicos  = normalizarServicos(c.servicos);
     const depos     = (c.depoimentos || []).filter(d => d && d.texto);
     const numeros   = (c.numeros || []).filter(n => n && n.valor);
     const faq       = (c.faq || []).filter(f => f && f.p && f.r);
     const equipe    = (c.equipe || []).filter(e => e && e.nome);
     const galeria   = linhas(c.galeria);
-    const horarios  = (c.horarios || []).filter(h => h && h.dia);
+    const horarios  = normalizarHorarios(c.horarios || c.horario);
     const difs      = linhas(c.diferenciais);
+    const heroDestaques = linhas(c.heroDestaques).slice(0, 4);
+    const etapasVenda = normalizarEtapas(c.etapasVenda || c.processo || []);
+    const tipoSite = String(c.tipoSite || 'conversao');
+    let pontosHero = (difs.length
+      ? difs
+      : servicos.map(s => s.titulo + (s.preco ? ' · ' + s.preco : ''))).slice(0, 4);
+    if (!pontosHero.length) pontosHero = heroDestaques.slice(0, 4);
+    const badgeHero = c.badge || (c.cidade ? 'Atendimento em ' + c.cidade : '');
+    const textoCta = c.textoCta || 'Chamar no WhatsApp';
+    const ctaTitulo = c.ctaTitulo || 'Atendimento rápido pelo WhatsApp';
+    const ctaTexto = c.ctaTexto || c.servicosSub || c.slogan || 'Tire dúvidas, peça preço e receba atendimento direto da equipe.';
+    const processoTitulo = c.processoTitulo || (tipoSite === 'agenda' ? 'Como agendar' : tipoSite === 'cardapio' ? 'Como pedir' : 'Como funciona');
+    const processoSub = c.processoSub || (c.objetivoSite || 'Veja o caminho mais rápido para falar com a equipe e resolver o que você precisa.');
+    const contatoRapido = [
+      c.endereco ? String(c.endereco).split(' - ').slice(-1)[0] : '',
+      horarios.length ? (horarios[0].dia + ': ' + horarios[0].hora) : '',
+      c.telefone || c.whatsapp || ''
+    ].filter(Boolean).slice(0, 3);
+    const temPainelHero = !!(pontosHero.length || contatoRapido.length || waLink);
 
     /* paleta derivada */
     const bg   = dark ? '#0b0f14' : '#ffffff';
@@ -3451,6 +3805,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
 
     const nav = [];
     if (sec.sobre)       nav.push(['#sobre','Sobre']);
+    if (sec.processo && etapasVenda.length) nav.push(['#processo', processoTitulo]);
     if (sec.servicos && servicos.length) nav.push(['#servicos', c.rotuloServicos || 'Serviços']);
     if (sec.galeria && galeria.length)   nav.push(['#galeria','Galeria']);
     if (sec.equipe && equipe.length)     nav.push(['#equipe','Equipe']);
@@ -3460,7 +3815,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     if (sec.contato)     nav.push(['#contato','Contato']);
 
     const iniciais = nome.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'ME';
-    const descricao = (c.descricao || c.slogan || c.sobreTexto || `${nome} — atendimento de qualidade.`)
+    const descricao = (c.descricao || c.subtitulo || c.slogan || c.sobreTexto || `${nome} — atendimento de qualidade.`)
       .toString().split('\n')[0].slice(0, 158);
     const marca = c.logo
       ? `<img src="${attr(c.logo)}" alt="Logo ${attr(nome)}" class="logoimg">`
@@ -3549,15 +3904,21 @@ header.rolou{box-shadow:0 6px 24px rgba(0,0,0,${dark?'.5':'.08'})}
 .promo svg{width:17px;height:17px}
 
 /* ── topo ── */
-.hero{padding:${est.heroPad};color:#fff;text-align:${c.heroAlinhamento==='left'?'left':'center'};position:relative;overflow:hidden;
+.hero{padding:clamp(88px,10vw,150px) 0 clamp(76px,9vw,118px);color:#fff;position:relative;overflow:hidden;isolation:isolate;
 background:${c.heroImagem
-  ? `linear-gradient(${dark?'rgba(6,10,14,.8)':'rgba(0,0,0,.58)'},${dark?'rgba(6,10,14,.92)':'rgba(0,0,0,.7)'}),url('${attr(c.heroImagem)}') center/cover no-repeat`
+  ? `linear-gradient(${dark?'rgba(6,10,14,.8)':'rgba(0,0,0,.58)'},${dark?'rgba(6,10,14,.92)':'rgba(0,0,0,.74)'}),url('${attr(c.heroImagem)}') center/cover no-repeat`
   : `linear-gradient(135deg,var(--d) 0%,var(--p) 58%,var(--a) 130%)`}}
-.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(900px 420px at 50% -10%,rgba(255,255,255,.14),transparent 62%);pointer-events:none}
-.hero .wrap{max-width:840px;position:relative;z-index:2}
-.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:7px 18px;border-radius:99px;font-size:.78rem;font-weight:750;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px;backdrop-filter:blur(6px)}
-.hero h1{font-size:clamp(2.05rem,5.6vw,3.75rem);margin-bottom:18px;text-shadow:0 2px 30px rgba(0,0,0,.28)}
-.hero .sub{font-size:clamp(1.02rem,2.2vw,1.3rem);opacity:.96;max-width:640px;margin:${c.heroAlinhamento==='left'?'0 0 34px':'0 auto 34px'}}
+.hero::before{content:'';position:absolute;left:-70px;bottom:-110px;width:320px;height:320px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 62%);filter:blur(10px);pointer-events:none}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(900px 420px at 12% -10%,rgba(255,255,255,.18),transparent 58%),radial-gradient(640px 300px at 100% 30%,rgba(255,255,255,.12),transparent 62%);pointer-events:none}
+.hero .wrap{max-width:1140px;position:relative;z-index:2}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.14fr) minmax(300px,.86fr);gap:36px;align-items:center}
+.hero-copy{max-width:${c.heroAlinhamento==='left'?'680px':'760px'};text-align:${c.heroAlinhamento==='left'?'left':'center'}}
+.hero-side{display:grid;gap:16px;justify-self:end;width:min(100%,360px)}
+.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);padding:8px 18px;border-radius:99px;font-size:.78rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.12)}
+.hero h1{font-size:clamp(2.2rem,5.8vw,4.15rem);margin-bottom:16px;text-shadow:0 2px 30px rgba(0,0,0,.28)}
+.hero .sub{font-size:clamp(1.04rem,2.2vw,1.28rem);opacity:.96;max-width:680px;margin:${c.heroAlinhamento==='left'?'0 0 26px':'0 auto 26px'}}
+.hero-badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin:0 0 28px}
+.hero-badges span{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);font-size:.9rem;font-weight:650;backdrop-filter:blur(8px)}
 .btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'}}
 .btn{display:inline-flex;align-items:center;gap:10px;padding:15px 32px;border-radius:var(--r);font-weight:700;font-size:1rem;transition:transform .22s,box-shadow .22s,filter .22s;border:0;cursor:pointer;font-family:inherit}
 .btn:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.24)}
@@ -3565,9 +3926,19 @@ background:${c.heroImagem
 .b2{background:rgba(255,255,255,.13);color:#fff;border:2px solid rgba(255,255,255,.55);backdrop-filter:blur(6px)}
 .bwa{background:#25D366;color:#fff}
 .bp{background:var(--p);color:#fff}
-.confia{display:flex;gap:22px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin-top:32px;font-size:.87rem;opacity:.93}
-.confia span{display:flex;align-items:center;gap:7px}
+.confia{display:flex;gap:14px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin-top:30px;font-size:.88rem;opacity:.94}
+.confia span{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15)}
 .confia svg{width:16px;height:16px}
+.hero-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:24px;border-radius:calc(var(--r) + 8px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.hero-mini{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(8,12,20,.24);font-size:.73rem;font-weight:800;letter-spacing:.9px;text-transform:uppercase}
+.hero-card strong{display:block;font-family:${fnt.h};font-size:1.45rem;line-height:1.14;margin:14px 0 10px}
+.hero-card p{color:rgba(255,255,255,.84);font-size:.97rem}
+.hero-pontos{list-style:none;display:grid;gap:12px;margin:18px 0 0}
+.hero-pontos li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:16px;background:rgba(8,12,20,.18)}
+.hero-pontos svg{width:18px;height:18px;color:#fff;margin-top:2px}
+.hero-rodape{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.hero-rodape span{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.09);font-size:.85rem;color:rgba(255,255,255,.86)}
+.hero-side .btn{width:100%;justify-content:center}
 
 /* ── seções ── */
 section{padding:${est.sec} 0;position:relative}
@@ -3584,6 +3955,8 @@ section{padding:${est.sec} 0;position:relative}
 
 /* ── números ── */
 .nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:22px;text-align:center}
+.num{background:var(--card);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:28px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.num::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--p),var(--a))}
 .num b{display:block;font-family:${fnt.h};font-size:clamp(2.1rem,4.6vw,3rem);font-weight:800;background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
 .num span{color:var(--mute);font-size:.93rem;font-weight:600}
 
@@ -3597,12 +3970,21 @@ section{padding:${est.sec} 0;position:relative}
 .plist li{display:flex;gap:13px;align-items:flex-start;font-weight:620}
 .plist svg{color:var(--p);width:21px;height:21px;margin-top:4px}
 
+/* ── processo ── */
+.proc{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.proc-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:28px;position:relative;overflow:hidden}
+.proc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--p),var(--a))}
+.proc-num{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:${pal.p}14;color:var(--p);font-weight:800;margin-bottom:16px}
+.proc-card h3{font-size:1.08rem;margin-bottom:8px}
+.proc-card p{color:var(--mute);font-size:.95rem}
+
 /* ── cards ── */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:26px}
 .card{background:var(--card);padding:34px;border-radius:var(--r);box-shadow:var(--sh);border:${est.border==='none'?'1px solid var(--line)':est.border};transition:transform .28s,box-shadow .28s,border-color .28s;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--p),var(--a));transform:scaleX(0);transform-origin:left;transition:transform .35s}
 .card:hover{transform:translateY(-8px);box-shadow:0 22px 48px rgba(0,0,0,${dark?'.45':'.13'});border-color:${pal.p}44}
 .card:hover::before{transform:scaleX(1)}
+.svc .ordem{position:absolute;right:22px;top:18px;padding:6px 10px;border-radius:999px;background:${pal.p}14;color:var(--p);font-size:.72rem;font-weight:800;letter-spacing:1px}
 .ico{width:54px;height:54px;border-radius:${est.radius==='4px'?'9px':est.radius};background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-size:1.45rem;margin-bottom:20px;box-shadow:0 8px 20px ${pal.p}3d}
 .card h3{font-size:1.22rem;margin-bottom:11px}
 .card p{color:var(--mute);font-size:.97rem;flex:1}
@@ -3701,9 +4083,10 @@ ${c.lgpd ? `.lgpd{position:fixed;left:16px;right:16px;bottom:16px;max-width:560p
  .menu{position:fixed;inset:72px 0 auto 0;flex-direction:column;background:var(--bg);padding:24px;gap:18px;border-bottom:1px solid var(--line);box-shadow:0 14px 30px rgba(0,0,0,.16);transform:translateY(-130%);transition:transform .34s cubic-bezier(.3,.8,.3,1);align-items:stretch;text-align:center}
  .menu.aberto{transform:none}
  .burger{display:block}
+ .hero-grid{grid-template-columns:1fr}
+ .hero-copy,.hero-side{max-width:100%;width:100%;justify-self:stretch}
+ .hero-copy,.hero .sub,.btns,.confia,.hero-badges,.hero-rodape{text-align:center;justify-content:center;margin-left:auto;margin-right:auto}
  .sobre{grid-template-columns:1fr;gap:36px}
- .hero{text-align:center}
- .hero .sub,.btns,.confia{margin-left:auto;margin-right:auto;justify-content:center}
  section{padding:58px 0}
  .card{padding:28px}
 }
@@ -3727,7 +4110,7 @@ ${c.promoTexto ? `<div class="promo">${I.tag}<span>${esc(c.promoTexto)}</span>${
    <a href="#" class="logo" aria-label="${attr(nome)} — início">${marca}${c.logo?'':`<span>${esc(nome)}</span>`}</a>
    <ul class="menu" id="menu">
     ${nav.map(([h,t]) => `<li><a href="${h}">${esc(t)}</a></li>`).join('\n    ')}
-    ${waLink ? `<li><a href="${attr(waLink)}" target="_blank" rel="noopener" class="navcta">${esc(c.textoCta || 'Fale conosco')}</a></li>` : ''}
+    ${waLink ? `<li><a href="${attr(waLink)}" target="_blank" rel="noopener" class="navcta">${esc(textoCta || 'Fale conosco')}</a></li>` : ''}
    </ul>
    <button class="burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
   </nav>
@@ -3736,20 +4119,37 @@ ${c.promoTexto ? `<div class="promo">${I.tag}<span>${esc(c.promoTexto)}</span>${
 
 <main id="conteudo">
 <div class="hero">
- <div class="wrap">
-  ${c.badge ? `<span class="selo">${esc(c.badge)}</span>` : ''}
-  <h1>${esc(c.titulo || nome)}</h1>
-  ${(c.slogan || c.descricao) ? `<p class="sub">${esc(c.slogan || c.descricao)}</p>` : ''}
-  <div class="btns">
-   ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bwa">${I.wa}<span>${esc(c.textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
-   ${servicos.length && sec.servicos ? `<a href="#servicos" class="btn b2">Ver ${esc((c.rotuloServicos||'serviços').toLowerCase())}</a>`
-     : (sec.contato ? `<a href="#contato" class="btn b2">Onde estamos</a>` : '')}
+ <div class="wrap hero-grid">
+  <div class="hero-copy">
+   ${badgeHero ? `<span class="selo">${esc(badgeHero)}</span>` : ''}
+   <h1>${esc(c.titulo || nome)}</h1>
+   ${(c.subtitulo || c.slogan || c.descricao) ? `<p class="sub">${esc(c.subtitulo || c.slogan || c.descricao)}</p>` : ''}
+   ${heroDestaques.length ? `<div class="hero-badges">${heroDestaques.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}
+   <div class="btns">
+    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bwa">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+    ${servicos.length && sec.servicos ? `<a href="#servicos" class="btn b2">Ver ${esc((c.rotuloServicos||'serviços').toLowerCase())}</a>`
+      : (sec.contato ? `<a href="#contato" class="btn b2">Onde estamos</a>` : '')}
+   </div>
+   ${(c.notaMedia || horarios.length || c.endereco) ? `<div class="confia">
+    ${c.notaMedia ? `<span>${I.star}<b>${esc(c.notaMedia)}</b> de avaliação${c.qtdAvaliacoes?` (${esc(c.qtdAvaliacoes)})`:''}</span>` : ''}
+    ${c.endereco ? `<span>${I.pin}${esc(String(c.endereco).split(' - ').slice(-1)[0])}</span>` : ''}
+    ${horarios.length ? `<span>${I.clock}${esc(horarios[0].dia)}: ${esc(horarios[0].hora)}</span>` : ''}
+   </div>` : ''}
   </div>
-  ${(c.notaMedia || horarios.length || c.endereco) ? `<div class="confia">
-   ${c.notaMedia ? `<span>${I.star}<b>${esc(c.notaMedia)}</b> de avaliação${c.qtdAvaliacoes?` (${esc(c.qtdAvaliacoes)})`:''}</span>` : ''}
-   ${c.endereco ? `<span>${I.pin}${esc(String(c.endereco).split(' - ').slice(-1)[0])}</span>` : ''}
-   ${horarios.length ? `<span>${I.clock}${esc(horarios[0].dia)}: ${esc(horarios[0].hora)}</span>` : ''}
-  </div>` : ''}
+  ${temPainelHero ? `<aside class="hero-side"${rv}>
+   <div class="hero-card">
+    <span class="hero-mini">${esc(c.promoTexto || 'Resposta rápida')}</span>
+    <strong>${esc(ctaTitulo)}</strong>
+    <p>${esc(ctaTexto)}</p>
+    ${pontosHero.length ? `<ul class="hero-pontos">
+     ${pontosHero.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('\n     ')}
+    </ul>` : ''}
+    ${contatoRapido.length ? `<div class="hero-rodape">
+     ${contatoRapido.map(x => `<span>${esc(x)}</span>`).join('')}
+    </div>` : ''}
+   </div>
+   ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+  </aside>` : ''}
  </div>
 </div>
 
@@ -3773,9 +4173,27 @@ ${sec.sobre ? `
     ${difs.length ? `<ul class="plist">
      ${difs.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('\n     ')}
     </ul>` : ''}
-    ${waLink ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(c.textoCta || 'Falar conosco')}</span></a></div>` : ''}
+    ${waLink ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta || 'Falar conosco')}</span></a></div>` : ''}
    </div>
    ${c.sobreImagem ? `<div class="foto"${rv}><img src="${attr(c.sobreImagem)}" alt="Ambiente da ${attr(nome)}" loading="lazy" decoding="async"></div>` : ''}
+  </div>
+ </div>
+</section>` : ''}
+
+${sec.processo && etapasVenda.length ? `
+<section id="processo" class="alt">
+ <div class="wrap">
+  <div class="cab"${rv}>
+   <div class="kick">Passo a passo</div>
+   <h2>${esc(processoTitulo)}</h2>
+   <p>${esc(processoSub)}</p>
+  </div>
+  <div class="proc">
+   ${etapasVenda.map((et, i) => `<article class="proc-card"${rv}>
+    <span class="proc-num">${i + 1}</span>
+    <h3>${esc(et.titulo)}</h3>
+    <p>${esc(et.detalhe || '')}</p>
+   </article>`).join('\n   ')}
   </div>
  </div>
 </section>` : ''}
@@ -3789,14 +4207,15 @@ ${sec.servicos && servicos.length ? `
    ${c.servicosSub ? `<p>${esc(c.servicosSub)}</p>` : ''}
   </div>
   <div class="grid">
-   ${servicos.map(s => `<article class="card"${rv}>
+   ${servicos.map((s,i) => `<article class="card svc"${rv}>
+    <span class="ordem">${String(i + 1).padStart(2, '0')}</span>
     <div class="ico" aria-hidden="true">${I.check}</div>
     <h3>${esc(s.titulo)}</h3>
     <p>${esc(s.descricao || '')}</p>
     ${s.preco ? `<div class="preco">${esc(s.preco)}</div>` : ''}
    </article>`).join('\n   ')}
   </div>
-  ${waLink ? `<div class="btns" style="margin-top:44px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(c.textoCta || 'Pedir orçamento')}</span></a></div>` : ''}
+  ${waLink ? `<div class="btns" style="margin-top:44px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta || 'Pedir orçamento')}</span></a></div>` : ''}
  </div>
 </section>` : ''}
 
@@ -3885,10 +4304,10 @@ ${sec.contato ? `
   </form>` : ''}
 
   <div class="cta"${rv}>
-   <h2>${esc(c.ctaTitulo || 'Pronto para começar?')}</h2>
-   <p>${esc(c.ctaTexto || 'Entre em contato agora e receba um atendimento personalizado.')}</p>
+   <h2>${esc(ctaTitulo || 'Pronto para começar?')}</h2>
+   <p>${esc(ctaTexto || 'Entre em contato agora e receba um atendimento personalizado.')}</p>
    <div class="btns">
-    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(c.textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
+    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
     ${c.telefone ? `<a href="tel:+55${attr(soDigitos(c.telefone))}" class="btn b2">${I.phone}<span>Ligar agora</span></a>` : ''}
    </div>
   </div>
@@ -4080,44 +4499,62 @@ const CLICHES = [
 
 const REGRAS = `COMO ESCREVER (siga à risca):
 
-1. Escreva como uma pessoa fala, não como folheto de propaganda.
-   Frases curtas. Voz ativa. Fale com "você".
+1. Escreva como dono de negócio brasileiro fala no balcão, no WhatsApp ou na recepção.
+   Frases curtas. Voz ativa. Português do Brasil. Fale com "você".
 
-2. Concreto vence bonito. Diga o que a pessoa ganha, com detalhe real.
+2. O texto precisa soar humano e útil. Concreto vence bonito.
    RUIM:  "Oferecemos soluções de qualidade com excelência no atendimento."
-   BOM:   "Assamos pão de hora em hora, das 5h às 20h. Chegou, tá quentinho."
+   BOM:   "Seu pedido sai na hora e você acompanha tudo pelo WhatsApp."
 
-3. NUNCA invente fato. Se não te informaram anos de mercado, número de clientes,
-   prêmio, certificação ou nota de avaliação, simplesmente não cite.
-   Prefira deixar de fora a inventar.
+3. NUNCA invente fato. Se não informaram anos de mercado, prêmios, nota, entrega,
+   estacionamento, convênio, prazo, garantia ou preço, não coloque.
 
 4. Proibido usar estas expressões (soam a texto automático):
    ${CLICHES.join(', ')}.
 
-5. Cite a cidade com naturalidade, como quem mora lá — não repita em toda frase.
+5. Faça o visitante enxergar a cena: atendimento rápido, pedido no WhatsApp,
+   agendamento, entrega, orçamento, retirada, consulta, revisão, prova social.
+   Use só o que estiver nos dados.
 
-6. A chamada principal é o benefício para o cliente, não a descrição da empresa.
-   RUIM:  "Oficina mecânica completa em Rondonópolis"
+6. A chamada principal precisa vender o benefício, não repetir o nome do ramo.
+   RUIM:  "Oficina mecânica em Rondonópolis"
    BOM:   "Seu carro pronto no mesmo dia, sem surpresa no orçamento"
 
-7. As perguntas frequentes devem ser as que a pessoa realmente faz antes de comprar:
-   preço, prazo, horário, se precisa agendar, formas de pagamento, entrega,
-   garantia, se atende no fim de semana. Nada de pergunta de enfeite.
+7. O subtítulo complementa a chamada com contexto concreto: cidade, tipo de serviço,
+   prazo, atendimento, conveniência ou diferencial real.
 
-8. Sem exagero de exclamação e sem emoji nos textos do site.
+8. Nos serviços, cada item precisa ter nome curto e descrição específica.
+   Evite descrição vazia como "serviço completo com qualidade".
 
-9. Português do Brasil, tom de negócio de bairro: próximo, direto e confiável.`;
+9. No FAQ, traga dúvidas reais antes da compra: preço, prazo, horário, agenda,
+   entrega, pagamento, garantia, cobertura, retirada, se atende fim de semana.
+
+10. Sem exagero de exclamação. Sem emoji. Sem texto pomposo.
+
+11. Cite a cidade com naturalidade, sem repetir em toda frase.
+
+12. Além dos textos principais, preencha também:
+   - badge: selo curto para o topo do site
+   - heroDestaques: 3 frases bem curtas para dar vida ao hero
+   - textoCta: texto do botão principal
+   - ctaTitulo e ctaTexto: chamada final da seção de contato
+   - etapasVenda: 3 passos curtos explicando como a pessoa fecha pelo site
+
+13. Se faltarem dados, escreva de forma elegante sem denunciar que faltou informação.`;
 
 function montarPrompt(d, correcoes) {
   const dados = [
     ['Nome do negócio', d.nome],
     ['Ramo', d.segmento],
+    ['Modelo do site', d.tipoSite],
+    ['Objetivo do site', d.objetivoSite],
     ['Cidade', d.cidade],
     ['O que vende / faz', d.oQueFaz],
     ['Diferenciais', d.diferenciais],
     ['Público', d.publico],
     ['Tom de voz desejado', d.tom],
     ['Serviços já listados', Array.isArray(d.servicos) ? d.servicos.join('; ') : d.servicos],
+    ['Etapas do atendimento', d.etapasVenda],
     ['Anos de mercado', d.anos],
     ['Observações do dono', d.observacoes]
   ].filter(([, v]) => v).map(([k, v]) => `- ${k}: ${v}`).join('\n');
@@ -4136,14 +4573,20 @@ ${REGRAS}${conserto}
 
 Responda SOMENTE com um JSON válido, sem comentários e sem texto fora do JSON:
 {
+  "badge": "selo curto de até 34 caracteres",
   "slogan": "frase curta de até 60 caracteres",
   "heroTitulo": "chamada principal de até 70 caracteres, o benefício para o cliente",
   "heroSubtitulo": "1 frase de até 140 caracteres completando a chamada",
+  "heroDestaques": ["3 frases curtas de até 28 caracteres"],
   "sobre": "2 parágrafos curtos separados por \\n\\n, no máximo 600 caracteres no total",
-  "servicos": [{"nome": "nome curto", "descricao": "1 frase concreta"}],
+  "servicos": [{"titulo": "nome curto", "descricao": "1 frase concreta", "preco": "faixa de preço somente se foi informada"}],
   "faq": [{"p": "pergunta que o cliente realmente faria", "r": "resposta objetiva de 1 a 2 frases"}],
+  "etapasVenda": ["3 passos curtos mostrando como funciona"],
   "metaDescricao": "resumo de até 155 caracteres para o Google",
   "palavras": "6 a 10 palavras-chave separadas por vírgula, incluindo a cidade",
+  "textoCta": "texto do botão principal com 2 a 4 palavras",
+  "ctaTexto": "1 frase curta para a chamada final",
+  "ctaTitulo": "título curto da seção final",
   "ctaWhatsapp": "mensagem curta que o visitante enviará no WhatsApp, em primeira pessoa"
 }
 Gere de 4 a 6 serviços e de 4 a 6 perguntas no FAQ.`;
@@ -4152,8 +4595,9 @@ Gere de 4 a 6 serviços e de 4 a 6 perguntas no FAQ.`;
 /* Confere a resposta antes de aceitar. Devolve a lista de problemas encontrados. */
 function problemas(t) {
   const p = [];
-  const tudo = [t.slogan, t.heroTitulo, t.heroSubtitulo, t.sobre,
-                ...(t.servicos || []).map(s => s.nome + ' ' + s.descricao),
+  const tudo = [t.badge, t.slogan, t.heroTitulo, t.heroSubtitulo, t.sobre, t.ctaTitulo, t.ctaTexto,
+                ...(t.heroDestaques || []),
+                ...(t.servicos || []).map(s => (s.titulo || s.nome || '') + ' ' + s.descricao + ' ' + (s.preco || '')),
                 ...(t.faq || []).map(f => f.p + ' ' + f.r)].join(' ').toLowerCase();
 
   // um item por clichê: assim um texto cheio deles pesa mais na comparação
@@ -4165,9 +4609,13 @@ function problemas(t) {
   else if (t.heroTitulo.length > 85) p.push('A chamada principal ficou longa demais.');
 
   if ((t.sobre || '').length < 120) p.push('O texto "sobre" ficou curto demais.');
+  if ((t.heroSubtitulo || '').length < 40) p.push('O subtítulo ficou curto demais.');
+  if ((t.heroDestaques || []).length < 2) p.push('Traga pelo menos 3 destaques curtos para o topo.');
+  if ((t.etapasVenda || []).length < 2) p.push('Traga 3 passos curtos explicando como funciona.');
   if ((t.servicos || []).length < 3) p.push('Traga pelo menos 4 serviços.');
   if ((t.faq || []).length < 3) p.push('Traga pelo menos 4 perguntas frequentes.');
   if (/\bemoji|😀|🙂|🎉|🔥/.test(tudo)) p.push('Tirou os emojis dos textos do site.');
+  if (!t.ctaTitulo || !t.ctaTexto) p.push('Preencha a chamada final de contato.');
 
   return p;
 }
@@ -4348,14 +4796,14 @@ async function gerarTextos(cfg, dados) {
     return montarSaida(j);
   };
 
-  let out = interpretar(await chamar(cfg, montarPrompt(dados), 2400));
+  let out = interpretar(await chamar(cfg, montarPrompt(dados), 3000));
 
   /* saiu genérico? dou uma segunda chance apontando os erros */
   const erros = problemas(out);
   if (erros.length) {
     console.warn('[ia] resposta recusada:', erros.join(' | '), '— tentando de novo');
     try {
-      const melhor = interpretar(await chamar(cfg, montarPrompt(dados, erros), 2400));
+      const melhor = interpretar(await chamar(cfg, montarPrompt(dados, erros), 3000));
       if (problemas(melhor).length <= erros.length) out = melhor;
     } catch (e) { /* se a segunda tentativa falhar, fico com a primeira */ }
   }
@@ -4372,16 +4820,22 @@ function montarSaida(j) {
   const lista = v => Array.isArray(v) ? v : [];
 
   const out = {
+    badge: txt(j.badge, 40),
     slogan: txt(j.slogan, 90),
     heroTitulo: txt(j.heroTitulo, 110),
     heroSubtitulo: txt(j.heroSubtitulo, 220),
+    heroDestaques: lista(j.heroDestaques).slice(0, 4).map(x => txt(x, 40)).filter(Boolean),
     sobre: txt(j.sobre, 1200),
+    etapasVenda: lista(j.etapasVenda).slice(0, 5).map(x => txt(x, 70)).filter(Boolean),
     metaDescricao: txt(j.metaDescricao, 180),
     palavras: txt(j.palavras, 240),
+    textoCta: txt(j.textoCta, 50),
+    ctaTitulo: txt(j.ctaTitulo, 90),
+    ctaTexto: txt(j.ctaTexto, 220),
     ctaWhatsapp: txt(j.ctaWhatsapp, 220),
     servicos: lista(j.servicos).slice(0, 8)
-      .map(s => ({ nome: txt(s && s.nome, 60), descricao: txt(s && s.descricao, 220) }))
-      .filter(s => s.nome),
+      .map(s => ({ titulo: txt(s && (s.titulo || s.nome), 60), descricao: txt(s && s.descricao, 220), preco: txt(s && s.preco, 40) }))
+      .filter(s => s.titulo),
     faq: lista(j.faq).slice(0, 8)
       .map(f => ({ p: txt(f && f.p, 140), r: txt(f && f.r, 500) }))
       .filter(f => f.p && f.r)
@@ -4443,8 +4897,11 @@ Antes de escrever qualquer texto, defina a estratégia do site deste negócio.
 NEGÓCIO:
 - Nome: ${d.nome || '(sem nome)'}
 - Ramo: ${d.segmento || '(não informado)'}
+- Modelo do site: ${d.tipoSite || '(não informado)'}
+- Objetivo do site: ${d.objetivoSite || '(não informado)'}
 - Cidade: ${d.cidade || '(não informada)'}
 - O que faz: ${d.oQueFaz || '(não informado)'}
+- Etapas do atendimento: ${d.etapasVenda || '(não informado)'}
 - Observações do dono: ${d.observacoes || '(nenhuma)'}
 
 Pense em quem mora nessa cidade e realmente compra desse tipo de negócio.
@@ -4457,7 +4914,7 @@ Responda SOMENTE com JSON:
   "objecoes": ["3 dúvidas ou medos que fazem a pessoa NÃO comprar"],
   "provas": ["3 coisas que o site deve mostrar para vencer essas objeções"],
   "tom": "como o texto deve soar, em poucas palavras",
-  "secoesRecomendadas": ["escolha entre: numeros, sobre, servicos, galeria, equipe, depoimentos, faq, horario, contato"],
+  "secoesRecomendadas": ["escolha entre: numeros, sobre, processo, servicos, galeria, equipe, depoimentos, faq, horario, contato"],
   "erroComum": "o erro que sites desse ramo costumam cometer e que vamos evitar"
 }`, 900);
 
@@ -4539,10 +4996,12 @@ Responda SOMENTE com JSON:
 async function revisor(cfg, d, estrategia, textos, arte) {
   const resumo = `NEGÓCIO: ${d.nome || ''} — ${d.segmento || ''} em ${d.cidade || ''}
 PROMESSA: ${estrategia.promessa || '(não definida)'}
+OBJETIVO: ${d.objetivoSite || '(não definido)'}
 CHAMADA: ${textos.heroTitulo || ''}
 SUBTÍTULO: ${textos.heroSubtitulo || ''}
 SOBRE: ${(textos.sobre || '').slice(0, 400)}
-SERVIÇOS: ${(textos.servicos || []).map(s => s.nome + ' — ' + s.descricao).join(' | ').slice(0, 600)}
+SERVIÇOS: ${(textos.servicos || []).map(s => (s.titulo || s.nome || '') + ' — ' + s.descricao).join(' | ').slice(0, 600)}
+COMO FUNCIONA: ${(textos.etapasVenda || []).join(' | ').slice(0, 300)}
 PERGUNTAS: ${(textos.faq || []).map(f => f.p).join(' | ').slice(0, 400)}
 VISUAL: paleta ${arte.paleta || '(padrão)'}, fonte ${arte.fonte || '(padrão)'}, estilo ${arte.estilo || '(padrão)'}
 DADOS QUE O DONO NÃO FORNECEU: ${camposVazios(d).join(', ') || 'nenhum'}`;
@@ -4710,7 +5169,7 @@ var VAZIO = {
     geoapifyChave: 'aec5b014ccc54d76be718a03ab50c632', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
   },
-  leads: [], sites: []
+  leads: [], sites: [], buscas: []
 };
 
 var BD = carregar();
@@ -4725,7 +5184,7 @@ function carregar() {
     if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
     if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
     if (!d.config.geoapifyChave) d.config.geoapifyChave = VAZIO.config.geoapifyChave;
-    d.leads = d.leads || []; d.sites = d.sites || [];
+    d.leads = d.leads || []; d.sites = d.sites || []; d.buscas = d.buscas || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
 }
@@ -4757,6 +5216,37 @@ function numeroDoTexto(t) {
   var n = String(t || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.');
   return Number(n) || 0;
 }
+function tituloServicoItem(s) {
+  return String(s && (s.titulo || s.nome || s.servico || s.label || s) || '').trim();
+}
+function normalizarServicoItem(s) {
+  if (typeof s === 'string') return { titulo: s.trim(), descricao: '', preco: '' };
+  return {
+    titulo: tituloServicoItem(s),
+    descricao: String(s && s.descricao || '').trim(),
+    preco: String(s && s.preco || '').trim()
+  };
+}
+function normalizarListaServicos(lista) {
+  var bruto = Array.isArray(lista) ? lista : String(lista || '').split('\n');
+  return bruto.map(normalizarServicoItem).filter(function (s) { return s.titulo; });
+}
+function primeiraLinhaHorarios(v) {
+  if (Array.isArray(v)) {
+    return v.map(function (h) {
+      var dia = String(h && h.dia || '').trim();
+      var hora = String(h && h.hora || '').trim();
+      return dia && hora ? dia + ': ' + hora : '';
+    }).filter(Boolean).join(' | ');
+  }
+  return String(v || '').trim();
+}
+function respostasDoQuestionario(l) {
+  if (!(l && l.questionario && l.questionario.respostas)) return '';
+  return l.questionario.respostas.map(function (r) {
+    return r.pergunta + ': ' + r.resposta;
+  }).join(' | ').slice(0, 1500);
+}
 
 /* Estamos dentro de uma caixa (prévia de chat, visualizador de arquivo,
    WebView de outro app)? Nesses lugares o navegador proíbe abrir links,
@@ -4767,6 +5257,98 @@ function dentroDeCaixa() {
   catch (e) { return true; }   // nem consegui olhar: é caixa fechada
 }
 var NA_CAIXA = dentroDeCaixa();
+
+var TELA_ATUAL = 'buscar';
+
+function textoLigado(ok, ligado, desligado) {
+  return ok ? ligado : desligado;
+}
+function cardTopo(valor, rotulo) {
+  return '<div class="painel-card"><b>' + esc(valor) + '</b><span>' + esc(rotulo) + '</span></div>';
+}
+function atalhoTopoHtml(rotulo, acao) {
+  return '<button class="atalho-topo" onclick="' + acao + '">' + rotulo + '</button>';
+}
+function metaTela(nome) {
+  return {
+    buscar:  { icone: '🔎', sub: 'encontre oportunidades e puxe conversa rápido' },
+    clientes:{ icone: '📋', sub: 'acompanhe cada cliente, resposta e cobrança' },
+    site:    { icone: '🎨', sub: 'monte páginas mais bonitas sem mudar o fluxo' },
+    ajustes: { icone: '⚙️', sub: 'deixe a máquina pronta para vender e publicar' }
+  }[nome || TELA_ATUAL] || { icone: '🚀', sub: 'seu escritório no bolso' };
+}
+function pintarPainelTopo(nome) {
+  if (nome) TELA_ATUAL = nome;
+  var el = $('#painelTopo');
+  if (!el) return;
+
+  var meta = metaTela(TELA_ATUAL);
+  if ($('#subtitulo')) $('#subtitulo').textContent = meta.sub;
+  if ($('#iconeTopo')) $('#iconeTopo').textContent = meta.icone;
+
+  var total = BD.leads.length;
+  var fechados = BD.leads.filter(function (l) { return l.etapa === 'fechado'; }).length;
+  var mrr = BD.leads.filter(function (l) { return l.plano && l.plano.ativo; })
+    .reduce(function (t, l) { return t + Number(l.plano.valor || 0); }, 0);
+  var sites = BD.sites.length;
+  if ($('#statusRapido')) $('#statusRapido').textContent = total + ' clientes';
+
+  var cards = [];
+  var acoes = [];
+
+  if (TELA_ATUAL === 'buscar') {
+    cards = [
+      cardTopo(total, 'clientes salvos'),
+      cardTopo(fechados, 'negócios fechados'),
+      cardTopo(sites, 'sites montados')
+    ];
+    acoes = [
+      atalhoTopoHtml('📋 Clientes', "ir('clientes')"),
+      atalhoTopoHtml('🎨 Criar site', "ir('site')"),
+      atalhoTopoHtml('⚙️ Ajustes', "ir('ajustes')")
+    ];
+  } else if (TELA_ATUAL === 'clientes') {
+    cards = [
+      cardTopo(total, 'clientes no CRM'),
+      cardTopo(fechados, 'fechados'),
+      cardTopo(dinheiro(mrr), 'receita mensal')
+    ];
+    acoes = [
+      atalhoTopoHtml('✍️ Novo', 'novoCliente()'),
+      atalhoTopoHtml('📥 Respostas', 'abrirCaixaRespostas()'),
+      atalhoTopoHtml('🎨 Criar site', "ir('site')")
+    ];
+  } else if (TELA_ATUAL === 'site') {
+    var modelo = (cfg && cfg.tipoSite && typeof modeloDoSite === 'function') ? modeloDoSite(cfg.tipoSite).rotulo : 'sem modelo';
+    var servs = cfg && cfg.servicos ? normalizarListaServicos(cfg.servicos).length : 0;
+    var melhorias = ULTIMO_TURBO && ULTIMO_TURBO.resultado && ULTIMO_TURBO.resultado.revisao
+      ? ((ULTIMO_TURBO.resultado.revisao.melhorias || []).length) : 0;
+    cards = [
+      cardTopo(modelo, 'modelo atual'),
+      cardTopo(servs, 'serviços no site'),
+      cardTopo(melhorias, 'melhorias da IA')
+    ];
+    acoes = [
+      atalhoTopoHtml('⚡ Estrutura', 'montarEstruturaBase()'),
+      atalhoTopoHtml('👀 Prévia', 'verSite()'),
+      atalhoTopoHtml('🌐 Publicar', 'publicar()')
+    ];
+  } else {
+    cards = [
+      cardTopo(textoLigado(BD.config.iaAtiva && BD.config.iaChave, 'ligada', 'desligada'), 'inteligência artificial'),
+      cardTopo(textoLigado(typeof pixPronto === 'function' && pixPronto(), 'pronto', 'faltando'), 'Pix'),
+      cardTopo(textoLigado(typeof githubPronto === 'function' && githubPronto(), 'ligado', 'desligado'), 'GitHub')
+    ];
+    acoes = [
+      atalhoTopoHtml('🤖 Testar IA', 'testarIA()'),
+      atalhoTopoHtml('🌐 Testar GitHub', 'testarGithub()'),
+      atalhoTopoHtml('📋 Ver clientes', "ir('clientes')")
+    ];
+  }
+
+  el.innerHTML = '<div class="painel-grid">' + cards.join('') + '</div>' +
+                 '<div class="atalhos-topo">' + acoes.join('') + '</div>';
+}
 
 var tempoRecado;
 function recado(txt) {
@@ -4826,13 +5408,17 @@ function fechar() {
 
 /* ══════════════ abas ══════════════ */
 function ir(nome) {
+  TELA_ATUAL = nome;
+  document.body.setAttribute('data-tela', nome);
   $$('.tela').forEach(function (t) { t.classList.remove('ativa'); });
   $('#tela-' + nome).classList.add('ativa');
   $$('.abas button').forEach(function (b) { b.classList.toggle('on', b.dataset.aba === nome); });
   window.scrollTo(0, 0);
+  if (nome === 'buscar') pintarBuscasSalvas();
   if (nome === 'clientes') pintarClientes();
   if (nome === 'site') pintarSite();
   if (nome === 'ajustes') pintarAjustes();
+  pintarPainelTopo(nome);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -4879,6 +5465,193 @@ var ESPELHOS = [
 var ULTIMO_ESPELHO = null;   // o que funcionou da última vez entra na frente
 
 var ACHADOS = [];
+var LIMITE_BUSCAS_SALVAS = 12;
+
+function textoBuscaNormalizado(t) {
+  var s = String(t || '').toLowerCase().trim();
+  if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s.replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function chaveDoAchado(b, cidadePadrao) {
+  return textoBuscaNormalizado(b && b.nome) + '|' + textoBuscaNormalizado((b && b.cidade) || cidadePadrao || '');
+}
+
+function chaveDaBusca(cidade, cats, raio, fonte) {
+  return [
+    textoBuscaNormalizado(cidade),
+    (cats || []).slice().sort().join(','),
+    Number(raio) || 0,
+    fonte || fonteBuscaAtiva()
+  ].join('|');
+}
+
+function dataHoraBonita(ts) {
+  if (!ts) return 'agora';
+  try { return new Date(ts).toLocaleString('pt-BR'); }
+  catch (e) { return new Date(ts).toISOString(); }
+}
+
+function fonteBuscaBonita(fonte, enriquecida) {
+  if (fonte === 'geoapify') return enriquecida ? 'Geoapify + reforço de dados' : 'Geoapify';
+  if (fonte === 'google') return enriquecida ? 'Google + reforço do mapa' : 'Google Places';
+  return 'OpenStreetMap';
+}
+
+function filtrarAchadosSemSite(lista, soSemSite) {
+  return soSemSite ? (lista || []).filter(function (b) { return !b.temSite; }) : (lista || []).slice();
+}
+
+function ordenarAchados(lista) {
+  return (lista || []).slice().sort(function (a, b) {
+    return b.score - a.score || a.nome.localeCompare(b.nome);
+  });
+}
+
+function acharBuscaSalva(chave) {
+  return (BD.buscas || []).filter(function (b) { return b.id === chave; })[0] || null;
+}
+
+function salvarBuscaNoBanco(payload) {
+  if (!payload || !payload.id) return;
+  BD.buscas = (BD.buscas || []).filter(function (b) { return b.id !== payload.id; });
+  BD.buscas.unshift(payload);
+  if (BD.buscas.length > LIMITE_BUSCAS_SALVAS) BD.buscas = BD.buscas.slice(0, LIMITE_BUSCAS_SALVAS);
+  salvar();
+}
+
+function apagarBuscaSalva(chave) {
+  var antes = (BD.buscas || []).length;
+  BD.buscas = (BD.buscas || []).filter(function (b) { return b.id !== chave; });
+  if ((BD.buscas || []).length !== antes) {
+    salvar();
+    pintarBuscasSalvas();
+    sincronizarBuscasOnlineSilencioso();
+    recado('🗑️ Busca removida do banco local');
+  }
+}
+
+function limparBuscasSalvas() {
+  if (!(BD.buscas || []).length) { recado('Não há buscas salvas'); return; }
+  if (!confirm('Apagar todas as buscas salvas do aparelho?')) return;
+  BD.buscas = [];
+  salvar();
+  pintarBuscasSalvas();
+  sincronizarBuscasOnlineSilencioso();
+  recado('🧹 Banco local de buscas limpo');
+}
+
+function marcarCategoriasBusca(cats) {
+  cats = cats || [];
+  $$('#chips .chip').forEach(function (chip) {
+    chip.classList.toggle('on', cats.indexOf(chip.dataset.cat) >= 0);
+  });
+}
+
+function abrirBuscaSalva(chave) {
+  var busca = acharBuscaSalva(chave);
+  if (!busca) { recado('Busca não encontrada'); return; }
+  if ($('#bCidade')) $('#bCidade').value = busca.cidade || '';
+  if ($('#bRaio')) $('#bRaio').value = String(busca.raio || 0);
+  marcarCategoriasBusca(busca.cats || []);
+  renderizarBuscaSalva(busca);
+  recado('⚡ Busca aberta do banco local');
+}
+
+function atualizarBuscaSalva(chave) {
+  var busca = acharBuscaSalva(chave);
+  if (!busca) { recado('Busca não encontrada'); return; }
+  if ($('#bCidade')) $('#bCidade').value = busca.cidade || '';
+  if ($('#bRaio')) $('#bRaio').value = String(busca.raio || 0);
+  marcarCategoriasBusca(busca.cats || []);
+  buscar(true);
+}
+
+function renderizarBuscaSalva(busca, forcarSemSite) {
+  var soSemSite = typeof forcarSemSite === 'boolean' ? forcarSemSite : !!($('#bSoSemSite') && $('#bSoSemSite').checked);
+  var lista = ordenarAchados(filtrarAchadosSemSite(busca.achados || [], soSemSite));
+  ACHADOS = lista;
+  var brutos = (busca.achados || []).length;
+  var semSite = (busca.achados || []).filter(function (b) { return !b.temSite; }).length;
+  pintarAchados(busca.local || { nome: busca.cidade }, {
+    cache: true,
+    cacheEm: busca.atualizadoEm,
+    cacheId: busca.id,
+    fonte: busca.fonte,
+    fonteRica: busca.fonte !== 'osm',
+    enriquecida: !!busca.enriquecida,
+    soSemSite: soSemSite,
+    totalOriginal: brutos,
+    comNome: brutos,
+    tinhamSite: Math.max(0, brutos - semSite)
+  });
+}
+
+function pintarBuscasSalvas() {
+  var alvo = $('#buscasSalvas');
+  if (!alvo) return;
+  var buscas = (BD.buscas || []).slice().sort(function (a, b) { return (b.atualizadoEm || 0) - (a.atualizadoEm || 0); });
+  var topo = githubPronto()
+    ? '<div class="aviso info"><b>☁️ Banco online pronto</b><br>Suas buscas podem ser sincronizadas com o GitHub para abrir em outro aparelho também.<div class="linha-btn" style="margin-top:10px"><button class="btn pequeno principal" onclick="sincronizarBuscasOnline()">☁️ Sincronizar agora</button></div></div><div id="buscaOnlineStatus"></div>'
+    : '<div class="aviso alerta"><b>Banco online desligado</b><br>Preencha o GitHub em Ajustes para compartilhar as buscas entre aparelhos.</div><div id="buscaOnlineStatus"></div>';
+  if (!buscas.length) {
+    alvo.innerHTML = topo + '<div class="vazio"><span class="emoji">🗂️</span><b>Nenhuma busca salva ainda</b><p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p></div>';
+    return;
+  }
+  alvo.innerHTML = topo + '<div class="cache-buscas">' + buscas.map(function (b) {
+    var semSite = (b.achados || []).filter(function (x) { return !x.temSite; }).length;
+    var comTel = (b.achados || []).filter(function (x) { return !!x.telefone; }).length;
+    return '<div class="cache-item">' +
+      '<div class="cache-item-topo"><div><b>' + esc(b.cidade) + '</b><span>' + esc(fonteBuscaBonita(b.fonte, b.enriquecida)) + ' · ' + dataHoraBonita(b.atualizadoEm) + '</span></div>' +
+      '<span class="pill destaque">' + (b.achados || []).length + ' achados</span></div>' +
+      '<div class="cache-tags">' +
+        '<span class="pill">' + semSite + ' sem site</span>' +
+        '<span class="pill">' + comTel + ' com telefone</span>' +
+        '<span class="pill">raio ' + ((b.raio || 0) ? (b.raio + ' km') : 'cidade toda') + '</span>' +
+      '</div>' +
+      '<p class="mini" style="margin:10px 0 0">' + esc((b.cats || []).map(function (c) { return (CATEGORIAS[c] && CATEGORIAS[c].rotulo) || c; }).join(' • ')) + '</p>' +
+      '<div class="linha-btn" style="margin-top:10px">' +
+        '<button class="btn pequeno principal" onclick="abrirBuscaSalva(' + JSON.stringify(b.id) + ')">⚡ Abrir</button>' +
+        '<button class="btn pequeno" onclick="atualizarBuscaSalva(' + JSON.stringify(b.id) + ')">🔄 Atualizar</button>' +
+        '<button class="btn pequeno" onclick="apagarBuscaSalva(' + JSON.stringify(b.id) + ')">🗑️ Apagar</button>' +
+      '</div>' +
+      '</div>';
+  }).join('') + '</div>' +
+  '<button class="btn" style="margin-top:12px" onclick="limparBuscasSalvas()">🧹 Limpar banco local de buscas</button>';
+}
+
+function fundirAchado(base, extra) {
+  if (!base) return extra;
+  if (!extra) return base;
+  var r = Object.assign({}, base);
+  if (!r.telefone && extra.telefone) r.telefone = extra.telefone;
+  if (!r.email && extra.email) r.email = extra.email;
+  if ((!r.endereco || r.endereco.length < String(extra.endereco || '').length) && extra.endereco) r.endereco = extra.endereco;
+  if (!r.horario && extra.horario) r.horario = extra.horario;
+  if (!r.site && extra.site) r.site = extra.site;
+  if ((!r.categoria || r.categoria === 'outro') && extra.categoria) r.categoria = extra.categoria;
+  if (!r.lat && extra.lat) r.lat = extra.lat;
+  if (!r.lon && extra.lon) r.lon = extra.lon;
+  r.temSite = !!(r.site || r.temSite || extra.temSite);
+  r.temRedeSocial = !!(r.temRedeSocial || extra.temRedeSocial);
+  r.score = pontuar(r);
+  return r;
+}
+
+function mesclarAchados(listaBase, listaExtra, cidadePadrao) {
+  var mapa = {}, ordem = [];
+  (listaBase || []).forEach(function (b) {
+    var k = chaveDoAchado(b, cidadePadrao);
+    if (!mapa[k]) ordem.push(k);
+    mapa[k] = fundirAchado(mapa[k], b);
+  });
+  (listaExtra || []).forEach(function (b) {
+    var k = chaveDoAchado(b, cidadePadrao);
+    if (!mapa[k]) ordem.push(k);
+    mapa[k] = fundirAchado(mapa[k], b);
+  });
+  return ordem.map(function (k) { return mapa[k]; }).filter(Boolean);
+}
 
 function pintarChips() {
   var alvo = $('#chips');
@@ -4986,6 +5759,107 @@ function pontuar(b) {
     (b.endereco ? 10 : 0) + (b.email ? 10 : 0) + (b.horario ? 5 : 0);
 }
 
+async function buscarOSMEm(cidade, cats, raio, soSemSite, aviso) {
+  var local = await acharCidade(cidade);
+  var filtros = [];
+  cats.forEach(function (c) {
+    (CATEGORIAS[c].filtros || []).forEach(function (f) { if (filtros.indexOf(f) < 0) filtros.push(f); });
+  });
+
+  var area = raio > 0
+    ? '(around:' + Math.round(raio * 1000) + ',' + local.lat + ',' + local.lon + ')'
+    : '(' + local.bbox.join(',') + ')';
+
+  var partes = filtros.map(function (f) { return 'nwr[' + f + ']' + area + ';'; });
+  var q = '[out:json][timeout:50];(' + partes.join('') + ');out center 300;';
+  var json = await consultarOverpass(q, aviso);
+
+  var vistos = {}, lista = [], comNome = 0, descartadosPorTerSite = 0;
+  (json.elements || []).forEach(function (el) {
+    var t = el.tags || {};
+    var nome = t.name || t['name:pt'] || t.brand;
+    if (!nome) return;
+    var ch = nome.toLowerCase().trim() + '|' + (t['addr:street'] || '').toLowerCase();
+    if (vistos[ch]) return;
+    vistos[ch] = 1;
+    comNome++;
+
+    var site = t.website || t['contact:website'] || t.url || null;
+    var fb = t['contact:facebook'] || t.facebook || null;
+    var ig = t['contact:instagram'] || t.instagram || null;
+    var temSite = !!site;
+    if (soSemSite && temSite) { descartadosPorTerSite++; return; }
+
+    var p = el.center || el;
+    var rua = [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(', ');
+    var bairro = t['addr:suburb'] || t['addr:neighbourhood'] || null;
+
+    var b = {
+      osmId: el.type + '/' + el.id,
+      nome: nome,
+      categoria: t.shop || t.amenity || t.office || t.tourism || t.leisure || 'outro',
+      telefone: t.phone || t['contact:phone'] || t['contact:mobile'] || null,
+      email: t.email || t['contact:email'] || null,
+      endereco: [rua, bairro].filter(Boolean).join(' - ') || null,
+      cidade: t['addr:city'] || cidade,
+      site: site, temSite: temSite,
+      temRedeSocial: !!(fb || ig),
+      horario: t.opening_hours || null,
+      lat: p.lat, lon: p.lon
+    };
+    b.score = pontuar(b);
+    lista.push(b);
+  });
+
+  return {
+    local: local,
+    lista: lista,
+    info: {
+      brutos: (json.elements || []).length,
+      comNome: comNome,
+      tinhamSite: descartadosPorTerSite,
+      soSemSite: !!soSemSite,
+      cats: cats.length,
+      fonte: 'osm',
+      fonteRica: false
+    }
+  };
+}
+
+async function enriquecerAchados(cidade, cats, raio, listaBase, fonteBase, aviso) {
+  var lista = (listaBase || []).slice();
+  var enriquecida = false;
+  var melhorouTelefone = false;
+
+  if (fonteBase === 'geoapify' && googlePronto()) {
+    try {
+      if (aviso) aviso('Google: puxando telefone e site para completar a busca…');
+      lista = mesclarAchados(lista, await buscarGoogleEm(cidade, cats), cidade);
+      enriquecida = true;
+    } catch (e) {}
+  }
+
+  if (googlePronto()) {
+    try {
+      var googlePontual = await enriquecerTelefonesComGoogle(cidade, lista, aviso);
+      lista = googlePontual.lista;
+      if (googlePontual.melhorou) {
+        enriquecida = true;
+        melhorouTelefone = true;
+      }
+    } catch (e) {}
+  }
+
+  try {
+    if (aviso) aviso('Mapa: cruzando horário, telefone e site quando existir…');
+    var osm = await buscarOSMEm(cidade, cats, raio, false, aviso);
+    lista = mesclarAchados(lista, osm.lista, cidade);
+    if (osm.lista.length) enriquecida = true;
+  } catch (e) {}
+
+  return { lista: lista, enriquecida: enriquecida, melhorouTelefone: melhorouTelefone };
+}
+
 /* ─────────── Google Places (busca rica, opcional) ───────────
    O mapa gratuito (OpenStreetMap) tem pouca empresa em cidade pequena.
    Com a chave do Google Places a busca acha muito mais — com telefone
@@ -5063,27 +5937,32 @@ async function geoapifyBusca(catsGeo, lon, lat, raioM) {
 
 function lugarGeoapifyParaAchado(f, cidade, rotulo) {
   var p = f.properties || {};
-  var nome = p.name;
+  var raw = ((p.datasource || {}).raw) || {};
+  var nome = p.name || raw.name || raw.brand;
   if (!nome) return null;
-  var tel = p.phone || p['contact:phone'] || p.contact__phone || null;
-  var site = p.website || p.url || null;
-  var rua = [p.street, p.housenumber].filter(Boolean).join(', ');
+  var tel = p.phone || p['contact:phone'] || p.contact__phone ||
+    raw.phone || raw['contact:phone'] || raw['contact:mobile'] || raw.mobile || raw['contact:whatsapp'] || null;
+  var site = p.website || p.url || raw.website || raw['contact:website'] || raw.url || null;
+  var rua = [p.street || raw['addr:street'], p.housenumber || raw['addr:housenumber']].filter(Boolean).join(', ');
   var b = {
     osmId: 'ga:' + (p.place_id || nome + p.lat + p.lon),
     nome: nome,
     categoria: rotulo || (p.categories && p.categories[0]) || 'outro',
-    telefone: tel, email: p.email || null,
-    endereco: [rua, p.suburb].filter(Boolean).join(' - ') || p.address_line1 || null,
-    cidade: p.city || cidade,
+    telefone: tel ? String(tel).replace(/[^0-9+]/g, '') : null,
+    email: p.email || raw.email || raw['contact:email'] || null,
+    endereco: [rua, p.suburb || raw['addr:suburb'] || raw['addr:neighbourhood']].filter(Boolean).join(' - ') || p.address_line1 || raw.formatted || null,
+    cidade: p.city || raw['addr:city'] || cidade,
     site: site, temSite: !!site,
-    temRedeSocial: false, horario: p.opening_hours || null,
-    lat: p.lat, lon: p.lon
+    temRedeSocial: !!(raw['contact:facebook'] || raw.facebook || raw['contact:instagram'] || raw.instagram),
+    horario: p.opening_hours || raw.opening_hours || null,
+    lat: p.lat || f.geometry && f.geometry.coordinates && f.geometry.coordinates[1],
+    lon: p.lon || f.geometry && f.geometry.coordinates && f.geometry.coordinates[0]
   };
   b.score = pontuar(b);
   return b;
 }
 
-async function buscarGeoapifyEm(cidade, cats, aviso) {
+async function buscarGeoapifyEm(cidade, cats, aviso, raio) {
   var local = GEO_CACHE[cidade.toLowerCase()];
   if (!local) {
     if (aviso) aviso('Geoapify: achando ' + cidade + ' no mapa…');
@@ -5096,7 +5975,8 @@ async function buscarGeoapifyEm(cidade, cats, aviso) {
     var catsGeo = GEOAPIFY_CATS[cats[i]] || [];
     if (!catsGeo.length) continue;
     if (aviso) aviso('Geoapify: procurando ' + rotulo.toLowerCase() + ' em ' + cidade + '…');
-    var features = await geoapifyBusca(catsGeo, local.lon, local.lat, 15000);
+    var raioM = (Number(raio) || 0) > 0 ? Math.round(Number(raio) * 1000) : 15000;
+    var features = await geoapifyBusca(catsGeo, local.lon, local.lat, raioM);
     features.forEach(function (f) {
       var b = lugarGeoapifyParaAchado(f, cidade, rotulo);
       if (!b) return;
@@ -5117,7 +5997,7 @@ function fonteBuscaAtiva() {
   return 'osm';
 }
 
-async function placesBusca(texto) {
+async function placesBusca(texto, limite) {
   var r = await comTempo(fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
@@ -5127,7 +6007,12 @@ async function placesBusca(texto) {
         'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri,' +
         'places.primaryTypeDisplayName'
     },
-    body: JSON.stringify({ textQuery: texto, languageCode: 'pt-BR', regionCode: 'BR', maxResultCount: 20 })
+    body: JSON.stringify({
+      textQuery: texto,
+      languageCode: 'pt-BR',
+      regionCode: 'BR',
+      maxResultCount: Math.max(1, Math.min(20, Number(limite) || 20))
+    })
   }), 25000, 'consultando o Google');
   if (!r.ok) {
     var corpo = await r.text(), msg = '';
@@ -5161,6 +6046,57 @@ function lugarParaAchado(p, cidade, rotulo) {
   return b;
 }
 
+function scoreNomeParecido(nomeA, nomeB) {
+  var a = textoBuscaNormalizado(nomeA);
+  var b = textoBuscaNormalizado(nomeB);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return 70;
+  var pa = a.split(' '), pb = b.split(' '), iguais = 0;
+  pa.forEach(function (p) { if (p && pb.indexOf(p) >= 0) iguais++; });
+  return iguais * 15;
+}
+
+async function enriquecerTelefonesComGoogle(cidade, lista, aviso) {
+  if (!googlePronto()) return { lista: lista || [], melhorou: false, consultas: 0 };
+  var pendentes = (lista || []).filter(function (b) {
+    return !!b && (!b.telefone || !b.site || !b.endereco);
+  }).slice(0, 10);
+  if (!pendentes.length) return { lista: lista || [], melhorou: false, consultas: 0 };
+
+  var mapa = {};
+  (lista || []).forEach(function (b) { mapa[chaveDoAchado(b, cidade)] = b; });
+  var melhorou = false;
+
+  for (var i = 0; i < pendentes.length; i++) {
+    var item = pendentes[i];
+    if (aviso) aviso('Google: tentando completar telefone e site de ' + item.nome + '…');
+    try {
+      var lugares = await placesBusca(item.nome + ' em ' + cidade + ', Brasil', 5);
+      var melhor = null, notaMelhor = 0;
+      lugares.forEach(function (p) {
+        var nome = (p.displayName && p.displayName.text) || '';
+        var nota = scoreNomeParecido(item.nome, nome);
+        if (nota > notaMelhor) { notaMelhor = nota; melhor = p; }
+      });
+      if (melhor && notaMelhor >= 60) {
+        var atual = mapa[chaveDoAchado(item, cidade)];
+        var antes = JSON.stringify({ telefone: atual.telefone || '', site: atual.site || '', endereco: atual.endereco || '' });
+        mapa[chaveDoAchado(item, cidade)] = fundirAchado(atual, lugarParaAchado(melhor, cidade, item.categoria));
+        var depois = JSON.stringify({ telefone: mapa[chaveDoAchado(item, cidade)].telefone || '', site: mapa[chaveDoAchado(item, cidade)].site || '', endereco: mapa[chaveDoAchado(item, cidade)].endereco || '' });
+        if (antes !== depois) melhorou = true;
+      }
+    } catch (e) {}
+    await new Promise(function (r) { setTimeout(r, 180); });
+  }
+
+  return {
+    lista: (lista || []).map(function (b) { return mapa[chaveDoAchado(b, cidade)] || b; }),
+    melhorou: melhorou,
+    consultas: pendentes.length
+  };
+}
+
 /* Busca cada categoria numa cidade. Mostra o andamento no aviso. */
 async function buscarGoogleEm(cidade, cats, aviso) {
   var lista = [], vistos = {};
@@ -5187,10 +6123,12 @@ function atualizarFonteBusca() {
   if (!el) return;
   var f = fonteBuscaAtiva();
   el.textContent = f === 'geoapify'
-    ? '🟢 Busca turbinada: Geoapify (grátis sem cartão)'
+    ? (googlePronto()
+        ? '🟢 Busca turbinada: Geoapify + Google + mapa (mais completa e salva no banco local)'
+        : '🟢 Busca turbinada: Geoapify + mapa (salva no banco local)')
     : f === 'google'
-      ? '🟢 Busca turbinada: Google Places'
-      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify em Ajustes pra achar muito mais.';
+      ? '🟢 Busca turbinada: Google Places + mapa (salva no banco local)'
+      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify ou Google em Ajustes pra achar mais e guardar no banco local.';
 }
 
 /* Caçada em todas as cidades da região de uma vez.
@@ -5255,7 +6193,7 @@ async function buscarRegiao() {
   $('#btnRegiao').disabled = false;
 }
 
-async function buscar() {
+async function buscar(forcar) {
   var cidade = $('#bCidade').value.trim();
   if (!cidade) { recado('Escreva a cidade'); return; }
 
@@ -5264,107 +6202,79 @@ async function buscar() {
 
   var soSemSite = $('#bSoSemSite').checked;
   var raio = Number($('#bRaio').value) || 0;
+  var fonte = fonteBuscaAtiva();
+  var chave = chaveDaBusca(cidade, cats, raio, fonte);
+  var cache = acharBuscaSalva(chave);
 
-  BD.config.cidadePadrao = cidade; salvar();
+  BD.config.cidadePadrao = cidade;
+  salvar();
+  pintarBuscasSalvas();
+
+  if (cache && !forcar) {
+    renderizarBuscaSalva(cache, soSemSite);
+    return;
+  }
 
   var painel = $('#bResultado');
   painel.innerHTML = '<div class="rodando-tela"><div class="roda"></div>' +
     '<b>Procurando em ' + esc(cidade) + '…</b>' +
-    '<p class="mini">Isso leva de 10 a 40 segundos. Não feche a tela.</p></div>';
+    '<p class="mini">Isso leva de 10 a 40 segundos. Na próxima vez a busca abre do banco local.</p></div>';
   $('#btnBuscar').disabled = true;
 
-  /* com chave Geoapify ou Google ligada, a busca vai pra lá — muito mais empresas */
-  var fonte = fonteBuscaAtiva();
-  if (fonte !== 'osm') {
-    try {
-      var avisoFn = function (msg) {
-        var b = $('#bResultado .rodando-tela b');
-        if (b) b.textContent = msg;
-      };
-      var listaG = fonte === 'geoapify'
-        ? await buscarGeoapifyEm(cidade, cats, avisoFn)
-        : await buscarGoogleEm(cidade, cats, avisoFn);
-      if (soSemSite) listaG = listaG.filter(function (b) { return !b.temSite; });
-      listaG.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
-      ACHADOS = listaG;
-      pintarAchados({ nome: cidade + (fonte === 'geoapify' ? ' (Geoapify)' : ' (Google Places)') },
-        { fonteRica: true, soSemSite: soSemSite });
-    } catch (e) {
-      painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(e.message || String(e)) + '</div>' +
-        '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
-    }
-    $('#btnBuscar').disabled = false;
-    return;
-  }
-
   try {
-    var local = await acharCidade(cidade);
-
-    var filtros = [];
-    cats.forEach(function (c) {
-      (CATEGORIAS[c].filtros || []).forEach(function (f) { if (filtros.indexOf(f) < 0) filtros.push(f); });
-    });
-
-    var area = raio > 0
-      ? '(around:' + Math.round(raio * 1000) + ',' + local.lat + ',' + local.lon + ')'
-      : '(' + local.bbox.join(',') + ')';
-
-    /* nwr = node + way + relation numa linha só. Metade do tamanho da consulta,
-       o que deixa ela mais rápida e menos sujeita a ser recusada. */
-    var partes = filtros.map(function (f) { return 'nwr[' + f + ']' + area + ';'; });
-
-    var q = '[out:json][timeout:50];(' + partes.join('') + ');out center 300;';
-    var json = await consultarOverpass(q, function (msg) {
+    var melhorouTelefone = false;
+    var avisoFn = function (msg) {
+      var b = $('#bResultado .rodando-tela b');
       var p = $('#bResultado .rodando-tela p');
-      if (p) p.textContent = msg;
+      if (b) b.textContent = msg;
+      if (p && msg && /Falando com o servidor|Perguntando para|Geoapify|Google|Mapa/.test(msg)) p.textContent = msg;
+    };
+
+    var pacote, listaBruta, enriquecida = false;
+    if (fonte !== 'osm') {
+      listaBruta = fonte === 'geoapify'
+        ? await buscarGeoapifyEm(cidade, cats, avisoFn, raio)
+        : await buscarGoogleEm(cidade, cats, avisoFn);
+      pacote = { local: GEO_CACHE[cidade.toLowerCase()] || { nome: cidade + ' (' + fonteBuscaBonita(fonte, false) + ')' }, info: { fonte: fonte, fonteRica: true } };
+      var reforco = await enriquecerAchados(cidade, cats, raio, listaBruta, fonte, avisoFn);
+      listaBruta = reforco.lista;
+      enriquecida = reforco.enriquecida;
+      var melhorouTelefone = !!reforco.melhorouTelefone;
+    } else {
+      pacote = await buscarOSMEm(cidade, cats, raio, false, function (msg) {
+        var p = $('#bResultado .rodando-tela p');
+        if (p) p.textContent = msg;
+      });
+      listaBruta = pacote.lista;
+    }
+
+    listaBruta = ordenarAchados(listaBruta);
+    salvarBuscaNoBanco({
+      id: chave,
+      cidade: cidade,
+      cats: cats.slice().sort(),
+      raio: raio,
+      fonte: fonte,
+      enriquecida: !!enriquecida,
+      atualizadoEm: Date.now(),
+      local: pacote.local,
+      achados: listaBruta
     });
+    pintarBuscasSalvas();
+    sincronizarBuscasOnlineSilencioso();
 
-    var vistos = {}, lista = [], comNome = 0, descartadosPorTerSite = 0;
-    (json.elements || []).forEach(function (el) {
-      var t = el.tags || {};
-      var nome = t.name || t['name:pt'] || t.brand;
-      if (!nome) return;
-      var ch = nome.toLowerCase().trim() + '|' + (t['addr:street'] || '').toLowerCase();
-      if (vistos[ch]) return;
-      vistos[ch] = 1;
-      comNome++;
-
-      var site = t.website || t['contact:website'] || t.url || null;
-      var fb = t['contact:facebook'] || t.facebook || null;
-      var ig = t['contact:instagram'] || t.instagram || null;
-      var temSite = !!site;
-      if (soSemSite && temSite) { descartadosPorTerSite++; return; }
-
-      var p = el.center || el;
-      var rua = [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(', ');
-      var bairro = t['addr:suburb'] || t['addr:neighbourhood'] || null;
-
-      var b = {
-        osmId: el.type + '/' + el.id,
-        nome: nome,
-        categoria: t.shop || t.amenity || t.office || t.tourism || t.leisure || 'outro',
-        telefone: t.phone || t['contact:phone'] || t['contact:mobile'] || null,
-        email: t.email || t['contact:email'] || null,
-        endereco: [rua, bairro].filter(Boolean).join(' - ') || null,
-        cidade: t['addr:city'] || cidade,
-        site: site, temSite: temSite,
-        temRedeSocial: !!(fb || ig),
-        horario: t.opening_hours || null,
-        lat: p.lat, lon: p.lon
-      };
-      b.score = pontuar(b);
-      lista.push(b);
-    });
-
-    lista.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
-    ACHADOS = lista;
-    pintarAchados(local, {
-      brutos: (json.elements || []).length,
-      comNome: comNome,
-      tinhamSite: descartadosPorTerSite,
+    ACHADOS = ordenarAchados(filtrarAchadosSemSite(listaBruta, soSemSite));
+    pintarAchados(pacote.local || { nome: cidade }, Object.assign({}, pacote.info || {}, {
+      fonte: fonte,
+      fonteRica: fonte !== 'osm',
+      enriquecida: !!enriquecida,
+      melhorouTelefone: !!melhorouTelefone,
+      cacheId: chave,
+      cacheEm: Date.now(),
+      gravadoAgora: true,
       soSemSite: soSemSite,
-      cats: cats.length
-    });
+      totalOriginal: listaBruta.length
+    }));
   } catch (e) {
     var msg = e.message || String(e);
     var dica = '';
@@ -5382,7 +6292,9 @@ async function buscar() {
              'Espere um minuto e tente de novo. Se continuar, use ⚙️ Ajustes → 🩺 Testar a conexão.</div>';
     }
     painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(msg) + '</div>' +
-      dica + '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
+      (cache ? '<div class="aviso bom"><b>Mas a busca antiga ficou guardada.</b><br>' +
+        '<button class="btn principal" onclick="abrirBuscaSalva(' + JSON.stringify(chave) + ')">⚡ Abrir do banco local</button></div>' : '') +
+      dica + '<button class="btn" onclick="buscar(true)">🔄 Tentar de novo</button>';
   }
   $('#btnBuscar').disabled = false;
 }
@@ -5390,9 +6302,21 @@ async function buscar() {
 function pintarAchados(local, info) {
   var painel = $('#bResultado');
   info = info || {};
+  var faixaFonte = '';
+  if (info.cache || info.gravadoAgora || info.fonte) {
+    faixaFonte = '<div class="aviso ' + (info.cache ? 'bom' : 'info') + '">' +
+      '<b>' + (info.cache ? '⚡ Aberto do banco local' : '💾 Busca salva no banco local') + '</b><br>' +
+      esc(fonteBuscaBonita(info.fonte || 'osm', info.enriquecida)) +
+      (info.totalOriginal ? ' · ' + info.totalOriginal + ' achados brutos' : '') +
+      (info.cacheEm ? ' · ' + dataHoraBonita(info.cacheEm) : '') +
+      (info.enriquecida ? '<br>O app cruzou fontes para tentar puxar telefone, site, horário e endereço quando houver.' : '') +
+      (info.melhorouTelefone ? '<br>☎️ O reforço do Google conseguiu completar parte dos telefones/sites que faltavam.' : '') +
+      (info.cacheId ? '<div class="linha-btn" style="margin-top:10px"><button class="btn pequeno" onclick="atualizarBuscaSalva(' + JSON.stringify(info.cacheId) + ')">🔄 Atualizar esta busca</button></div>' : '') +
+      '</div>';
+  }
 
   if (!ACHADOS.length) {
-    var h = '<div class="vazio"><span class="emoji">🔍</span><b>Nada encontrado</b>';
+    var h = faixaFonte + '<div class="vazio"><span class="emoji">🔍</span><b>Nada encontrado</b>';
 
     if (info.tinhamSite > 0) {
       /* achou empresas, mas todas já tinham site */
@@ -5421,6 +6345,7 @@ function pintarAchados(local, info) {
   BD.leads.forEach(function (l) { if (l.osmId) salvos[l.osmId] = 1; });
 
   painel.innerHTML =
+    faixaFonte +
     '<div class="placar">' +
       '<div><b>' + ACHADOS.length + '</b><span>encontradas</span></div>' +
       '<div><b>' + semSite + '</b><span>sem site</span></div>' +
@@ -5547,6 +6472,7 @@ function atualizarBolha() {
   if (!b) return;
   b.textContent = n > 99 ? '99+' : n;
   b.style.display = n ? 'flex' : 'none';
+  pintarPainelTopo();
 }
 
 function pintarClientes() {
@@ -5610,6 +6536,7 @@ function pintarClientes() {
         : '') +
     '</div>';
   }).join('');
+  pintarPainelTopo();
 }
 
 /* Painel no topo da lista: quem pagou e ainda não respondeu o
@@ -6272,13 +7199,16 @@ async function perguntasComIA(l) {
     'antes de ganhar um site profissional.\n' +
     'Negócio: ' + (l.nome || 'sem nome') + '\nRamo: ' + (l.categoria || 'não informado') +
     '\nCidade: ' + (l.cidade || BD.config.cidadePadrao || 'não informada') + '\n\n' +
-    'Crie de 6 a 8 perguntas simples, em português informal e direto, específicas pra esse ramo. ' +
-    'Elas precisam descobrir: o que o negócio faz de principal, serviços ou produtos (com preço se tiver), ' +
-    'horário de funcionamento, endereço, ponto forte/diferencial, estilo visual desejado e se tem fotos e logotipo.\n' +
+    'Crie de 6 a 8 perguntas simples, úteis e específicas para esse ramo. ' +
+    'Português informal, direto e sem cara de robô. Nada de perguntas repetidas. ' +
+    'As perguntas precisam descobrir: serviço principal, produtos/serviços com preço se tiver, ' +
+    'horário, endereço ou bairro atendido, diferencial real, como a pessoa costuma pedir/agendar, ' +
+    'estilo visual desejado e se já tem fotos, logotipo ou cardápio/catálogo.\n' +
+    'Se fizer sentido para o ramo, pergunte sobre delivery, retirada, orçamento, agendamento ou cobertura de bairros.\n' +
     'Responda APENAS JSON válido neste formato:\n' +
     '{"perguntas":[{"id":"q1","t":"texto da pergunta","tipo":"texto"},{"id":"q2","t":"outra pergunta","tipo":"area"}]}\n' +
-    'Use "area" só pra pergunta de resposta longa. Sem emojis.';
-  var bruto = await IA.chamarBruto(configIA(), prompt, 800);
+    'Use "area" só para resposta longa. Sem emojis.';
+  var bruto = await IA.chamarBruto(configIA(), prompt, 1000);
   var j = IA.extrairJSON(bruto);
   var ps = (j.perguntas || []).filter(function (p) { return p && p.t; }).slice(0, 10)
     .map(function (p, i) {
@@ -6579,23 +7509,27 @@ async function rascunhoDasRespostas(idLead) {
     var prompt =
       'Um cliente respondeu um questionário para ganhar um site. Respostas dele:\n\n' + qa + '\n\n' +
       'Negócio: ' + (l.nome || cfg.nome) + '. Cidade: ' + (l.cidade || cfg.cidade || '') + '.\n' +
-      'Monte o conteúdo do site em português do Brasil, com texto natural e sem frases genéricas.\n' +
-      'Responda APENAS JSON válido:\n' +
-      '{"titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
-      '"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
-      '"servicos":[{"nome":"...","descricao":"uma frase"}],' +
-      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"horario":"horário por extenso",' +
-      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '"}\n' +
-      'Inclua de 4 a 6 serviços e de 4 a 5 perguntas frequentes, baseados SÓ nas respostas acima. ' +
+      'Escreva em português do Brasil, com texto natural, humano e sem frases genéricas. ' +
+      'Não invente preço, prazo, entrega, garantia ou anos de mercado. Use só o que aparece nas respostas.\n' +
+      'Responda APENAS JSON válido neste formato:\n' +
+      '{"badge":"selo curto","titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
+      '"heroDestaques":["3 frases curtas"],"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
+      '"servicos":[{"titulo":"...","descricao":"uma frase","preco":"só se foi informado"}],' +
+      '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"etapasVenda":["3 passos curtos"],"horario":"horário por extenso",' +
+      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '",' +
+      '"textoCta":"texto do botão principal","ctaTitulo":"título curto da chamada final","ctaTexto":"frase curta para fechar o contato"}\n' +
+      'Inclua de 4 a 6 serviços, de 4 a 5 perguntas frequentes e 3 passos curtos de atendimento, baseados SÓ nas respostas acima. ' +
       'Se uma cor foi pedida nas respostas, escolha a paleta mais parecida.';
-    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2200));
+    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2800));
 
+    if (j.badge) cfg.badge = String(j.badge);
     if (j.titulo) cfg.titulo = String(j.titulo);
     if (j.subtitulo) cfg.subtitulo = String(j.subtitulo);
+    if (Array.isArray(j.heroDestaques) && j.heroDestaques.length) cfg.heroDestaques = j.heroDestaques;
+    if (Array.isArray(j.etapasVenda) && j.etapasVenda.length) cfg.etapasVenda = j.etapasVenda;
     if (j.sobre) cfg.sobreTexto = String(j.sobre);
     if (Array.isArray(j.servicos) && j.servicos.length) {
-      cfg.servicos = j.servicos.filter(function (s) { return s && s.nome; })
-        .map(function (s) { return { nome: String(s.nome), descricao: String(s.descricao || '') }; });
+      cfg.servicos = normalizarListaServicos(j.servicos);
     }
     if (Array.isArray(j.faq) && j.faq.length) {
       cfg.faq = j.faq.filter(function (f) { return f && f.p; })
@@ -6604,6 +7538,9 @@ async function rascunhoDasRespostas(idLead) {
     if (j.horario) cfg.horario = String(j.horario);
     if (j.paleta && SiteGen.PALETAS[j.paleta]) cfg.paleta = j.paleta;
     if (j.fonte && SiteGen.FONTES[j.fonte]) cfg.fonte = j.fonte;
+    if (j.textoCta) cfg.textoCta = String(j.textoCta);
+    if (j.ctaTitulo) cfg.ctaTitulo = String(j.ctaTitulo);
+    if (j.ctaTexto) cfg.ctaTexto = String(j.ctaTexto);
 
     salvarRascunho();
     anotar(l, '🪄 Site pré-montado a partir das respostas do questionário');
@@ -6625,23 +7562,208 @@ var LEAD_DO_SITE = null;
 var ULTIMO_TURBO = null;
 var ETAPAS_TURBO = null;   // fica na tela mesmo depois que o time termina
 
+var TIPOS_SITE = {
+  conversao: {
+    rotulo: '💬 Captação',
+    desc: 'Feito para chamar no WhatsApp e transformar visita em conversa rápido.',
+    badge: 'Resposta rápida no WhatsApp',
+    cta: 'Pedir orçamento',
+    ctaTitulo: 'Fale com a equipe hoje',
+    ctaTexto: 'Mande sua dúvida, peça preço e receba resposta sem enrolação.',
+    destaques: ['Resposta rápida', 'Atendimento direto', 'Orçamento fácil'],
+    etapas: ['Chame no WhatsApp', 'Explique o que você precisa', 'Receba o orçamento e feche'],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'depoimentos', 'faq', 'contato']
+  },
+  cardapio: {
+    rotulo: '🍽️ Cardápio',
+    desc: 'Ideal para restaurante, lanchonete, padaria e delivery que quer vender no celular.',
+    badge: 'Peça sem complicação',
+    cta: 'Fazer pedido',
+    ctaTitulo: 'Peça pelo WhatsApp',
+    ctaTexto: 'Veja o que a casa faz hoje e mande seu pedido em poucos toques.',
+    destaques: ['Pedido rápido', 'Entrega ou retirada', 'Cardápio no celular'],
+    etapas: ['Escolha o que vai pedir', 'Chame no WhatsApp', 'Receba ou retire no combinado'],
+    secoes: ['numeros', 'servicos', 'processo', 'depoimentos', 'horario', 'faq', 'contato']
+  },
+  agenda: {
+    rotulo: '📅 Agendamento',
+    desc: 'Para salão, clínica, oficina e serviços que dependem de horário ou avaliação.',
+    badge: 'Agende seu atendimento',
+    cta: 'Agendar agora',
+    ctaTitulo: 'Reserve seu horário',
+    ctaTexto: 'Fale com a equipe, tire dúvidas e combine o melhor horário para você.',
+    destaques: ['Agendamento fácil', 'Atendimento organizado', 'Confirmação rápida'],
+    etapas: ['Chame no WhatsApp', 'Escolha o melhor horário', 'Confirme seu atendimento'],
+    secoes: ['sobre', 'processo', 'servicos', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
+  },
+  vitrine: {
+    rotulo: '🛍️ Vitrine',
+    desc: 'Para mostrar produtos, coleções, portfólio e chamar para orçamento.',
+    badge: 'Catálogo no celular',
+    cta: 'Ver catálogo',
+    ctaTitulo: 'Peça seu orçamento',
+    ctaTexto: 'Conheça os produtos, escolha o que gostou e fale com a loja pelo WhatsApp.',
+    destaques: ['Produtos em destaque', 'Fotos e catálogo', 'Atendimento pelo WhatsApp'],
+    etapas: ['Veja os destaques', 'Escolha o que gostou', 'Fale com a loja no WhatsApp'],
+    secoes: ['numeros', 'sobre', 'servicos', 'galeria', 'depoimentos', 'faq', 'contato']
+  },
+  premium: {
+    rotulo: '🏛️ Institucional',
+    desc: 'Para passar confiança, explicar bem o serviço e valorizar a marca.',
+    badge: 'Presença forte na internet',
+    cta: 'Falar com a equipe',
+    ctaTitulo: 'Vamos conversar?',
+    ctaTexto: 'Entenda como o negócio funciona e fale com a equipe para tirar dúvidas.',
+    destaques: ['Marca mais forte', 'Mais confiança', 'Contato direto'],
+    etapas: ['Conheça o serviço', 'Tire suas dúvidas', 'Fale com a equipe'],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'equipe', 'depoimentos', 'faq', 'contato']
+  }
+};
+
+function tipoSiteSugerido(perfil) {
+  return {
+    restaurante: 'cardapio', lanchonete: 'cardapio', padaria: 'cardapio', bar_cafe: 'cardapio',
+    salao: 'agenda', clinica: 'agenda', academia: 'agenda', oficina: 'agenda', hotel: 'agenda', veterinaria: 'agenda',
+    roupas: 'vitrine', moveis: 'vitrine', eletronicos: 'vitrine', papelaria: 'vitrine', floricultura: 'vitrine', autopecas: 'vitrine', mercado: 'vitrine',
+    advocacia: 'premium', imobiliaria: 'premium', escola: 'premium', construcao: 'premium',
+    farmacia: 'conversao', generico: 'conversao'
+  }[perfil] || 'conversao';
+}
+
+function modeloDoSite(tipo) {
+  return TIPOS_SITE[tipo] || TIPOS_SITE.conversao;
+}
+
+function secoesAtivasDoSite() {
+  if (!cfg || !cfg.secoes) return [];
+  if (Array.isArray(cfg.secoes)) return cfg.secoes.slice();
+  return Object.keys(cfg.secoes).filter(function (k) { return cfg.secoes[k]; });
+}
+
+function rotuloSecaoSite(k) {
+  return {
+    numeros: 'números', sobre: 'sobre', processo: 'como funciona', servicos: 'serviços',
+    galeria: 'galeria', equipe: 'equipe', depoimentos: 'depoimentos', faq: 'dúvidas',
+    horario: 'horário', contato: 'contato'
+  }[k] || k;
+}
+
+function resumirLista(lista, qtd) {
+  return (Array.isArray(lista) ? lista : []).slice(0, qtd || 3).join(' · ');
+}
+
+function preencherSeVazio(chave, valor) {
+  if (!cfg[chave]) cfg[chave] = valueOf(valor);
+}
+function valueOf(v) { return typeof v === 'function' ? v() : v; }
+
+function aplicarTipoSite(tipo, preservar) {
+  if (!cfg) cfg = cfgNovo();
+  var modelo = modeloDoSite(tipo);
+  cfg.tipoSite = tipo;
+  cfg.secoes = modelo.secoes.slice();
+  cfg.badge = (preservar && cfg.badge) ? cfg.badge : modelo.badge;
+  cfg.textoCta = (preservar && cfg.textoCta) ? cfg.textoCta : modelo.cta;
+  cfg.ctaTitulo = (preservar && cfg.ctaTitulo) ? cfg.ctaTitulo : modelo.ctaTitulo;
+  cfg.ctaTexto = (preservar && cfg.ctaTexto) ? cfg.ctaTexto : modelo.ctaTexto;
+  if (!preservar || !Array.isArray(cfg.heroDestaques) || !cfg.heroDestaques.length) cfg.heroDestaques = modelo.destaques.slice();
+  if (!preservar || !Array.isArray(cfg.etapasVenda) || !cfg.etapasVenda.length) cfg.etapasVenda = modelo.etapas.slice();
+}
+
+function montarEstruturaBase() {
+  lerFormulario();
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil);
+  var modelo = modeloDoSite(cfg.tipoSite);
+  var lead = LEAD_DO_SITE ? acharLead(LEAD_DO_SITE) : null;
+  var servs = normalizarListaServicos(cfg.servicos || []);
+
+  aplicarTipoSite(cfg.tipoSite, true);
+
+  if (!cfg.badge) cfg.badge = cfg.cidade ? 'Atendimento em ' + cfg.cidade : modelo.badge;
+  if (!cfg.objetivoSite) cfg.objetivoSite = modelo.desc;
+  if (!cfg.textoCta) cfg.textoCta = modelo.cta;
+  if (!cfg.ctaTitulo) cfg.ctaTitulo = modelo.ctaTitulo;
+  if (!cfg.ctaTexto) cfg.ctaTexto = modelo.ctaTexto;
+  if (!cfg.titulo) cfg.titulo = cfg.nome || 'Seu próximo cliente pode te achar aqui';
+  if (!cfg.subtitulo) {
+    var resumoServ = servs.slice(0, 3).map(function (s) { return s.titulo; }).join(', ');
+    cfg.subtitulo = resumoServ
+      ? resumoServ + (cfg.cidade ? ' em ' + cfg.cidade : '') + '.'
+      : modelo.desc;
+  }
+  if (!cfg.sobreTexto) {
+    cfg.sobreTexto = lead && lead.obs
+      ? lead.obs
+      : 'Atendimento direto, apresentação clara do que o negócio faz e um jeito fácil de falar pelo WhatsApp.';
+  }
+  if (!cfg.horario && lead && lead.horario) cfg.horario = lead.horario;
+  if ((!cfg.heroDestaques || !cfg.heroDestaques.length) && servs.length) {
+    cfg.heroDestaques = servs.slice(0, 3).map(function (s) { return s.preco ? s.titulo + ' · ' + s.preco : s.titulo; });
+  }
+  if ((!cfg.etapasVenda || !cfg.etapasVenda.length)) cfg.etapasVenda = modelo.etapas.slice();
+  if (lead && !cfg.endereco) cfg.endereco = lead.endereco || '';
+  if (lead && !cfg.whatsapp) cfg.whatsapp = soNumero(lead.telefone);
+  if (lead && !cfg.telefone) cfg.telefone = soNumero(lead.telefone);
+
+  salvarRascunho();
+  pintarSite();
+  recado('⚡ Criação renovada');
+}
+
+function htmlTiposSite() {
+  return Object.keys(TIPOS_SITE).map(function (k) {
+    var m = TIPOS_SITE[k];
+    return '<div class="modelo-site' + (cfg.tipoSite === k ? ' on' : '') + '" onclick="selecionarTipoSite(\'' + k + '\')">' +
+      '<b>' + m.rotulo + '</b>' +
+      '<p>' + esc(m.desc) + '</p>' +
+      '<span class="mini">' + esc(m.cta) + ' · ' + esc(m.secoes.slice(0, 3).map(rotuloSecaoSite).join(' • ')) + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function selecionarTipoSite(tipo) {
+  if (!cfg) cfg = cfgNovo();
+  cfg.tipoSite = tipo;
+  aplicarTipoSite(tipo, false);
+  salvarRascunho();
+  pintarSite();
+  recado('Modelo do site: ' + modeloDoSite(tipo).rotulo);
+}
+
 function cfgNovo() {
   var c = {
     nome: '', slogan: '', telefone: '', whatsapp: '', email: '', endereco: '', cidade: '',
     paleta: 'oceano', fonte: 'moderna', estilo: 'moderno', heroAlinhamento: 'esquerda',
     titulo: '', subtitulo: '', sobreTexto: '', servicos: [], faq: [],
-    secoes: ['servicos', 'sobre', 'faq', 'horario', 'contato'],
+    badge: '', heroDestaques: [], textoCta: '', ctaTitulo: '', ctaTexto: '',
+    objetivoSite: '', tipoSite: 'conversao', etapasVenda: [],
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'depoimentos', 'faq', 'contato'],
     horario: '', botaoFlutuante: true, animacoes: true, lgpd: true
   };
   try { Perfis.aplicar(c, 'generico'); } catch (e) {}
-  c.nome = ''; c.titulo = ''; c.servicos = [];
+  var modelo = modeloDoSite(c.tipoSite);
+  c.secoes = modelo.secoes.slice();
+  c.badge = modelo.badge;
+  c.textoCta = modelo.cta;
+  c.ctaTitulo = modelo.ctaTitulo;
+  c.ctaTexto = modelo.ctaTexto;
+  c.heroDestaques = modelo.destaques.slice();
+  c.etapasVenda = modelo.etapas.slice();
+  c.nome = ''; c.titulo = ''; c.subtitulo = ''; c.servicos = [];
   return c;
 }
 
 function pintarSite() {
   if (!cfg) cfg = cfgNovo();
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil || 'generico');
+  if (!cfg.secoes || !secoesAtivasDoSite().length) aplicarTipoSite(cfg.tipoSite, true);
+  var modelo = modeloDoSite(cfg.tipoSite);
   var perfis = (typeof Perfis !== 'undefined' && Perfis.PERFIS) ? Object.keys(Perfis.PERFIS) : ['generico'];
+  var servs = normalizarListaServicos(cfg.servicos || []);
+  var secoesAtivas = secoesAtivasDoSite();
   var h = '';
+
+  h += '<div class="hero-app"><span class="tag">Criação de sites</span><h2>Mesmo motor, interface nova</h2><p>Agora você escolhe o tipo do site primeiro e monta tudo com mais cara de dashboard.</p><div class="hero-linhas"><span>' + esc(modelo.rotulo) + '</span><span>' + servs.length + ' itens no site</span><span>' + secoesAtivas.length + ' seções ligadas</span></div></div>';
 
   if (LEAD_DO_SITE) {
     var l = acharLead(LEAD_DO_SITE);
@@ -6649,45 +7771,96 @@ function pintarSite() {
       '<span onclick="soltarLead()" style="float:right;text-decoration:underline">trocar</span></div>';
   }
 
+  h += '<div class="site-passo">';
+  h += '<h3>🚀 Nova criação de sites</h3>';
+  h += '<p>Agora o site nasce por objetivo: captar no WhatsApp, vender cardápio, mostrar catálogo, agendar ou passar confiança.</p>';
+  h += '<div class="site-resumo">' +
+    '<div><b>' + esc(modelo.rotulo) + '</b><span>modelo atual</span></div>' +
+    '<div><b>' + servs.length + '</b><span>serviços no site</span></div>' +
+    '<div><b>' + secoesAtivas.length + '</b><span>seções ligadas</span></div>' +
+    '</div>';
+  h += '</div>';
+
   h += '<div class="bloco">';
-  h += '<h2>1. O básico</h2>';
+  h += '<h2>1. Escolher o jeito do site vender</h2>';
+  h += '<p class="ajuda">Cada modelo muda a estrutura, a chamada principal e a ordem das seções.</p>';
+  h += '<div class="modelo-grade">' + htmlTiposSite() + '</div>';
+  h += '<div class="lista-preview">' +
+    '<div><i>🎯</i><div><b>Objetivo</b><span>' + esc(cfg.objetivoSite || modelo.desc) + '</span></div></div>' +
+    '<div><i>🧱</i><div><b>Seções ligadas</b><span>' + esc(secoesAtivas.map(rotuloSecaoSite).join(' • ')) + '</span></div></div>' +
+    '<div><i>⚡</i><div><b>CTA principal</b><span>' + esc(cfg.textoCta || modelo.cta) + '</span></div></div>' +
+    '</div>';
+  h += '</div>';
+
+  h += '<div class="bloco">';
+  h += '<h2>2. Estratégia e promessa</h2>';
   h += '<label>Nome do negócio</label><input id="sNome" value="' + esc(cfg.nome) + '" placeholder="Padaria do Zé">';
   h += '<div class="dupla">' +
-    '<div><label>Tipo</label><select id="sPerfil">' +
+    '<div><label>Tipo do negócio</label><select id="sPerfil">' +
       perfis.map(function (p) {
         return '<option value="' + p + '"' + (cfg.perfil === p ? ' selected' : '') + '>' + p.replace(/_/g, ' ') + '</option>';
       }).join('') + '</select></div>' +
     '<div><label>Cidade</label><input id="sCidade" value="' + esc(cfg.cidade) + '" placeholder="Rondonópolis"></div>' +
     '</div>';
-  h += '<label>WhatsApp (só números)</label><input id="sWhats" inputmode="numeric" value="' + esc(cfg.whatsapp) + '" placeholder="66999998888">';
-  h += '<label>O que o negócio faz (uma linha por serviço)</label>';
-  h += '<textarea id="sServicos" placeholder="Bolos de aniversário&#10;Pão francês quentinho&#10;Salgados para festa">' +
-       esc((cfg.servicos || []).map(function (s) { return s.nome || s; }).join('\n')) + '</textarea>';
-  h += '<button class="btn pequeno" onclick="aplicarPerfil()">🎨 Usar o modelo desse tipo de negócio</button>';
+  h += '<div class="dupla">' +
+    '<div><label>WhatsApp (só números)</label><input id="sWhats" inputmode="numeric" value="' + esc(cfg.whatsapp) + '" placeholder="66999998888"></div>' +
+    '<div><label>Texto do botão</label><input id="sTextoCta" value="' + esc(cfg.textoCta || modelo.cta) + '" placeholder="Pedir orçamento"></div>' +
+    '</div>';
+  h += '<label>Selo do topo</label><input id="sBadge" value="' + esc(cfg.badge || modelo.badge) + '" placeholder="Resposta rápida no WhatsApp">';
+  h += '<label>Qual é o objetivo desse site?</label><textarea id="sObjetivo" class="area-mini" placeholder="Ex.: fazer a pessoa chamar no WhatsApp e pedir orçamento">' + esc(cfg.objetivoSite || modelo.desc) + '</textarea>';
+  h += '<label>Subtítulo principal</label><textarea id="sSubtitulo" class="area-mini" placeholder="Explique em uma frase curta o que a pessoa encontra nesse site">' + esc(cfg.subtitulo || '') + '</textarea>';
+  h += '<div class="linha-btn">' +
+    '<button class="btn pequeno" onclick="aplicarPerfil()">🎨 Puxar base do segmento</button>' +
+    '<button class="btn pequeno principal" onclick="montarEstruturaBase()">⚡ Renovar a estrutura</button>' +
+    '</div>';
   h += '</div>';
 
   h += '<div class="bloco">';
-  h += '<h2>2. Deixar a IA trabalhar</h2>';
+  h += '<h2>3. Conteúdo que vende</h2>';
+  h += '<p class="ajuda">Preencha o que aparece logo de cara e o que faz a pessoa confiar.</p>';
+  h += '<label>Serviços / produtos (uma linha por item)</label>';
+  h += '<textarea id="sServicos" placeholder="Bolos de aniversário&#10;Pão francês quentinho&#10;Salgados para festa">' +
+       esc(servs.map(function (s) { return s.titulo; }).join('\n')) + '</textarea>';
+  h += '<label>Destaques do topo (uma linha por destaque curto)</label>';
+  h += '<textarea id="sDestaques" class="area-mini" placeholder="Entrega rápida&#10;Orçamento sem enrolação&#10;Atendimento pelo WhatsApp">' + esc((cfg.heroDestaques || []).join('\n')) + '</textarea>';
+  h += '<label>Como funciona (uma linha por etapa)</label>';
+  h += '<textarea id="sEtapas" class="area-mini" placeholder="Chame no WhatsApp&#10;Explique o que você precisa&#10;Receba o orçamento">' + esc((cfg.etapasVenda || []).join('\n')) + '</textarea>';
+  h += '<label>Sobre o negócio</label>';
+  h += '<textarea id="sSobre" placeholder="Conte de forma simples por que esse negócio merece confiança">' + esc(cfg.sobreTexto || '') + '</textarea>';
+  h += '<label>Horário de funcionamento</label>';
+  h += '<textarea id="sHorario" class="area-mini" placeholder="Segunda a sexta: 8h às 18h&#10;Sábado: 8h às 12h">' + esc(Array.isArray(cfg.horarios) ? cfg.horarios.map(function (x) { return x.dia + ': ' + x.hora; }).join('\n') : (cfg.horario || '')) + '</textarea>';
+  h += '</div>';
+
+  h += '<div class="bloco">';
+  h += '<h2>4. Deixar a IA trabalhar</h2>';
   if (!BD.config.iaAtiva || !BD.config.iaChave) {
     h += '<div class="aviso alerta">A IA está desligada. Cadastre uma chave em Ajustes — a da Groq é grátis.</div>' +
          '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Ligar a IA</button>';
   } else {
-    h += '<p class="ajuda">Quatro IAs trabalham em sequência: estrategista, redator, diretor de arte e revisor. No fim você recebe a lista do que melhorar.</p>';
-    h += '<button class="btn turbo" onclick="rodarTurbo()">🚀 Modo turbo</button>';
+    h += '<p class="ajuda">Agora o turbo decide melhor a estratégia, a promessa, o CTA e a estrutura do site.</p>';
+    h += '<button class="btn turbo" onclick="rodarTurbo()">🚀 Turbo completo</button>';
     h += '<button class="btn pequeno" onclick="soTextos()">✍️ Só reescrever os textos</button>';
   }
   h += '<div id="turboPainel"></div>';
   h += '</div>';
 
   h += '<div class="bloco">';
-  h += '<h2>3. Aparência</h2>';
+  h += '<h2>5. Visual</h2>';
+  h += '<p class="ajuda">Escolha o clima visual depois da estratégia.</p>';
   var paletas = (typeof SiteGen !== 'undefined' && SiteGen.PALETAS) ? Object.keys(SiteGen.PALETAS) : ['oceano'];
   var fontes = (typeof SiteGen !== 'undefined' && SiteGen.FONTES) ? Object.keys(SiteGen.FONTES) : ['moderna'];
+  var estilos = (typeof SiteGen !== 'undefined' && SiteGen.ESTILOS) ? Object.keys(SiteGen.ESTILOS) : ['moderno'];
   h += '<div class="dupla">' +
     '<div><label>Cor</label><select id="sPaleta">' + paletas.map(function (p) {
       return '<option value="' + p + '"' + (cfg.paleta === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></div>' +
     '<div><label>Letra</label><select id="sFonte">' + fontes.map(function (f) {
       return '<option value="' + f + '"' + (cfg.fonte === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select></div>' +
+    '</div>';
+  h += '<div class="dupla">' +
+    '<div><label>Estilo visual</label><select id="sEstilo">' + estilos.map(function (e) {
+      return '<option value="' + e + '"' + (cfg.estilo === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></div>' +
+    '<div><label>Alinhamento do topo</label><select id="sAlinhamento">' + ['esquerda', 'centro'].map(function (a) {
+      return '<option value="' + a + '"' + (cfg.heroAlinhamento === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></div>' +
     '</div>';
   h += '</div>';
 
@@ -6731,6 +7904,7 @@ function pintarSite() {
 
   $('#tela-site').innerHTML = h;
   pintarEtapas();
+  pintarPainelTopo();
 }
 
 /* Desenha o andamento do time. Fica visível depois de pronto também —
@@ -6763,18 +7937,28 @@ function lerFormulario() {
   if ($('#sWhats')) cfg.whatsapp = soNumero($('#sWhats').value);
   if ($('#sPaleta')) cfg.paleta = $('#sPaleta').value;
   if ($('#sFonte')) cfg.fonte = $('#sFonte').value;
+  if ($('#sEstilo')) cfg.estilo = $('#sEstilo').value;
+  if ($('#sAlinhamento')) cfg.heroAlinhamento = $('#sAlinhamento').value;
   if ($('#sPerfil')) cfg.perfil = $('#sPerfil').value;
+  if ($('#sTextoCta')) cfg.textoCta = $('#sTextoCta').value.trim();
+  if ($('#sBadge')) cfg.badge = $('#sBadge').value.trim();
+  if ($('#sObjetivo')) cfg.objetivoSite = $('#sObjetivo').value.trim();
+  if ($('#sSubtitulo')) cfg.subtitulo = $('#sSubtitulo').value.trim();
+  if ($('#sSobre')) cfg.sobreTexto = $('#sSobre').value.trim();
+  if ($('#sHorario')) cfg.horario = $('#sHorario').value.trim();
+  if ($('#sDestaques')) cfg.heroDestaques = $('#sDestaques').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 4);
+  if ($('#sEtapas')) cfg.etapasVenda = $('#sEtapas').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 5);
   if ($('#sServicos')) {
     var linhas = $('#sServicos').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-    if (linhas.length) {
-      cfg.servicos = linhas.map(function (n, i) {
-        var antigo = (cfg.servicos || [])[i];
-        return { nome: n, descricao: (antigo && antigo.nome === n && antigo.descricao) || '' };
-      });
-    }
+    var antigos = normalizarListaServicos(cfg.servicos || []);
+    cfg.servicos = linhas.map(function (n, i) {
+      var antigo = antigos[i] || {};
+      return { titulo: n, descricao: antigo.descricao || '', preco: antigo.preco || '' };
+    });
   }
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(cfg.perfil);
   if (!cfg.titulo) cfg.titulo = cfg.nome;
-  cfg.telefone = cfg.telefone || cfg.whatsapp;
+  cfg.telefone = cfg.whatsapp || cfg.telefone;
 }
 
 function aplicarPerfil() {
@@ -6784,6 +7968,8 @@ function aplicarPerfil() {
   try { Perfis.aplicar(cfg, p); } catch (e) { recado('Modelo indisponível'); return; }
   cfg.nome = nome; cfg.cidade = cidade; cfg.whatsapp = whats;
   if (servicos && servicos.length) cfg.servicos = servicos;
+  if (!cfg.tipoSite) cfg.tipoSite = tipoSiteSugerido(p);
+  aplicarTipoSite(cfg.tipoSite || tipoSiteSugerido(p), true);
   salvarRascunho();
   pintarSite();
   recado('🎨 Modelo aplicado');
@@ -6801,15 +7987,19 @@ function criarSitePara(idLead) {
     cfg.nome = l.nome;
     cfg.cidade = l.cidade || BD.config.cidadePadrao;
     cfg.whatsapp = soNumero(l.telefone);
+    cfg.telefone = soNumero(l.telefone);
     cfg.endereco = l.endereco || '';
     try {
       var perfil = (typeof Perfis !== 'undefined' && Perfis.paraCategoria) ? Perfis.paraCategoria(l.categoria) : 'generico';
       var nome = cfg.nome, cid = cfg.cidade, wa = cfg.whatsapp;
       Perfis.aplicar(cfg, perfil);
-      cfg.nome = nome; cfg.cidade = cid; cfg.whatsapp = wa;
+      cfg.nome = nome; cfg.cidade = cid; cfg.whatsapp = wa; cfg.telefone = wa;
+      cfg.tipoSite = tipoSiteSugerido(perfil);
+      aplicarTipoSite(cfg.tipoSite, true);
     } catch (e) {}
   }
   fechar(); ir('site');
+  montarEstruturaBase();
   recado('Montando o site de ' + l.nome);
 }
 
@@ -6822,12 +8012,33 @@ function salvarRascunho() {
 /* ─────────── modo turbo ─────────── */
 function dadosDoNegocio() {
   lerFormulario();
+  var l = LEAD_DO_SITE ? acharLead(LEAD_DO_SITE) : null;
+  var servs = normalizarListaServicos(cfg.servicos || []);
   return {
-    nome: cfg.nome, segmento: (cfg.perfil || 'generico').replace(/_/g, ' '),
+    nome: cfg.nome,
+    segmento: (cfg.perfil || 'generico').replace(/_/g, ' '),
+    tipoSite: cfg.tipoSite || tipoSiteSugerido(cfg.perfil || 'generico'),
+    objetivoSite: cfg.objetivoSite || '',
     cidade: cfg.cidade || BD.config.cidadePadrao,
-    oQueFaz: (cfg.servicos || []).map(function (s) { return s.nome; }).join(', '),
-    servicos: (cfg.servicos || []).map(function (s) { return s.nome; }),
-    telefone: cfg.whatsapp, temFotos: false, temLogo: false
+    oQueFaz: servs.map(function (s) { return s.titulo; }).join(', '),
+    servicos: servs.map(function (s) { return s.titulo; }),
+    diferenciais: [
+      Array.isArray(cfg.diferenciais) ? cfg.diferenciais.join('; ') : String(cfg.diferenciais || ''),
+      Array.isArray(cfg.heroDestaques) ? cfg.heroDestaques.join('; ') : ''
+    ].filter(Boolean).join('; '),
+    telefone: cfg.whatsapp || (l ? l.telefone : ''),
+    endereco: cfg.endereco || (l ? l.endereco : ''),
+    horario: primeiraLinhaHorarios(cfg.horarios || cfg.horario || (l ? l.horario : '')),
+    etapasVenda: (cfg.etapasVenda || []).join(' | '),
+    temFotos: !!(cfg.heroImagem || cfg.sobreImagem || (cfg.galeria && String(cfg.galeria).trim())),
+    temLogo: !!cfg.logo,
+    observacoes: [
+      cfg.subtitulo ? 'Subtítulo atual: ' + cfg.subtitulo : '',
+      cfg.textoCta ? 'CTA atual: ' + cfg.textoCta : '',
+      l && l.obs ? 'Anotações: ' + l.obs : '',
+      l && l.contato ? 'Contato do negócio: ' + l.contato : '',
+      respostasDoQuestionario(l)
+    ].filter(Boolean).join(' | ')
   };
 }
 
@@ -6849,7 +8060,7 @@ async function rodarTurbo() {
   var opcoes = {
     paletas: Object.keys(SiteGen.PALETAS), fontes: Object.keys(SiteGen.FONTES),
     estilos: Object.keys(SiteGen.ESTILOS || { moderno: 1 }),
-    secoes: ['numeros', 'sobre', 'servicos', 'galeria', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
+    secoes: ['numeros', 'sobre', 'processo', 'servicos', 'galeria', 'equipe', 'depoimentos', 'faq', 'horario', 'contato']
   };
 
   try {
@@ -6870,14 +8081,20 @@ async function rodarTurbo() {
 
 function aplicarTurbo(r) {
   var t = r.textos || {};
+  if (t.badge) cfg.badge = t.badge;
   if (t.heroTitulo) cfg.titulo = t.heroTitulo;
   if (t.heroSubtitulo) cfg.subtitulo = t.heroSubtitulo;
+  if (t.heroDestaques && t.heroDestaques.length) cfg.heroDestaques = t.heroDestaques;
   if (t.slogan) cfg.slogan = t.slogan;
   if (t.sobre) cfg.sobreTexto = t.sobre;
   if (t.metaDescricao) cfg.descricao = t.metaDescricao;
   if (t.palavras) cfg.palavras = t.palavras;
+  if (t.textoCta) cfg.textoCta = t.textoCta;
+  if (t.ctaTitulo) cfg.ctaTitulo = t.ctaTitulo;
+  if (t.ctaTexto) cfg.ctaTexto = t.ctaTexto;
   if (t.ctaWhatsapp) cfg.whatsappMsg = t.ctaWhatsapp;
-  if (t.servicos && t.servicos.length) cfg.servicos = t.servicos;
+  if (t.etapasVenda && t.etapasVenda.length) cfg.etapasVenda = t.etapasVenda;
+  if (t.servicos && t.servicos.length) cfg.servicos = normalizarListaServicos(t.servicos);
   if (t.faq && t.faq.length) cfg.faq = t.faq;
 
   var a = r.arte || {};
@@ -6989,6 +8206,7 @@ function guardarSite(html) {
     if (l && l.siteSlug !== slug) { l.siteSlug = slug; anotar(l, '🎨 Site montado'); }
   }
   salvar();
+  pintarPainelTopo();
 }
 
 function baixarSite() {
@@ -7045,9 +8263,11 @@ function baixarPacote() {
   d.push('');
   d.push('- **Nome:** ' + (cfg.nome || '—'));
   d.push('- **Tipo:** ' + (cfg.perfil || '—'));
+  d.push('- **Modelo do site:** ' + (cfg.tipoSite || '—'));
+  d.push('- **Objetivo:** ' + (cfg.objetivoSite || '—'));
   d.push('- **Cidade:** ' + (cfg.cidade || '—'));
   d.push('- **WhatsApp:** ' + (cfg.whatsapp || '—'));
-  d.push('- **Visual:** paleta ' + cfg.paleta + ', fonte ' + cfg.fonte);
+  d.push('- **Visual:** paleta ' + cfg.paleta + ', fonte ' + cfg.fonte + ', estilo ' + (cfg.estilo || 'moderno'));
   d.push('');
   d.push('## 2. Estratégia do time');
   d.push('');
@@ -7139,6 +8359,99 @@ function erroGithub(status) {
   if (status === 409) return 'O repositório está vazio. Crie ele com um README antes.';
   if (status === 422) return 'O GitHub recusou o arquivo. Tente outro nome para o site.';
   return 'O GitHub respondeu erro ' + status + '.';
+}
+
+function deBase64(txt) {
+  var b = String(txt || '').replace(/\s+/g, '');
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+var CAMINHO_BUSCAS_ONLINE = '/contents/dados/buscas.json';
+
+function normalizarBancoOnlineBuscas(dados) {
+  if (Array.isArray(dados)) return dados;
+  if (dados && Array.isArray(dados.buscas)) return dados.buscas;
+  return [];
+}
+
+function mesclarBancoBuscas(local, remoto) {
+  var mapa = {};
+  (local || []).forEach(function (b) { if (b && b.id) mapa[b.id] = b; });
+  (remoto || []).forEach(function (b) {
+    if (!b || !b.id) return;
+    var atual = mapa[b.id];
+    if (!atual || Number(b.atualizadoEm || 0) >= Number(atual.atualizadoEm || 0)) mapa[b.id] = b;
+  });
+  return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) {
+    return Number(b.atualizadoEm || 0) - Number(a.atualizadoEm || 0);
+  }).slice(0, LIMITE_BUSCAS_SALVAS * 4);
+}
+
+function atualizarStatusBuscaOnline(html) {
+  var el = $('#buscaOnlineStatus');
+  if (el) el.innerHTML = html || '';
+}
+
+async function lerBuscasOnline() {
+  if (!githubPronto()) throw new Error('Ligue o GitHub em Ajustes para usar o banco online.');
+  var r = await github(CAMINHO_BUSCAS_ONLINE, { method: 'GET' });
+  if (r.status === 404) return { sha: null, buscas: [] };
+  if (!r.ok) throw new Error(erroGithub(r.status));
+  var j = await r.json();
+  var txt = deBase64(j.content || '');
+  var dados = [];
+  try { dados = normalizarBancoOnlineBuscas(JSON.parse(txt || '[]')); } catch (e) { dados = []; }
+  return { sha: j.sha || null, buscas: dados };
+}
+
+async function salvarBuscasOnline(buscas, sha) {
+  if (!githubPronto()) throw new Error('Ligue o GitHub em Ajustes para usar o banco online.');
+  var corpo = {
+    message: 'Sincroniza banco de buscas do LeadSite',
+    content: paraBase64(JSON.stringify({ atualizadoEm: hoje(), buscas: buscas || [] }, null, 2))
+  };
+  if (sha) corpo.sha = sha;
+  var r = await github(CAMINHO_BUSCAS_ONLINE, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if (!r.ok) throw new Error(erroGithub(r.status));
+  return r.json();
+}
+
+async function sincronizarBuscasOnline(silencioso) {
+  if (!githubPronto()) {
+    atualizarStatusBuscaOnline('<div class="aviso alerta">Preencha o GitHub em Ajustes para compartilhar as buscas entre aparelhos.</div>');
+    if (!silencioso) recado('Falta ligar o GitHub');
+    return;
+  }
+
+  atualizarStatusBuscaOnline('<div class="rodando-tela"><div class="roda"></div><b>Sincronizando banco online…</b></div>');
+  try {
+    var remoto = await lerBuscasOnline();
+    var mescladas = mesclarBancoBuscas(BD.buscas || [], remoto.buscas || []);
+    BD.buscas = mescladas;
+    salvar();
+    await salvarBuscasOnline(mescladas, remoto.sha);
+    pintarBuscasSalvas();
+    atualizarStatusBuscaOnline('<div class="aviso bom"><b>☁️ Banco online sincronizado</b><br>' +
+      (mescladas.length) + ' buscas guardadas no GitHub para reutilizar em outros aparelhos.</div>');
+    if (!silencioso) recado('☁️ Banco online sincronizado');
+    return mescladas;
+  } catch (e) {
+    atualizarStatusBuscaOnline('<div class="aviso ruim"><b>Banco online falhou</b><br>' + esc(e.message || String(e)) + '</div>');
+    if (!silencioso) recado('Não consegui sincronizar o banco online');
+    throw e;
+  }
+}
+
+function sincronizarBuscasOnlineSilencioso() {
+  if (!githubPronto()) return;
+  sincronizarBuscasOnline(true).catch(function () {});
 }
 
 async function publicar() {
@@ -7337,6 +8650,8 @@ function pintarAjustes() {
   var c = BD.config;
   var h = '';
 
+  h += '<div class="hero-app"><span class="tag">Ajustes</span><h2>Deixar tudo pronto para vender</h2><p>Configure seus preços, chaves, Pix, IA e GitHub num painel mais organizado.</p><div class="hero-linhas"><span>🤖 IA</span><span>💰 Pix</span><span>🌐 GitHub Pages</span></div></div>';
+
   h += '<div class="bloco"><h2>👤 Você</h2>';
   h += '<label>Seu nome (aparece nas mensagens)</label><input id="aNome" value="' + esc(c.meuNome) + '">';
   h += '<label>Seu WhatsApp (com DDD)</label><input id="aWhats" inputmode="numeric" value="' + esc(c.meuWhats) + '" placeholder="66999998888">';
@@ -7349,20 +8664,24 @@ function pintarAjustes() {
   h += '</div>';
 
   h += '<div class="bloco"><h2>🔍 Busca de clientes</h2>';
-  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito (poucas empresas em cidade pequena). ' +
-    'Com uma chave ela acha MUITO mais — com telefone e dizendo quem já tem site.</p>';
+  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito. Com Geoapify ou Google ela acha muito mais. ' +
+    'Agora as buscas por cidade também ficam guardadas no banco local do aparelho para abrir de novo sem consultar a internet toda vez.</p>';
   h += '<label>Chave do Geoapify (recomendada — grátis, sem cartão)</label>' +
     '<input id="aGeoapify" type="password" value="' + esc(c.geoapifyChave) + '" placeholder="cole aqui" autocapitalize="none">';
   h += '<p class="ajuda mini">Crie de graça em <b>myprojects.geoapify.com</b>: registre, crie um projeto, ' +
-    'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada.</p>';
+    'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada. O Geoapify acha volume, mas telefone e horário dependem do que a loja cadastrou nas fontes públicas.</p>';
   h += '<button class="btn" onclick="testarGeoapify()">🔍 Testar a chave Geoapify</button>';
   h += '<div id="aGeoapifyResultado"></div>';
   h += '<label style="margin-top:14px">Chave do Google Places (alternativa)</label>' +
     '<input id="aGmaps" type="password" value="' + esc(c.gmapsChave) + '" placeholder="AIza…" autocapitalize="none">';
   h += '<p class="ajuda mini">console.cloud.google.com → projeto → ative <b>Places API (New)</b> → Credenciais. ' +
-    'Os primeiros US$ 200 por mês o Google não cobra, mas pede cartão. Se as duas chaves estiverem aqui, o app usa o Geoapify.</p>';
+    'Os primeiros US$ 200 por mês o Google não cobra, mas pede cartão. Se as duas chaves estiverem aqui, o app usa Geoapify para achar mais e cruza com Google/mapa para tentar completar telefone, site e endereço.</p>';
   h += '<button class="btn" onclick="testarGmaps()">🔍 Testar a chave Google</button>';
   h += '<div id="aGmapsResultado"></div>';
+  h += '<div class="aviso info" style="margin-top:14px"><b>💾 Banco local de buscas</b><br>' +
+    'Hoje há <b>' + ((BD.buscas || []).length) + '</b> buscas salvas neste aparelho. ' +
+    'Use isso para reaproveitar cidades como Rondonópolis sem consultar tudo de novo.</div>';
+  h += '<button class="btn" onclick="limparBuscasSalvas()">🧹 Limpar buscas salvas</button>';
   h += '</div>';
 
   h += '<div class="bloco"><h2>💰 Pix</h2>';
@@ -7390,9 +8709,9 @@ function pintarAjustes() {
   h += '<div id="aIaResultado"></div>';
   h += '</div>';
 
-  h += '<div class="bloco"><h2>🌐 Pôr sites no ar (GitHub)</h2>';
+  h += '<div class="bloco"><h2>🌐 Pôr sites no ar e guardar buscas online (GitHub)</h2>';
   h += '<p class="ajuda">De graça e para sempre. Preencha uma vez e depois é só tocar em Publicar. ' +
-       'O passo a passo está no arquivo CELULAR-COMECE-AQUI.</p>';
+       'Esse mesmo GitHub também vira seu banco online das buscas salvas.</p>';
   h += '<div class="dupla">' +
     '<div><label>Seu usuário</label><input id="aGhUsuario" value="' + esc(c.ghUsuario) + '" placeholder="natanielsilva" autocapitalize="none"></div>' +
     '<div><label>Repositório</label><input id="aGhRepo" value="' + esc(c.ghRepo) + '" placeholder="leadsite" autocapitalize="none"></div>' +
@@ -7411,6 +8730,7 @@ function pintarAjustes() {
   h += '<div class="placar" style="margin:10px 0">' +
     '<div><b>' + BD.leads.length + '</b><span>clientes</span></div>' +
     '<div><b>' + BD.sites.length + '</b><span>sites</span></div>' +
+    '<div><b>' + ((BD.buscas || []).length) + '</b><span>buscas salvas</span></div>' +
     '<div><b>' + (SALVA_DE_VERDADE ? '✅' : '⚠️') + '</b><span>' + (SALVA_DE_VERDADE ? 'salvando' : 'só na memória') + '</span></div>' +
     '</div>';
   h += '<button class="btn principal" onclick="exportar()">⬇️ Baixar backup</button>';
@@ -7428,6 +8748,7 @@ function pintarAjustes() {
   h += '<p class="mini" style="text-align:center;margin-top:14px">LeadSite Celular · funciona sem servidor</p>';
 
   $('#tela-ajustes').innerHTML = h;
+  pintarPainelTopo();
 }
 
 function salvarAjustes() {
@@ -7455,6 +8776,7 @@ function salvarAjustes() {
   recado('💾 Salvo');
   if ($('#bCidade') && !$('#bCidade').value) $('#bCidade').value = c.cidadePadrao;
   atualizarFonteBusca();
+  pintarPainelTopo();
 }
 
 async function testarGeoapify() {
@@ -7651,7 +8973,9 @@ function iniciar() {
 
   pintarChips();
   atualizarFonteBusca();
+  pintarBuscasSalvas();
   $('#bCidade').value = BD.config.cidadePadrao || '';
+  if (githubPronto() && !(BD.buscas || []).length) sincronizarBuscasOnlineSilencioso();
   $('#fundoModal').onclick = fechar;
   $$('.abas button').forEach(function (b) {
     b.onclick = function () { ir(b.dataset.aba); };
