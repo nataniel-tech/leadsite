@@ -11,90 +11,224 @@
 <title>LeadSite</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <style>
-/* LeadSite Celular — visual feito para tela pequena e dedo grande.
-   Nada de hover: tudo funciona no toque. Alvos de no mínimo 48px. */
+
+/* LeadSite Premium — dashboard novo mantendo a mesma lógica do app. */
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --fundo:    #0f172a;
-  --carta:    #1e293b;
-  --carta2:   #334155;
-  --borda:    #334155;
-  --texto:    #f1f5f9;
-  --fraco:    #94a3b8;
-  --verde:    #10b981;
-  --verde-e:  #059669;
-  --azul:     #38bdf8;
-  --amarelo:  #fbbf24;
+  --fundo: #07111f;
+  --fundo2: #0b1628;
+  --fundo3: #101d33;
+  --carta: rgba(15, 23, 42, .72);
+  --carta2: rgba(30, 41, 59, .88);
+  --vidro: rgba(148, 163, 184, .08);
+  --borda: rgba(148, 163, 184, .14);
+  --texto: #f8fbff;
+  --fraco: #93a4bc;
+  --verde: #22c55e;
+  --verde-e: #16a34a;
+  --azul: #38bdf8;
+  --amarelo: #fbbf24;
   --vermelho: #f87171;
-  --roxo:     #a78bfa;
-  --barra:    64px;
+  --roxo: #8b5cf6;
+  --sombra: 0 20px 60px rgba(0, 0, 0, .28);
+  --sombra2: 0 10px 32px rgba(0, 0, 0, .20);
+  --barra: 78px;
 }
 
 html, body {
   margin: 0; padding: 0;
-  background: var(--fundo); color: var(--texto);
-  font-family: -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, .15), transparent 26%),
+    radial-gradient(circle at top right, rgba(139, 92, 246, .14), transparent 22%),
+    linear-gradient(180deg, var(--fundo), var(--fundo2) 44%, #060d19 100%);
+  color: var(--texto);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px; line-height: 1.5;
   overscroll-behavior-y: none;
 }
-
-body { padding-bottom: calc(var(--barra) + env(safe-area-inset-bottom, 0px)); }
+body {
+  min-height: 100vh;
+  padding-bottom: calc(var(--barra) + 24px + env(safe-area-inset-bottom, 0px));
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(circle at 15% 18%, rgba(34, 197, 94, .08), transparent 18%),
+    radial-gradient(circle at 84% 12%, rgba(56, 189, 248, .08), transparent 20%);
+}
 
 /* ─────────── topo ─────────── */
 .topo {
   position: sticky; top: 0; z-index: 40;
-  background: rgba(15, 23, 42, .96);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--borda);
-  padding: 14px 16px 12px;
-  display: flex; align-items: center; gap: 10px;
+  padding: 14px 14px 8px;
+  background: linear-gradient(180deg, rgba(4, 9, 19, .92), rgba(4, 9, 19, .55));
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(148, 163, 184, .08);
 }
-.topo h1 { font-size: 19px; margin: 0; font-weight: 700; flex: 1; }
-.topo .sub { font-size: 12px; color: var(--fraco); font-weight: 400; display: block; margin-top: 1px; }
+.topo-linha {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 10px;
+}
+.marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.marca-icone {
+  width: 44px; height: 44px; border-radius: 15px;
+  display: grid; place-items: center; font-size: 23px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, .24), rgba(56, 189, 248, .25));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: var(--sombra2);
+  flex: 0 0 auto;
+}
+.marca-txt { min-width: 0; }
+.marca-txt strong { display: block; font-size: 19px; letter-spacing: -.02em; }
+.topo .sub { font-size: 12px; color: var(--fraco); display: block; margin-top: 2px; }
+.status-pilulas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 32px; padding: 0 12px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--borda);
+  color: var(--fraco); font-size: 11.5px; font-weight: 700;
+}
+.pill.destaque {
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.16));
+  color: #dcfce7; border-color: rgba(34,197,94,.22);
+}
+.painel-topo { display: grid; gap: 10px; }
+.painel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.painel-card {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .88), rgba(12, 20, 35, .82));
+  border: 1px solid var(--borda); border-radius: 16px; padding: 12px;
+  box-shadow: var(--sombra2);
+}
+.painel-card b { display: block; font-size: 16px; color: var(--texto); }
+.painel-card span { display: block; margin-top: 4px; color: var(--fraco); font-size: 11px; }
+.atalhos-topo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.atalho-topo {
+  width: 100%; min-height: 44px; border-radius: 14px;
+  background: rgba(255,255,255,.05); color: var(--texto);
+  border: 1px solid var(--borda); font: inherit; font-size: 12.5px; font-weight: 700;
+}
 
 /* ─────────── telas ─────────── */
-.tela { display: none; padding: 14px 14px 24px; }
-.tela.ativa { display: block; animation: entra .18s ease; }
-@keyframes entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.tela {
+  display: none;
+  position: relative; z-index: 1;
+  padding: 18px 14px 28px;
+}
+.tela.ativa { display: block; animation: entra .22s ease; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.hero-app, .site-passo {
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, .12), rgba(139, 92, 246, .10)),
+    linear-gradient(180deg, rgba(15, 23, 42, .92), rgba(10, 17, 29, .9));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--sombra);
+}
+.hero-app .tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 30px; padding: 0 12px; border-radius: 999px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: #dbeafe; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+}
+.hero-app h2, .site-passo h3 { margin: 12px 0 8px; font-size: 22px; line-height: 1.14; letter-spacing: -.02em; }
+.hero-app p, .site-passo p { margin: 0; font-size: 13.5px; color: var(--fraco); }
+.hero-linhas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.hero-linhas span {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(148,163,184,.14); font-size: 12px; color: #dbeafe;
+}
+.site-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.site-resumo div {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.12);
+  border-radius: 14px; padding: 12px 10px;
+}
+.site-resumo b { display: block; font-size: 14px; }
+.site-resumo span { display: block; font-size: 11px; color: var(--fraco); margin-top: 3px; }
+.modelo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.modelo-site {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.14); border-radius: 16px;
+  padding: 14px; min-height: 112px; cursor: pointer; box-shadow: var(--sombra2);
+}
+.modelo-site.on { border-color: rgba(34,197,94,.32); background: linear-gradient(135deg, rgba(34,197,94,.11), rgba(56,189,248,.10)); }
+.modelo-site b { display: block; font-size: 14px; margin-bottom: 5px; }
+.modelo-site p { margin: 0; font-size: 12px; color: var(--fraco); }
+.modelo-site .mini { margin-top: 8px; display: block; }
+.lista-preview { display: grid; gap: 8px; margin-top: 10px; }
+.lista-preview div {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.12);
+  border-radius: 14px; padding: 11px 12px;
+}
+.lista-preview i { font-style: normal; font-size: 18px; line-height: 1.1; }
+.lista-preview b { display: block; font-size: 13px; margin-bottom: 2px; }
+.lista-preview span { font-size: 12px; color: var(--fraco); }
+.area-mini { min-height: 72px; }
+.bloco-topo { margin-bottom: 10px; }
+.bloco-topo h2 { margin: 0 0 4px; font-size: 16px; }
+.bloco-topo p { margin: 0; color: var(--fraco); font-size: 12.5px; }
 
 /* ─────────── barra de abas ─────────── */
 .abas {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 50;
   height: calc(var(--barra) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: #0b1220; border-top: 1px solid var(--borda);
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(7, 17, 31, .82);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 24px;
   display: grid; grid-template-columns: repeat(4, 1fr);
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
 }
 .abas button {
-  background: none; border: 0; color: var(--fraco);
-  font-size: 11px; font-family: inherit;
+  position: relative;
+  background: transparent; border: 0; color: var(--fraco);
+  border-radius: 18px; font-size: 11px; font-family: inherit; font-weight: 700;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; cursor: pointer; padding: 0;
+  gap: 4px; cursor: pointer; padding: 0;
 }
-.abas button i { font-size: 21px; font-style: normal; line-height: 1; }
-.abas button.on { color: var(--verde); }
+.abas button i { font-size: 20px; font-style: normal; line-height: 1; }
+.abas button.on {
+  color: #f8fbff;
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.18));
+  border: 1px solid rgba(56,189,248,.16);
+}
 .abas button .bolha {
-  position: absolute; margin: -22px 0 0 22px;
-  background: var(--vermelho); color: #fff; font-size: 10px; font-weight: 700;
-  min-width: 17px; height: 17px; border-radius: 9px; padding: 0 4px;
+  position: absolute; right: 12px; top: 8px;
+  background: linear-gradient(135deg, #ef4444, #f97316); color: #fff; font-size: 10px; font-weight: 800;
+  min-width: 18px; height: 18px; border-radius: 99px; padding: 0 5px;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 20px rgba(239,68,68,.28);
 }
 
 /* ─────────── formulários ─────────── */
-label { display: block; font-size: 13px; color: var(--fraco); margin: 14px 0 6px; font-weight: 600; }
+label { display: block; font-size: 12.5px; color: #c7d2fe; margin: 14px 0 7px; font-weight: 700; letter-spacing: .01em; }
 input, select, textarea {
-  width: 100%; padding: 13px 14px;
-  background: var(--carta); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 12px;
-  font-size: 16px; /* 16px evita o zoom automático do Android */
-  font-family: inherit;
+  width: 100%; padding: 14px 14px;
+  background: rgba(8, 15, 27, .82); color: var(--texto);
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 14px;
+  font-size: 16px; font-family: inherit;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
 }
 textarea { min-height: 92px; resize: vertical; }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--verde); border-color: transparent; }
-select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fraco) 50%), linear-gradient(135deg, var(--fraco) 50%, transparent 50%); background-position: calc(100% - 18px) 22px, calc(100% - 13px) 22px; background-size: 5px 5px; background-repeat: no-repeat; }
-
+input::placeholder, textarea::placeholder { color: #6b7a91; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, .42);
+  box-shadow: 0 0 0 3px rgba(56,189,248,.12);
+}
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fraco) 50%), linear-gradient(135deg, var(--fraco) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 23px, calc(100% - 13px) 23px;
+  background-size: 5px 5px; background-repeat: no-repeat;
+}
 .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dupla label { margin-top: 14px; }
 
@@ -102,32 +236,51 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; min-height: 50px; padding: 13px 16px;
-  background: var(--carta2); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 12px;
-  font-size: 15px; font-weight: 600; font-family: inherit;
+  background: linear-gradient(180deg, rgba(30, 41, 59, .96), rgba(16, 24, 37, .96));
+  color: var(--texto);
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 14px;
+  font-size: 15px; font-weight: 700; font-family: inherit;
   cursor: pointer; margin-top: 10px; text-decoration: none;
+  box-shadow: var(--sombra2);
 }
-.btn:active { transform: scale(.985); filter: brightness(1.15); }
-.btn.principal { background: var(--verde-e); border-color: var(--verde); color: #fff; }
-.btn.turbo { background: linear-gradient(135deg, #7c3aed, #2563eb); border: 0; color: #fff; }
-.btn.zap { background: #128C7E; border: 0; color: #fff; }
-.btn.perigo { background: transparent; border-color: #7f1d1d; color: var(--vermelho); }
-.btn.pequeno { min-height: 42px; font-size: 13.5px; padding: 9px 12px; margin-top: 8px; }
+.btn:active { transform: scale(.985); }
+.btn.principal {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border-color: rgba(34,197,94,.35); color: #fff;
+}
+.btn.turbo {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border: 0; color: #fff;
+}
+.btn.zap {
+  background: linear-gradient(135deg, #128C7E, #25D366);
+  border: 0; color: #fff;
+}
+.btn.perigo { background: rgba(127, 29, 29, .18); border-color: rgba(248,113,113,.22); color: #fecaca; }
+.btn.pequeno { min-height: 42px; font-size: 13px; padding: 10px 12px; margin-top: 8px; }
 .btn:disabled { opacity: .5; }
 .linha-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .linha-btn .btn { margin-top: 8px; }
 
 /* ─────────── cartões ─────────── */
-.carta {
-  background: var(--carta); border: 1px solid var(--borda);
-  border-radius: 14px; padding: 14px; margin-bottom: 10px;
+.carta, .bloco, .etapa, .melhoria {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .90), rgba(8, 15, 27, .90));
+  border: 1px solid rgba(148, 163, 184, .14);
+  box-shadow: var(--sombra2);
 }
-.carta h3 { margin: 0 0 4px; font-size: 16px; }
+.carta {
+  border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; overflow: hidden;
+}
+.carta::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+}
+.carta h3 { margin: 0 0 5px; font-size: 16px; }
 .carta .meta { font-size: 13px; color: var(--fraco); }
-
-.bloco { background: var(--carta); border: 1px solid var(--borda); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-.bloco > h2 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 7px; }
+.bloco { border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+.bloco > h2 { font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 7px; }
 .bloco > p.ajuda { font-size: 13px; color: var(--fraco); margin: 0 0 6px; }
+.bloco-resultado { padding-top: 14px; }
 
 
 /* ─────────── construtor de sites ─────────── */
@@ -169,65 +322,78 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 
 /* ─────────── selos ─────────── */
 .selo {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  padding: 3px 8px; border-radius: 20px; margin: 4px 4px 0 0;
+  display: inline-block; font-size: 11px; font-weight: 800;
+  padding: 4px 9px; border-radius: 999px; margin: 4px 4px 0 0;
+  border: 1px solid transparent;
 }
-.selo.semsite  { background: #7f1d1d; color: #fecaca; }
-.selo.comsite  { background: #334155; color: var(--fraco); }
-.selo.quente   { background: #78350f; color: #fed7aa; }
-.selo.plano    { background: #064e3b; color: #6ee7b7; }
-.selo.pago     { background: #065f46; color: #a7f3d0; }
-.selo.etapa    { background: #1e3a8a; color: #bfdbfe; }
-.selo.atraso   { background: #7f1d1d; color: #fecaca; }
+.selo.semsite  { background: rgba(127, 29, 29, .34); color: #fecaca; border-color: rgba(248,113,113,.22); }
+.selo.comsite  { background: rgba(51, 65, 85, .55); color: #cbd5e1; border-color: rgba(148,163,184,.14); }
+.selo.quente   { background: rgba(120, 53, 15, .45); color: #fed7aa; border-color: rgba(251,191,36,.2); }
+.selo.plano    { background: rgba(6, 78, 59, .38); color: #86efac; border-color: rgba(34,197,94,.18); }
+.selo.pago     { background: rgba(20, 83, 45, .45); color: #bbf7d0; border-color: rgba(34,197,94,.18); }
+.selo.etapa    { background: rgba(30, 58, 138, .38); color: #bfdbfe; border-color: rgba(56,189,248,.14); }
+.selo.atraso   { background: rgba(127, 29, 29, .34); color: #fecaca; border-color: rgba(248,113,113,.22); }
 
 /* nota do lead */
-.nota { float: right; font-size: 21px; font-weight: 800; color: var(--verde); line-height: 1; }
-.nota small { display: block; font-size: 9px; color: var(--fraco); font-weight: 600; text-align: center; }
+.nota {
+  float: right; min-width: 54px; text-align: center;
+  font-size: 22px; font-weight: 900; color: #34d399; line-height: 1;
+  background: rgba(16, 185, 129, .08); padding: 8px 8px 6px; border-radius: 14px;
+  border: 1px solid rgba(16,185,129,.12);
+}
+.nota small { display: block; font-size: 9px; color: var(--fraco); font-weight: 700; text-align: center; margin-top: 3px; }
 
 /* ─────────── chips de categoria ─────────── */
-.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .chip {
-  padding: 9px 13px; border-radius: 20px;
-  background: var(--carta); border: 1px solid var(--borda);
-  color: var(--fraco); font-size: 13.5px; cursor: pointer; user-select: none;
+  padding: 10px 13px; border-radius: 999px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.14);
+  color: #cbd5e1; font-size: 13px; cursor: pointer; user-select: none;
 }
-.chip.on { background: var(--verde-e); border-color: var(--verde); color: #fff; font-weight: 600; }
+.chip.on {
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(56,189,248,.18));
+  border-color: rgba(56,189,248,.22); color: #fff; font-weight: 700;
+}
 
 /* ─────────── modal que sobe de baixo ─────────── */
 .fundo-modal {
   position: fixed; inset: 0; z-index: 60;
-  background: rgba(0, 0, 0, .6); display: none;
+  background: rgba(1, 6, 14, .66); display: none;
+  backdrop-filter: blur(6px);
 }
 .fundo-modal.on { display: block; }
 .folha {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
   max-height: 92vh; overflow-y: auto;
-  background: var(--fundo); border-radius: 20px 20px 0 0;
-  border-top: 1px solid var(--borda);
+  background: linear-gradient(180deg, #0b1425, #08111f);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid rgba(148,163,184,.16);
   padding: 8px 16px calc(28px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%); transition: transform .22s ease;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.35);
 }
 .folha.on { transform: none; }
-.puxador { width: 42px; height: 4px; background: var(--carta2); border-radius: 3px; margin: 6px auto 12px; }
+.puxador { width: 44px; height: 5px; background: #31435f; border-radius: 4px; margin: 8px auto 14px; }
 .folha h2 { font-size: 18px; margin: 0 0 12px; }
 
 /* ─────────── avisos ─────────── */
 .aviso {
-  padding: 11px 13px; border-radius: 11px; font-size: 13.5px;
-  margin: 10px 0; border-left: 3px solid;
+  padding: 12px 13px; border-radius: 14px; font-size: 13.5px;
+  margin: 10px 0; border: 1px solid transparent; border-left: 3px solid;
 }
-.aviso.info  { background: #0c4a6e33; border-color: var(--azul); color: #bae6fd; }
-.aviso.bom   { background: #064e3b33; border-color: var(--verde); color: #a7f3d0; }
-.aviso.alerta{ background: #78350f33; border-color: var(--amarelo); color: #fde68a; }
-.aviso.ruim  { background: #7f1d1d33; border-color: var(--vermelho); color: #fecaca; }
+.aviso.info  { background: rgba(12, 74, 110, .26); border-color: rgba(56,189,248,.14); color: #bae6fd; }
+.aviso.bom   { background: rgba(6, 78, 59, .28); border-color: rgba(34,197,94,.22); color: #a7f3d0; }
+.aviso.alerta{ background: rgba(120, 53, 15, .28); border-color: rgba(251,191,36,.22); color: #fde68a; }
+.aviso.ruim  { background: rgba(127, 29, 29, .28); border-color: rgba(248,113,113,.22); color: #fecaca; }
 
 /* ─────────── recadinho flutuante ─────────── */
 #recado {
   position: fixed; left: 14px; right: 14px; z-index: 90;
-  bottom: calc(var(--barra) + 16px + env(safe-area-inset-bottom, 0px));
-  background: #0b1220; border: 1px solid var(--verde);
-  color: var(--texto); padding: 13px 15px; border-radius: 12px;
-  font-size: 14px; text-align: center; box-shadow: 0 8px 28px #000a;
+  bottom: calc(var(--barra) + 24px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #0a1424, #08101d);
+  border: 1px solid rgba(34,197,94,.26);
+  color: var(--texto); padding: 14px 15px; border-radius: 14px;
+  font-size: 14px; text-align: center; box-shadow: 0 12px 32px rgba(0,0,0,.36);
   opacity: 0; transform: translateY(14px); pointer-events: none;
   transition: all .22s ease;
 }
@@ -236,91 +402,125 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 /* ─────────── etapas do time de IA ─────────── */
 .etapa {
   display: flex; align-items: center; gap: 11px;
-  padding: 12px 13px; border-radius: 12px;
-  background: var(--carta); border: 1px solid var(--borda); margin-bottom: 8px;
+  padding: 13px; border-radius: 16px; margin-bottom: 9px;
 }
-.etapa .ico { font-size: 21px; width: 26px; text-align: center; }
+.etapa .ico { font-size: 21px; width: 28px; text-align: center; }
 .etapa .txt { flex: 1; min-width: 0; }
 .etapa .txt b { display: block; font-size: 14.5px; }
 .etapa .txt span { font-size: 12px; color: var(--fraco); }
 .etapa .estado { font-size: 18px; }
-.etapa.rodando { border-color: var(--azul); background: #0c4a6e22; }
+.etapa.rodando { border-color: rgba(56,189,248,.26); background: rgba(12,74,110,.18); }
 .etapa.rodando .estado { animation: girando 1s linear infinite; }
 @keyframes girando { to { transform: rotate(360deg); } }
-.etapa.ok { border-color: var(--verde); }
-.etapa.falhou { border-color: var(--vermelho); opacity: .7; }
+.etapa.ok { border-color: rgba(34,197,94,.24); }
+.etapa.falhou { border-color: rgba(248,113,113,.24); opacity: .78; }
 
 /* ─────────── melhorias ─────────── */
 .nota-site {
-  text-align: center; font-size: 40px; font-weight: 800;
-  color: var(--verde); line-height: 1; margin: 6px 0 2px;
+  text-align: center; font-size: 40px; font-weight: 900;
+  color: #34d399; line-height: 1; margin: 6px 0 4px;
 }
-.nota-site small { display: block; font-size: 12px; color: var(--fraco); font-weight: 600; }
+.nota-site small { display: block; font-size: 12px; color: var(--fraco); font-weight: 700; }
 .melhoria {
-  background: var(--carta); border: 1px solid var(--borda);
   border-left: 3px solid var(--fraco);
-  border-radius: 11px; padding: 12px; margin-bottom: 9px;
+  border-radius: 16px; padding: 13px; margin-bottom: 10px;
 }
 .melhoria.alta  { border-left-color: var(--vermelho); }
 .melhoria.media { border-left-color: var(--amarelo); }
 .melhoria.baixa { border-left-color: var(--fraco); }
 .melhoria.feita { opacity: .45; }
-.melhoria b { font-size: 14.5px; display: block; margin-bottom: 3px; }
+.melhoria b { font-size: 14.5px; display: block; margin-bottom: 4px; }
 .melhoria p { margin: 4px 0; font-size: 13px; color: var(--fraco); }
 .melhoria .quem { font-size: 11px; font-weight: 700; }
 
 /* ─────────── vazio ─────────── */
-.vazio { text-align: center; padding: 44px 20px; color: var(--fraco); }
-.vazio .emoji { font-size: 46px; display: block; margin-bottom: 12px; opacity: .7; }
+.vazio {
+  text-align: center; padding: 42px 20px; color: var(--fraco);
+  background: rgba(255,255,255,.03); border: 1px dashed rgba(148,163,184,.16); border-radius: 18px;
+}
+.vazio .emoji { font-size: 46px; display: block; margin-bottom: 12px; opacity: .85; }
 .vazio b { display: block; color: var(--texto); margin-bottom: 6px; font-size: 16px; }
 .vazio p { font-size: 13.5px; margin: 0; }
 
 /* ─────────── carregando ─────────── */
-.rodando-tela { text-align: center; padding: 40px 20px; }
+.rodando-tela { text-align: center; padding: 42px 20px; }
 .roda {
-  width: 38px; height: 38px; margin: 0 auto 16px;
-  border: 3px solid var(--carta2); border-top-color: var(--verde);
+  width: 40px; height: 40px; margin: 0 auto 16px;
+  border: 3px solid rgba(148,163,184,.18); border-top-color: var(--verde);
   border-radius: 50%; animation: girando .8s linear infinite;
 }
 
 /* ─────────── QR do Pix ─────────── */
-.qr { background: #fff; padding: 12px; border-radius: 14px; display: inline-block; margin: 0 auto; }
+.qr { background: #fff; padding: 12px; border-radius: 18px; display: inline-block; margin: 0 auto; }
 .qr img, .qr canvas, .qr table { display: block; width: 190px; height: 190px; }
 .meio { text-align: center; }
 
 .codigo {
-  background: #0b1220; border: 1px solid var(--borda); border-radius: 10px;
-  padding: 11px; font-family: ui-monospace, monospace; font-size: 11px;
-  word-break: break-all; color: #94e2c4; max-height: 96px; overflow-y: auto;
+  background: rgba(5, 11, 20, .94); border: 1px solid rgba(148,163,184,.12); border-radius: 14px;
+  padding: 12px; font-family: ui-monospace, monospace; font-size: 11px;
+  word-break: break-all; color: #a7f3d0; max-height: 110px; overflow-y: auto;
   -webkit-user-select: all; user-select: all;
 }
 
 /* números do topo */
 .placar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .placar div {
-  background: var(--carta); border: 1px solid var(--borda);
-  border-radius: 12px; padding: 11px 6px; text-align: center;
+  background: linear-gradient(180deg, rgba(12,20,35,.95), rgba(8,14,25,.95));
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 16px; padding: 13px 8px; text-align: center; box-shadow: var(--sombra2);
 }
-.placar b { display: block; font-size: 19px; color: var(--verde); }
+.placar b { display: block; font-size: 19px; color: #34d399; }
 .placar span { font-size: 10.5px; color: var(--fraco); }
 
-hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
+hr.sep { border: 0; border-top: 1px solid rgba(148,163,184,.12); margin: 18px 0; }
 .mini { font-size: 12px; color: var(--fraco); }
+
+@media (max-width: 720px) {
+  .topo-linha { align-items: flex-start; flex-direction: column; }
+  .status-pilulas { justify-content: flex-start; }
+}
+@media (max-width: 560px) {
+  .dupla, .linha-btn, .painel-grid, .atalhos-topo { grid-template-columns: 1fr; }
+  .abas { left: 10px; right: 10px; }
+}
 
 </style>
 </head>
 <body>
 
 <header class="topo">
-  <span style="font-size:22px">🚀</span>
-  <h1>LeadSite<span class="sub" id="subtitulo">seu escritório no bolso</span></h1>
+  <div class="topo-linha">
+    <div class="marca">
+      <span class="marca-icone" id="iconeTopo">🚀</span>
+      <div class="marca-txt">
+        <strong>LeadSite</strong>
+        <span class="sub" id="subtitulo">dashboard de prospecção e criação de sites</span>
+      </div>
+    </div>
+    <div class="status-pilulas">
+      <span class="pill">premium escuro</span>
+      <span class="pill destaque" id="statusRapido">0 clientes</span>
+    </div>
+  </div>
+  <div class="painel-topo" id="painelTopo"></div>
 </header>
 
 <!-- ═══════════ BUSCAR ═══════════ -->
 <section class="tela" id="tela-buscar">
+  <div class="hero-app">
+    <span class="tag">Buscar leads</span>
+    <h2>Caçar empresas e puxar conversa mais rápido</h2>
+    <p>Escolha a cidade, filtre quem não tem site e monte uma fila de contatos pronta para hoje.</p>
+    <div class="hero-linhas">
+      <span>🗺️ busca por cidade</span>
+      <span>🔥 pontuação automática</span>
+      <span>💬 atalho pro WhatsApp</span>
+    </div>
+  </div>
+
   <div class="bloco">
     <h2>🔍 Achar empresas sem site</h2>
-    <p class="ajuda">Busca de verdade no mapa do OpenStreetMap. Quem não tem site é cliente em potencial.</p>
+    <p class="ajuda">Busca de verdade no mapa. Quem não tem site vira oportunidade boa de abordagem.</p>
 
     <label>Cidade</label>
     <input id="bCidade" placeholder="Rondonópolis" autocomplete="off">
@@ -352,21 +552,44 @@ hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
     <p class="mini" id="fonteBusca" style="text-align:center"></p>
   </div>
 
-  <div id="bResultado">
-    <div class="vazio">
-      <span class="emoji">🗺️</span>
-      <b>Escolha a cidade e o tipo</b>
-      <p>Em menos de um minuto você tem uma lista de empresas para chamar hoje.</p>
+  <div class="bloco bloco-resultado">
+    <div class="bloco-topo">
+      <h2>Resultados da busca</h2>
+      <p>Os melhores leads aparecem aqui já com nota, telefone e ação rápida.</p>
+    </div>
+    <div id="bResultado">
+      <div class="vazio">
+        <span class="emoji">🗺️</span>
+        <b>Escolha a cidade e o tipo</b>
+        <p>Em menos de um minuto você tem uma lista de empresas para chamar hoje.</p>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ CLIENTES ═══════════ -->
 <section class="tela" id="tela-clientes">
-  <div class="placar" id="cPlacar"></div>
-  <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
-  <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas dos clientes</button>
-  <div class="chips" id="cFiltros" style="margin:12px 0"></div>
+  <div class="hero-app">
+    <span class="tag">CRM rápido</span>
+    <h2>Organizar clientes, respostas e cobranças</h2>
+    <p>Veja quem respondeu, quem pagou, quem esfriou e quem já pode receber o site.</p>
+    <div class="hero-linhas">
+      <span>📋 pipeline simples</span>
+      <span>💰 cobrança por Pix</span>
+      <span>📝 questionário embutido</span>
+    </div>
+  </div>
+
+  <div class="bloco">
+    <div class="placar" id="cPlacar"></div>
+    <label>Procurar cliente</label>
+    <input id="cBusca" placeholder="🔎 procurar pelo nome" autocomplete="off">
+    <div class="linha-btn">
+      <button class="btn" style="margin-top:10px" onclick="abrirCaixaRespostas()">📥 Caixa de respostas</button>
+      <button class="btn" style="margin-top:10px" onclick="ir('site')">🎨 Criar site</button>
+    </div>
+    <div class="chips" id="cFiltros" style="margin:12px 0"></div>
+  </div>
   <div id="cLista"></div>
 </section>
 
@@ -5002,6 +5225,98 @@ function dentroDeCaixa() {
 }
 var NA_CAIXA = dentroDeCaixa();
 
+var TELA_ATUAL = 'buscar';
+
+function textoLigado(ok, ligado, desligado) {
+  return ok ? ligado : desligado;
+}
+function cardTopo(valor, rotulo) {
+  return '<div class="painel-card"><b>' + esc(valor) + '</b><span>' + esc(rotulo) + '</span></div>';
+}
+function atalhoTopoHtml(rotulo, acao) {
+  return '<button class="atalho-topo" onclick="' + acao + '">' + rotulo + '</button>';
+}
+function metaTela(nome) {
+  return {
+    buscar:  { icone: '🔎', sub: 'encontre oportunidades e puxe conversa rápido' },
+    clientes:{ icone: '📋', sub: 'acompanhe cada cliente, resposta e cobrança' },
+    site:    { icone: '🎨', sub: 'monte páginas mais bonitas sem mudar o fluxo' },
+    ajustes: { icone: '⚙️', sub: 'deixe a máquina pronta para vender e publicar' }
+  }[nome || TELA_ATUAL] || { icone: '🚀', sub: 'seu escritório no bolso' };
+}
+function pintarPainelTopo(nome) {
+  if (nome) TELA_ATUAL = nome;
+  var el = $('#painelTopo');
+  if (!el) return;
+
+  var meta = metaTela(TELA_ATUAL);
+  if ($('#subtitulo')) $('#subtitulo').textContent = meta.sub;
+  if ($('#iconeTopo')) $('#iconeTopo').textContent = meta.icone;
+
+  var total = BD.leads.length;
+  var fechados = BD.leads.filter(function (l) { return l.etapa === 'fechado'; }).length;
+  var mrr = BD.leads.filter(function (l) { return l.plano && l.plano.ativo; })
+    .reduce(function (t, l) { return t + Number(l.plano.valor || 0); }, 0);
+  var sites = BD.sites.length;
+  if ($('#statusRapido')) $('#statusRapido').textContent = total + ' clientes';
+
+  var cards = [];
+  var acoes = [];
+
+  if (TELA_ATUAL === 'buscar') {
+    cards = [
+      cardTopo(total, 'clientes salvos'),
+      cardTopo(fechados, 'negócios fechados'),
+      cardTopo(sites, 'sites montados')
+    ];
+    acoes = [
+      atalhoTopoHtml('📋 Clientes', "ir('clientes')"),
+      atalhoTopoHtml('🎨 Criar site', "ir('site')"),
+      atalhoTopoHtml('⚙️ Ajustes', "ir('ajustes')")
+    ];
+  } else if (TELA_ATUAL === 'clientes') {
+    cards = [
+      cardTopo(total, 'clientes no CRM'),
+      cardTopo(fechados, 'fechados'),
+      cardTopo(dinheiro(mrr), 'receita mensal')
+    ];
+    acoes = [
+      atalhoTopoHtml('✍️ Novo', 'novoCliente()'),
+      atalhoTopoHtml('📥 Respostas', 'abrirCaixaRespostas()'),
+      atalhoTopoHtml('🎨 Criar site', "ir('site')")
+    ];
+  } else if (TELA_ATUAL === 'site') {
+    var modelo = (cfg && cfg.tipoSite && typeof modeloDoSite === 'function') ? modeloDoSite(cfg.tipoSite).rotulo : 'sem modelo';
+    var servs = cfg && cfg.servicos ? normalizarListaServicos(cfg.servicos).length : 0;
+    var melhorias = ULTIMO_TURBO && ULTIMO_TURBO.resultado && ULTIMO_TURBO.resultado.revisao
+      ? ((ULTIMO_TURBO.resultado.revisao.melhorias || []).length) : 0;
+    cards = [
+      cardTopo(modelo, 'modelo atual'),
+      cardTopo(servs, 'serviços no site'),
+      cardTopo(melhorias, 'melhorias da IA')
+    ];
+    acoes = [
+      atalhoTopoHtml('⚡ Estrutura', 'montarEstruturaBase()'),
+      atalhoTopoHtml('👀 Prévia', 'verSite()'),
+      atalhoTopoHtml('🌐 Publicar', 'publicar()')
+    ];
+  } else {
+    cards = [
+      cardTopo(textoLigado(BD.config.iaAtiva && BD.config.iaChave, 'ligada', 'desligada'), 'inteligência artificial'),
+      cardTopo(textoLigado(typeof pixPronto === 'function' && pixPronto(), 'pronto', 'faltando'), 'Pix'),
+      cardTopo(textoLigado(typeof githubPronto === 'function' && githubPronto(), 'ligado', 'desligado'), 'GitHub')
+    ];
+    acoes = [
+      atalhoTopoHtml('🤖 Testar IA', 'testarIA()'),
+      atalhoTopoHtml('🌐 Testar GitHub', 'testarGithub()'),
+      atalhoTopoHtml('📋 Ver clientes', "ir('clientes')")
+    ];
+  }
+
+  el.innerHTML = '<div class="painel-grid">' + cards.join('') + '</div>' +
+                 '<div class="atalhos-topo">' + acoes.join('') + '</div>';
+}
+
 var tempoRecado;
 function recado(txt) {
   var el = $('#recado');
@@ -5060,6 +5375,8 @@ function fechar() {
 
 /* ══════════════ abas ══════════════ */
 function ir(nome) {
+  TELA_ATUAL = nome;
+  document.body.setAttribute('data-tela', nome);
   $$('.tela').forEach(function (t) { t.classList.remove('ativa'); });
   $('#tela-' + nome).classList.add('ativa');
   $$('.abas button').forEach(function (b) { b.classList.toggle('on', b.dataset.aba === nome); });
@@ -5067,6 +5384,7 @@ function ir(nome) {
   if (nome === 'clientes') pintarClientes();
   if (nome === 'site') pintarSite();
   if (nome === 'ajustes') pintarAjustes();
+  pintarPainelTopo(nome);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -5781,6 +6099,7 @@ function atualizarBolha() {
   if (!b) return;
   b.textContent = n > 99 ? '99+' : n;
   b.style.display = n ? 'flex' : 'none';
+  pintarPainelTopo();
 }
 
 function pintarClientes() {
@@ -5844,6 +6163,7 @@ function pintarClientes() {
         : '') +
     '</div>';
   }).join('');
+  pintarPainelTopo();
 }
 
 /* Painel no topo da lista: quem pagou e ainda não respondeu o
@@ -7070,6 +7390,8 @@ function pintarSite() {
   var secoesAtivas = secoesAtivasDoSite();
   var h = '';
 
+  h += '<div class="hero-app"><span class="tag">Criação de sites</span><h2>Mesmo motor, interface nova</h2><p>Agora você escolhe o tipo do site primeiro e monta tudo com mais cara de dashboard.</p><div class="hero-linhas"><span>' + esc(modelo.rotulo) + '</span><span>' + servs.length + ' itens no site</span><span>' + secoesAtivas.length + ' seções ligadas</span></div></div>';
+
   if (LEAD_DO_SITE) {
     var l = acharLead(LEAD_DO_SITE);
     if (l) h += '<div class="aviso info">🎯 Montando o site de <b>' + esc(l.nome) + '</b> ' +
@@ -7209,6 +7531,7 @@ function pintarSite() {
 
   $('#tela-site').innerHTML = h;
   pintarEtapas();
+  pintarPainelTopo();
 }
 
 /* Desenha o andamento do time. Fica visível depois de pronto também —
@@ -7510,6 +7833,7 @@ function guardarSite(html) {
     if (l && l.siteSlug !== slug) { l.siteSlug = slug; anotar(l, '🎨 Site montado'); }
   }
   salvar();
+  pintarPainelTopo();
 }
 
 function baixarSite() {
@@ -7860,6 +8184,8 @@ function pintarAjustes() {
   var c = BD.config;
   var h = '';
 
+  h += '<div class="hero-app"><span class="tag">Ajustes</span><h2>Deixar tudo pronto para vender</h2><p>Configure seus preços, chaves, Pix, IA e GitHub num painel mais organizado.</p><div class="hero-linhas"><span>🤖 IA</span><span>💰 Pix</span><span>🌐 GitHub Pages</span></div></div>';
+
   h += '<div class="bloco"><h2>👤 Você</h2>';
   h += '<label>Seu nome (aparece nas mensagens)</label><input id="aNome" value="' + esc(c.meuNome) + '">';
   h += '<label>Seu WhatsApp (com DDD)</label><input id="aWhats" inputmode="numeric" value="' + esc(c.meuWhats) + '" placeholder="66999998888">';
@@ -7951,6 +8277,7 @@ function pintarAjustes() {
   h += '<p class="mini" style="text-align:center;margin-top:14px">LeadSite Celular · funciona sem servidor</p>';
 
   $('#tela-ajustes').innerHTML = h;
+  pintarPainelTopo();
 }
 
 function salvarAjustes() {
@@ -7978,6 +8305,7 @@ function salvarAjustes() {
   recado('💾 Salvo');
   if ($('#bCidade') && !$('#bCidade').value) $('#bCidade').value = c.cidadePadrao;
   atualizarFonteBusca();
+  pintarPainelTopo();
 }
 
 async function testarGeoapify() {
