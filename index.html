@@ -3378,7 +3378,43 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const attr = esc;
   const soDigitos = (s) => String(s || '').replace(/\D/g, '');
-  const linhas = (s) => Array.isArray(s) ? s.filter(Boolean) : String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const linhas = (s) => Array.isArray(s)
+    ? s.map(x => String(x == null ? '' : x).trim()).filter(Boolean)
+    : String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const tituloServico = (s) => String(s && (s.titulo || s.nome || s.servico || s.label || s) || '').trim();
+  function normalizarServicos(lista) {
+    return (Array.isArray(lista) ? lista : linhas(lista)).map(function (s) {
+      if (typeof s === 'string') return { titulo: s.trim(), descricao: '', preco: '' };
+      return {
+        titulo: tituloServico(s),
+        descricao: String(s && s.descricao || '').trim(),
+        preco: String(s && s.preco || '').trim()
+      };
+    }).filter(function (s) { return s.titulo; });
+  }
+  function normalizarSecoes(v) {
+    const base = { numeros:false, sobre:false, servicos:false, galeria:false, equipe:false, depoimentos:false, faq:false, horario:false, contato:false };
+    if (Array.isArray(v)) {
+      v.forEach(function (k) { k = String(k || '').toLowerCase().trim(); if (k in base) base[k] = true; });
+    } else if (v && typeof v === 'object') {
+      Object.keys(base).forEach(function (k) { base[k] = !!v[k]; });
+    }
+    if (!Object.keys(base).some(function (k) { return base[k]; })) {
+      ['numeros','sobre','servicos','depoimentos','faq','contato'].forEach(function (k) { base[k] = true; });
+    }
+    return base;
+  }
+  function normalizarHorarios(v) {
+    if (Array.isArray(v)) {
+      return v.map(function (h) {
+        return { dia: String(h && h.dia || '').trim(), hora: String(h && h.hora || '').trim() };
+      }).filter(function (h) { return h.dia && h.hora; });
+    }
+    return linhas(v).map(function (linha) {
+      var m = linha.match(/^([^:]+):\s*(.+)$/);
+      return m ? { dia: m[1].trim(), hora: m[2].trim() } : { dia: 'Atendimento', hora: linha };
+    }).filter(function (h) { return h.dia && h.hora; });
+  }
 
   const I = {
     check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
@@ -3424,7 +3460,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const pal = PALETAS[c.paleta] || PALETAS.esmeralda;
     const fnt = FONTES[c.fonte] || FONTES.moderna;
     const est = ESTILOS[c.estilo] || ESTILOS.moderno;
-    const sec = c.secoes || {};
+    const sec = normalizarSecoes(c.secoes);
     const dark = !!c.escuro && c.escuro !== '0';
 
     const tel = soDigitos(c.whatsapp);
@@ -3432,14 +3468,29 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     const waMsg = c.whatsappMsg || `Olá! Vim pelo site e gostaria de mais informações.`;
     const waLink = waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(waMsg)}` : '';
 
-    const servicos  = (c.servicos || []).filter(s => s && s.titulo);
+    const servicos  = normalizarServicos(c.servicos);
     const depos     = (c.depoimentos || []).filter(d => d && d.texto);
     const numeros   = (c.numeros || []).filter(n => n && n.valor);
     const faq       = (c.faq || []).filter(f => f && f.p && f.r);
     const equipe    = (c.equipe || []).filter(e => e && e.nome);
     const galeria   = linhas(c.galeria);
-    const horarios  = (c.horarios || []).filter(h => h && h.dia);
+    const horarios  = normalizarHorarios(c.horarios || c.horario);
     const difs      = linhas(c.diferenciais);
+    const heroDestaques = linhas(c.heroDestaques).slice(0, 4);
+    let pontosHero = (difs.length
+      ? difs
+      : servicos.map(s => s.titulo + (s.preco ? ' · ' + s.preco : ''))).slice(0, 4);
+    if (!pontosHero.length) pontosHero = heroDestaques.slice(0, 4);
+    const badgeHero = c.badge || (c.cidade ? 'Atendimento em ' + c.cidade : '');
+    const textoCta = c.textoCta || 'Chamar no WhatsApp';
+    const ctaTitulo = c.ctaTitulo || 'Atendimento rápido pelo WhatsApp';
+    const ctaTexto = c.ctaTexto || c.servicosSub || c.slogan || 'Tire dúvidas, peça preço e receba atendimento direto da equipe.';
+    const contatoRapido = [
+      c.endereco ? String(c.endereco).split(' - ').slice(-1)[0] : '',
+      horarios.length ? (horarios[0].dia + ': ' + horarios[0].hora) : '',
+      c.telefone || c.whatsapp || ''
+    ].filter(Boolean).slice(0, 3);
+    const temPainelHero = !!(pontosHero.length || contatoRapido.length || waLink);
 
     /* paleta derivada */
     const bg   = dark ? '#0b0f14' : '#ffffff';
@@ -3460,7 +3511,7 @@ return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
     if (sec.contato)     nav.push(['#contato','Contato']);
 
     const iniciais = nome.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'ME';
-    const descricao = (c.descricao || c.slogan || c.sobreTexto || `${nome} — atendimento de qualidade.`)
+    const descricao = (c.descricao || c.subtitulo || c.slogan || c.sobreTexto || `${nome} — atendimento de qualidade.`)
       .toString().split('\n')[0].slice(0, 158);
     const marca = c.logo
       ? `<img src="${attr(c.logo)}" alt="Logo ${attr(nome)}" class="logoimg">`
@@ -3549,15 +3600,21 @@ header.rolou{box-shadow:0 6px 24px rgba(0,0,0,${dark?'.5':'.08'})}
 .promo svg{width:17px;height:17px}
 
 /* ── topo ── */
-.hero{padding:${est.heroPad};color:#fff;text-align:${c.heroAlinhamento==='left'?'left':'center'};position:relative;overflow:hidden;
+.hero{padding:clamp(88px,10vw,150px) 0 clamp(76px,9vw,118px);color:#fff;position:relative;overflow:hidden;isolation:isolate;
 background:${c.heroImagem
-  ? `linear-gradient(${dark?'rgba(6,10,14,.8)':'rgba(0,0,0,.58)'},${dark?'rgba(6,10,14,.92)':'rgba(0,0,0,.7)'}),url('${attr(c.heroImagem)}') center/cover no-repeat`
+  ? `linear-gradient(${dark?'rgba(6,10,14,.8)':'rgba(0,0,0,.58)'},${dark?'rgba(6,10,14,.92)':'rgba(0,0,0,.74)'}),url('${attr(c.heroImagem)}') center/cover no-repeat`
   : `linear-gradient(135deg,var(--d) 0%,var(--p) 58%,var(--a) 130%)`}}
-.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(900px 420px at 50% -10%,rgba(255,255,255,.14),transparent 62%);pointer-events:none}
-.hero .wrap{max-width:840px;position:relative;z-index:2}
-.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:7px 18px;border-radius:99px;font-size:.78rem;font-weight:750;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px;backdrop-filter:blur(6px)}
-.hero h1{font-size:clamp(2.05rem,5.6vw,3.75rem);margin-bottom:18px;text-shadow:0 2px 30px rgba(0,0,0,.28)}
-.hero .sub{font-size:clamp(1.02rem,2.2vw,1.3rem);opacity:.96;max-width:640px;margin:${c.heroAlinhamento==='left'?'0 0 34px':'0 auto 34px'}}
+.hero::before{content:'';position:absolute;left:-70px;bottom:-110px;width:320px;height:320px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 62%);filter:blur(10px);pointer-events:none}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(900px 420px at 12% -10%,rgba(255,255,255,.18),transparent 58%),radial-gradient(640px 300px at 100% 30%,rgba(255,255,255,.12),transparent 62%);pointer-events:none}
+.hero .wrap{max-width:1140px;position:relative;z-index:2}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.14fr) minmax(300px,.86fr);gap:36px;align-items:center}
+.hero-copy{max-width:${c.heroAlinhamento==='left'?'680px':'760px'};text-align:${c.heroAlinhamento==='left'?'left':'center'}}
+.hero-side{display:grid;gap:16px;justify-self:end;width:min(100%,360px)}
+.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);padding:8px 18px;border-radius:99px;font-size:.78rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.12)}
+.hero h1{font-size:clamp(2.2rem,5.8vw,4.15rem);margin-bottom:16px;text-shadow:0 2px 30px rgba(0,0,0,.28)}
+.hero .sub{font-size:clamp(1.04rem,2.2vw,1.28rem);opacity:.96;max-width:680px;margin:${c.heroAlinhamento==='left'?'0 0 26px':'0 auto 26px'}}
+.hero-badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin:0 0 28px}
+.hero-badges span{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);font-size:.9rem;font-weight:650;backdrop-filter:blur(8px)}
 .btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'}}
 .btn{display:inline-flex;align-items:center;gap:10px;padding:15px 32px;border-radius:var(--r);font-weight:700;font-size:1rem;transition:transform .22s,box-shadow .22s,filter .22s;border:0;cursor:pointer;font-family:inherit}
 .btn:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.24)}
@@ -3565,9 +3622,19 @@ background:${c.heroImagem
 .b2{background:rgba(255,255,255,.13);color:#fff;border:2px solid rgba(255,255,255,.55);backdrop-filter:blur(6px)}
 .bwa{background:#25D366;color:#fff}
 .bp{background:var(--p);color:#fff}
-.confia{display:flex;gap:22px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin-top:32px;font-size:.87rem;opacity:.93}
-.confia span{display:flex;align-items:center;gap:7px}
+.confia{display:flex;gap:14px;flex-wrap:wrap;justify-content:${c.heroAlinhamento==='left'?'flex-start':'center'};margin-top:30px;font-size:.88rem;opacity:.94}
+.confia span{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15)}
 .confia svg{width:16px;height:16px}
+.hero-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:24px;border-radius:calc(var(--r) + 8px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.hero-mini{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(8,12,20,.24);font-size:.73rem;font-weight:800;letter-spacing:.9px;text-transform:uppercase}
+.hero-card strong{display:block;font-family:${fnt.h};font-size:1.45rem;line-height:1.14;margin:14px 0 10px}
+.hero-card p{color:rgba(255,255,255,.84);font-size:.97rem}
+.hero-pontos{list-style:none;display:grid;gap:12px;margin:18px 0 0}
+.hero-pontos li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:16px;background:rgba(8,12,20,.18)}
+.hero-pontos svg{width:18px;height:18px;color:#fff;margin-top:2px}
+.hero-rodape{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.hero-rodape span{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.09);font-size:.85rem;color:rgba(255,255,255,.86)}
+.hero-side .btn{width:100%;justify-content:center}
 
 /* ── seções ── */
 section{padding:${est.sec} 0;position:relative}
@@ -3584,6 +3651,8 @@ section{padding:${est.sec} 0;position:relative}
 
 /* ── números ── */
 .nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:22px;text-align:center}
+.num{background:var(--card);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:28px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.num::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--p),var(--a))}
 .num b{display:block;font-family:${fnt.h};font-size:clamp(2.1rem,4.6vw,3rem);font-weight:800;background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
 .num span{color:var(--mute);font-size:.93rem;font-weight:600}
 
@@ -3603,6 +3672,7 @@ section{padding:${est.sec} 0;position:relative}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--p),var(--a));transform:scaleX(0);transform-origin:left;transition:transform .35s}
 .card:hover{transform:translateY(-8px);box-shadow:0 22px 48px rgba(0,0,0,${dark?'.45':'.13'});border-color:${pal.p}44}
 .card:hover::before{transform:scaleX(1)}
+.svc .ordem{position:absolute;right:22px;top:18px;padding:6px 10px;border-radius:999px;background:${pal.p}14;color:var(--p);font-size:.72rem;font-weight:800;letter-spacing:1px}
 .ico{width:54px;height:54px;border-radius:${est.radius==='4px'?'9px':est.radius};background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-size:1.45rem;margin-bottom:20px;box-shadow:0 8px 20px ${pal.p}3d}
 .card h3{font-size:1.22rem;margin-bottom:11px}
 .card p{color:var(--mute);font-size:.97rem;flex:1}
@@ -3701,9 +3771,10 @@ ${c.lgpd ? `.lgpd{position:fixed;left:16px;right:16px;bottom:16px;max-width:560p
  .menu{position:fixed;inset:72px 0 auto 0;flex-direction:column;background:var(--bg);padding:24px;gap:18px;border-bottom:1px solid var(--line);box-shadow:0 14px 30px rgba(0,0,0,.16);transform:translateY(-130%);transition:transform .34s cubic-bezier(.3,.8,.3,1);align-items:stretch;text-align:center}
  .menu.aberto{transform:none}
  .burger{display:block}
+ .hero-grid{grid-template-columns:1fr}
+ .hero-copy,.hero-side{max-width:100%;width:100%;justify-self:stretch}
+ .hero-copy,.hero .sub,.btns,.confia,.hero-badges,.hero-rodape{text-align:center;justify-content:center;margin-left:auto;margin-right:auto}
  .sobre{grid-template-columns:1fr;gap:36px}
- .hero{text-align:center}
- .hero .sub,.btns,.confia{margin-left:auto;margin-right:auto;justify-content:center}
  section{padding:58px 0}
  .card{padding:28px}
 }
@@ -3727,7 +3798,7 @@ ${c.promoTexto ? `<div class="promo">${I.tag}<span>${esc(c.promoTexto)}</span>${
    <a href="#" class="logo" aria-label="${attr(nome)} — início">${marca}${c.logo?'':`<span>${esc(nome)}</span>`}</a>
    <ul class="menu" id="menu">
     ${nav.map(([h,t]) => `<li><a href="${h}">${esc(t)}</a></li>`).join('\n    ')}
-    ${waLink ? `<li><a href="${attr(waLink)}" target="_blank" rel="noopener" class="navcta">${esc(c.textoCta || 'Fale conosco')}</a></li>` : ''}
+    ${waLink ? `<li><a href="${attr(waLink)}" target="_blank" rel="noopener" class="navcta">${esc(textoCta || 'Fale conosco')}</a></li>` : ''}
    </ul>
    <button class="burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
   </nav>
@@ -3736,20 +3807,37 @@ ${c.promoTexto ? `<div class="promo">${I.tag}<span>${esc(c.promoTexto)}</span>${
 
 <main id="conteudo">
 <div class="hero">
- <div class="wrap">
-  ${c.badge ? `<span class="selo">${esc(c.badge)}</span>` : ''}
-  <h1>${esc(c.titulo || nome)}</h1>
-  ${(c.slogan || c.descricao) ? `<p class="sub">${esc(c.slogan || c.descricao)}</p>` : ''}
-  <div class="btns">
-   ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bwa">${I.wa}<span>${esc(c.textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
-   ${servicos.length && sec.servicos ? `<a href="#servicos" class="btn b2">Ver ${esc((c.rotuloServicos||'serviços').toLowerCase())}</a>`
-     : (sec.contato ? `<a href="#contato" class="btn b2">Onde estamos</a>` : '')}
+ <div class="wrap hero-grid">
+  <div class="hero-copy">
+   ${badgeHero ? `<span class="selo">${esc(badgeHero)}</span>` : ''}
+   <h1>${esc(c.titulo || nome)}</h1>
+   ${(c.subtitulo || c.slogan || c.descricao) ? `<p class="sub">${esc(c.subtitulo || c.slogan || c.descricao)}</p>` : ''}
+   ${heroDestaques.length ? `<div class="hero-badges">${heroDestaques.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}
+   <div class="btns">
+    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bwa">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+    ${servicos.length && sec.servicos ? `<a href="#servicos" class="btn b2">Ver ${esc((c.rotuloServicos||'serviços').toLowerCase())}</a>`
+      : (sec.contato ? `<a href="#contato" class="btn b2">Onde estamos</a>` : '')}
+   </div>
+   ${(c.notaMedia || horarios.length || c.endereco) ? `<div class="confia">
+    ${c.notaMedia ? `<span>${I.star}<b>${esc(c.notaMedia)}</b> de avaliação${c.qtdAvaliacoes?` (${esc(c.qtdAvaliacoes)})`:''}</span>` : ''}
+    ${c.endereco ? `<span>${I.pin}${esc(String(c.endereco).split(' - ').slice(-1)[0])}</span>` : ''}
+    ${horarios.length ? `<span>${I.clock}${esc(horarios[0].dia)}: ${esc(horarios[0].hora)}</span>` : ''}
+   </div>` : ''}
   </div>
-  ${(c.notaMedia || horarios.length || c.endereco) ? `<div class="confia">
-   ${c.notaMedia ? `<span>${I.star}<b>${esc(c.notaMedia)}</b> de avaliação${c.qtdAvaliacoes?` (${esc(c.qtdAvaliacoes)})`:''}</span>` : ''}
-   ${c.endereco ? `<span>${I.pin}${esc(String(c.endereco).split(' - ').slice(-1)[0])}</span>` : ''}
-   ${horarios.length ? `<span>${I.clock}${esc(horarios[0].dia)}: ${esc(horarios[0].hora)}</span>` : ''}
-  </div>` : ''}
+  ${temPainelHero ? `<aside class="hero-side"${rv}>
+   <div class="hero-card">
+    <span class="hero-mini">${esc(c.promoTexto || 'Resposta rápida')}</span>
+    <strong>${esc(ctaTitulo)}</strong>
+    <p>${esc(ctaTexto)}</p>
+    ${pontosHero.length ? `<ul class="hero-pontos">
+     ${pontosHero.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('\n     ')}
+    </ul>` : ''}
+    ${contatoRapido.length ? `<div class="hero-rodape">
+     ${contatoRapido.map(x => `<span>${esc(x)}</span>`).join('')}
+    </div>` : ''}
+   </div>
+   ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+  </aside>` : ''}
  </div>
 </div>
 
@@ -3773,7 +3861,7 @@ ${sec.sobre ? `
     ${difs.length ? `<ul class="plist">
      ${difs.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('\n     ')}
     </ul>` : ''}
-    ${waLink ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(c.textoCta || 'Falar conosco')}</span></a></div>` : ''}
+    ${waLink ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta || 'Falar conosco')}</span></a></div>` : ''}
    </div>
    ${c.sobreImagem ? `<div class="foto"${rv}><img src="${attr(c.sobreImagem)}" alt="Ambiente da ${attr(nome)}" loading="lazy" decoding="async"></div>` : ''}
   </div>
@@ -3789,14 +3877,15 @@ ${sec.servicos && servicos.length ? `
    ${c.servicosSub ? `<p>${esc(c.servicosSub)}</p>` : ''}
   </div>
   <div class="grid">
-   ${servicos.map(s => `<article class="card"${rv}>
+   ${servicos.map((s,i) => `<article class="card svc"${rv}>
+    <span class="ordem">${String(i + 1).padStart(2, '0')}</span>
     <div class="ico" aria-hidden="true">${I.check}</div>
     <h3>${esc(s.titulo)}</h3>
     <p>${esc(s.descricao || '')}</p>
     ${s.preco ? `<div class="preco">${esc(s.preco)}</div>` : ''}
    </article>`).join('\n   ')}
   </div>
-  ${waLink ? `<div class="btns" style="margin-top:44px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(c.textoCta || 'Pedir orçamento')}</span></a></div>` : ''}
+  ${waLink ? `<div class="btns" style="margin-top:44px"><a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta || 'Pedir orçamento')}</span></a></div>` : ''}
  </div>
 </section>` : ''}
 
@@ -3885,10 +3974,10 @@ ${sec.contato ? `
   </form>` : ''}
 
   <div class="cta"${rv}>
-   <h2>${esc(c.ctaTitulo || 'Pronto para começar?')}</h2>
-   <p>${esc(c.ctaTexto || 'Entre em contato agora e receba um atendimento personalizado.')}</p>
+   <h2>${esc(ctaTitulo || 'Pronto para começar?')}</h2>
+   <p>${esc(ctaTexto || 'Entre em contato agora e receba um atendimento personalizado.')}</p>
    <div class="btns">
-    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(c.textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
+    ${waLink ? `<a href="${attr(waLink)}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(textoCta || 'Chamar no WhatsApp')}</span></a>` : ''}
     ${c.telefone ? `<a href="tel:+55${attr(soDigitos(c.telefone))}" class="btn b2">${I.phone}<span>Ligar agora</span></a>` : ''}
    </div>
   </div>
@@ -4080,33 +4169,47 @@ const CLICHES = [
 
 const REGRAS = `COMO ESCREVER (siga à risca):
 
-1. Escreva como uma pessoa fala, não como folheto de propaganda.
-   Frases curtas. Voz ativa. Fale com "você".
+1. Escreva como dono de negócio brasileiro fala no balcão, no WhatsApp ou na recepção.
+   Frases curtas. Voz ativa. Português do Brasil. Fale com "você".
 
-2. Concreto vence bonito. Diga o que a pessoa ganha, com detalhe real.
+2. O texto precisa soar humano e útil. Concreto vence bonito.
    RUIM:  "Oferecemos soluções de qualidade com excelência no atendimento."
-   BOM:   "Assamos pão de hora em hora, das 5h às 20h. Chegou, tá quentinho."
+   BOM:   "Seu pedido sai na hora e você acompanha tudo pelo WhatsApp."
 
-3. NUNCA invente fato. Se não te informaram anos de mercado, número de clientes,
-   prêmio, certificação ou nota de avaliação, simplesmente não cite.
-   Prefira deixar de fora a inventar.
+3. NUNCA invente fato. Se não informaram anos de mercado, prêmios, nota, entrega,
+   estacionamento, convênio, prazo, garantia ou preço, não coloque.
 
 4. Proibido usar estas expressões (soam a texto automático):
    ${CLICHES.join(', ')}.
 
-5. Cite a cidade com naturalidade, como quem mora lá — não repita em toda frase.
+5. Faça o visitante enxergar a cena: atendimento rápido, pedido no WhatsApp,
+   agendamento, entrega, orçamento, retirada, consulta, revisão, prova social.
+   Use só o que estiver nos dados.
 
-6. A chamada principal é o benefício para o cliente, não a descrição da empresa.
-   RUIM:  "Oficina mecânica completa em Rondonópolis"
+6. A chamada principal precisa vender o benefício, não repetir o nome do ramo.
+   RUIM:  "Oficina mecânica em Rondonópolis"
    BOM:   "Seu carro pronto no mesmo dia, sem surpresa no orçamento"
 
-7. As perguntas frequentes devem ser as que a pessoa realmente faz antes de comprar:
-   preço, prazo, horário, se precisa agendar, formas de pagamento, entrega,
-   garantia, se atende no fim de semana. Nada de pergunta de enfeite.
+7. O subtítulo complementa a chamada com contexto concreto: cidade, tipo de serviço,
+   prazo, atendimento, conveniência ou diferencial real.
 
-8. Sem exagero de exclamação e sem emoji nos textos do site.
+8. Nos serviços, cada item precisa ter nome curto e descrição específica.
+   Evite descrição vazia como "serviço completo com qualidade".
 
-9. Português do Brasil, tom de negócio de bairro: próximo, direto e confiável.`;
+9. No FAQ, traga dúvidas reais antes da compra: preço, prazo, horário, agenda,
+   entrega, pagamento, garantia, cobertura, retirada, se atende fim de semana.
+
+10. Sem exagero de exclamação. Sem emoji. Sem texto pomposo.
+
+11. Cite a cidade com naturalidade, sem repetir em toda frase.
+
+12. Além dos textos principais, preencha também:
+   - badge: selo curto para o topo do site
+   - heroDestaques: 3 frases bem curtas para dar vida ao hero
+   - textoCta: texto do botão principal
+   - ctaTitulo e ctaTexto: chamada final da seção de contato
+
+13. Se faltarem dados, escreva de forma elegante sem denunciar que faltou informação.`;
 
 function montarPrompt(d, correcoes) {
   const dados = [
@@ -4136,14 +4239,19 @@ ${REGRAS}${conserto}
 
 Responda SOMENTE com um JSON válido, sem comentários e sem texto fora do JSON:
 {
+  "badge": "selo curto de até 34 caracteres",
   "slogan": "frase curta de até 60 caracteres",
   "heroTitulo": "chamada principal de até 70 caracteres, o benefício para o cliente",
   "heroSubtitulo": "1 frase de até 140 caracteres completando a chamada",
+  "heroDestaques": ["3 frases curtas de até 28 caracteres"],
   "sobre": "2 parágrafos curtos separados por \\n\\n, no máximo 600 caracteres no total",
-  "servicos": [{"nome": "nome curto", "descricao": "1 frase concreta"}],
+  "servicos": [{"titulo": "nome curto", "descricao": "1 frase concreta", "preco": "faixa de preço somente se foi informada"}],
   "faq": [{"p": "pergunta que o cliente realmente faria", "r": "resposta objetiva de 1 a 2 frases"}],
   "metaDescricao": "resumo de até 155 caracteres para o Google",
   "palavras": "6 a 10 palavras-chave separadas por vírgula, incluindo a cidade",
+  "textoCta": "texto do botão principal com 2 a 4 palavras",
+  "ctaTexto": "1 frase curta para a chamada final",
+  "ctaTitulo": "título curto da seção final",
   "ctaWhatsapp": "mensagem curta que o visitante enviará no WhatsApp, em primeira pessoa"
 }
 Gere de 4 a 6 serviços e de 4 a 6 perguntas no FAQ.`;
@@ -4152,8 +4260,9 @@ Gere de 4 a 6 serviços e de 4 a 6 perguntas no FAQ.`;
 /* Confere a resposta antes de aceitar. Devolve a lista de problemas encontrados. */
 function problemas(t) {
   const p = [];
-  const tudo = [t.slogan, t.heroTitulo, t.heroSubtitulo, t.sobre,
-                ...(t.servicos || []).map(s => s.nome + ' ' + s.descricao),
+  const tudo = [t.badge, t.slogan, t.heroTitulo, t.heroSubtitulo, t.sobre, t.ctaTitulo, t.ctaTexto,
+                ...(t.heroDestaques || []),
+                ...(t.servicos || []).map(s => (s.titulo || s.nome || '') + ' ' + s.descricao + ' ' + (s.preco || '')),
                 ...(t.faq || []).map(f => f.p + ' ' + f.r)].join(' ').toLowerCase();
 
   // um item por clichê: assim um texto cheio deles pesa mais na comparação
@@ -4165,9 +4274,12 @@ function problemas(t) {
   else if (t.heroTitulo.length > 85) p.push('A chamada principal ficou longa demais.');
 
   if ((t.sobre || '').length < 120) p.push('O texto "sobre" ficou curto demais.');
+  if ((t.heroSubtitulo || '').length < 40) p.push('O subtítulo ficou curto demais.');
+  if ((t.heroDestaques || []).length < 2) p.push('Traga pelo menos 3 destaques curtos para o topo.');
   if ((t.servicos || []).length < 3) p.push('Traga pelo menos 4 serviços.');
   if ((t.faq || []).length < 3) p.push('Traga pelo menos 4 perguntas frequentes.');
   if (/\bemoji|😀|🙂|🎉|🔥/.test(tudo)) p.push('Tirou os emojis dos textos do site.');
+  if (!t.ctaTitulo || !t.ctaTexto) p.push('Preencha a chamada final de contato.');
 
   return p;
 }
@@ -4348,14 +4460,14 @@ async function gerarTextos(cfg, dados) {
     return montarSaida(j);
   };
 
-  let out = interpretar(await chamar(cfg, montarPrompt(dados), 2400));
+  let out = interpretar(await chamar(cfg, montarPrompt(dados), 3000));
 
   /* saiu genérico? dou uma segunda chance apontando os erros */
   const erros = problemas(out);
   if (erros.length) {
     console.warn('[ia] resposta recusada:', erros.join(' | '), '— tentando de novo');
     try {
-      const melhor = interpretar(await chamar(cfg, montarPrompt(dados, erros), 2400));
+      const melhor = interpretar(await chamar(cfg, montarPrompt(dados, erros), 3000));
       if (problemas(melhor).length <= erros.length) out = melhor;
     } catch (e) { /* se a segunda tentativa falhar, fico com a primeira */ }
   }
@@ -4372,16 +4484,21 @@ function montarSaida(j) {
   const lista = v => Array.isArray(v) ? v : [];
 
   const out = {
+    badge: txt(j.badge, 40),
     slogan: txt(j.slogan, 90),
     heroTitulo: txt(j.heroTitulo, 110),
     heroSubtitulo: txt(j.heroSubtitulo, 220),
+    heroDestaques: lista(j.heroDestaques).slice(0, 4).map(x => txt(x, 40)).filter(Boolean),
     sobre: txt(j.sobre, 1200),
     metaDescricao: txt(j.metaDescricao, 180),
     palavras: txt(j.palavras, 240),
+    textoCta: txt(j.textoCta, 50),
+    ctaTitulo: txt(j.ctaTitulo, 90),
+    ctaTexto: txt(j.ctaTexto, 220),
     ctaWhatsapp: txt(j.ctaWhatsapp, 220),
     servicos: lista(j.servicos).slice(0, 8)
-      .map(s => ({ nome: txt(s && s.nome, 60), descricao: txt(s && s.descricao, 220) }))
-      .filter(s => s.nome),
+      .map(s => ({ titulo: txt(s && (s.titulo || s.nome), 60), descricao: txt(s && s.descricao, 220), preco: txt(s && s.preco, 40) }))
+      .filter(s => s.titulo),
     faq: lista(j.faq).slice(0, 8)
       .map(f => ({ p: txt(f && f.p, 140), r: txt(f && f.r, 500) }))
       .filter(f => f.p && f.r)
@@ -4542,7 +4659,7 @@ PROMESSA: ${estrategia.promessa || '(não definida)'}
 CHAMADA: ${textos.heroTitulo || ''}
 SUBTÍTULO: ${textos.heroSubtitulo || ''}
 SOBRE: ${(textos.sobre || '').slice(0, 400)}
-SERVIÇOS: ${(textos.servicos || []).map(s => s.nome + ' — ' + s.descricao).join(' | ').slice(0, 600)}
+SERVIÇOS: ${(textos.servicos || []).map(s => (s.titulo || s.nome || '') + ' — ' + s.descricao).join(' | ').slice(0, 600)}
 PERGUNTAS: ${(textos.faq || []).map(f => f.p).join(' | ').slice(0, 400)}
 VISUAL: paleta ${arte.paleta || '(padrão)'}, fonte ${arte.fonte || '(padrão)'}, estilo ${arte.estilo || '(padrão)'}
 DADOS QUE O DONO NÃO FORNECEU: ${camposVazios(d).join(', ') || 'nenhum'}`;
@@ -4756,6 +4873,37 @@ function soNumero(t) { return String(t || '').replace(/\D/g, ''); }
 function numeroDoTexto(t) {
   var n = String(t || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.');
   return Number(n) || 0;
+}
+function tituloServicoItem(s) {
+  return String(s && (s.titulo || s.nome || s.servico || s.label || s) || '').trim();
+}
+function normalizarServicoItem(s) {
+  if (typeof s === 'string') return { titulo: s.trim(), descricao: '', preco: '' };
+  return {
+    titulo: tituloServicoItem(s),
+    descricao: String(s && s.descricao || '').trim(),
+    preco: String(s && s.preco || '').trim()
+  };
+}
+function normalizarListaServicos(lista) {
+  var bruto = Array.isArray(lista) ? lista : String(lista || '').split('\n');
+  return bruto.map(normalizarServicoItem).filter(function (s) { return s.titulo; });
+}
+function primeiraLinhaHorarios(v) {
+  if (Array.isArray(v)) {
+    return v.map(function (h) {
+      var dia = String(h && h.dia || '').trim();
+      var hora = String(h && h.hora || '').trim();
+      return dia && hora ? dia + ': ' + hora : '';
+    }).filter(Boolean).join(' | ');
+  }
+  return String(v || '').trim();
+}
+function respostasDoQuestionario(l) {
+  if (!(l && l.questionario && l.questionario.respostas)) return '';
+  return l.questionario.respostas.map(function (r) {
+    return r.pergunta + ': ' + r.resposta;
+  }).join(' | ').slice(0, 1500);
 }
 
 /* Estamos dentro de uma caixa (prévia de chat, visualizador de arquivo,
@@ -6272,13 +6420,16 @@ async function perguntasComIA(l) {
     'antes de ganhar um site profissional.\n' +
     'Negócio: ' + (l.nome || 'sem nome') + '\nRamo: ' + (l.categoria || 'não informado') +
     '\nCidade: ' + (l.cidade || BD.config.cidadePadrao || 'não informada') + '\n\n' +
-    'Crie de 6 a 8 perguntas simples, em português informal e direto, específicas pra esse ramo. ' +
-    'Elas precisam descobrir: o que o negócio faz de principal, serviços ou produtos (com preço se tiver), ' +
-    'horário de funcionamento, endereço, ponto forte/diferencial, estilo visual desejado e se tem fotos e logotipo.\n' +
+    'Crie de 6 a 8 perguntas simples, úteis e específicas para esse ramo. ' +
+    'Português informal, direto e sem cara de robô. Nada de perguntas repetidas. ' +
+    'As perguntas precisam descobrir: serviço principal, produtos/serviços com preço se tiver, ' +
+    'horário, endereço ou bairro atendido, diferencial real, como a pessoa costuma pedir/agendar, ' +
+    'estilo visual desejado e se já tem fotos, logotipo ou cardápio/catálogo.\n' +
+    'Se fizer sentido para o ramo, pergunte sobre delivery, retirada, orçamento, agendamento ou cobertura de bairros.\n' +
     'Responda APENAS JSON válido neste formato:\n' +
     '{"perguntas":[{"id":"q1","t":"texto da pergunta","tipo":"texto"},{"id":"q2","t":"outra pergunta","tipo":"area"}]}\n' +
-    'Use "area" só pra pergunta de resposta longa. Sem emojis.';
-  var bruto = await IA.chamarBruto(configIA(), prompt, 800);
+    'Use "area" só para resposta longa. Sem emojis.';
+  var bruto = await IA.chamarBruto(configIA(), prompt, 1000);
   var j = IA.extrairJSON(bruto);
   var ps = (j.perguntas || []).filter(function (p) { return p && p.t; }).slice(0, 10)
     .map(function (p, i) {
@@ -6579,23 +6730,26 @@ async function rascunhoDasRespostas(idLead) {
     var prompt =
       'Um cliente respondeu um questionário para ganhar um site. Respostas dele:\n\n' + qa + '\n\n' +
       'Negócio: ' + (l.nome || cfg.nome) + '. Cidade: ' + (l.cidade || cfg.cidade || '') + '.\n' +
-      'Monte o conteúdo do site em português do Brasil, com texto natural e sem frases genéricas.\n' +
-      'Responda APENAS JSON válido:\n' +
-      '{"titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
-      '"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
-      '"servicos":[{"nome":"...","descricao":"uma frase"}],' +
+      'Escreva em português do Brasil, com texto natural, humano e sem frases genéricas. ' +
+      'Não invente preço, prazo, entrega, garantia ou anos de mercado. Use só o que aparece nas respostas.\n' +
+      'Responda APENAS JSON válido neste formato:\n' +
+      '{"badge":"selo curto","titulo":"chamada principal curta","subtitulo":"uma frase de apoio",' +
+      '"heroDestaques":["3 frases curtas"],"sobre":"texto de 120 a 300 caracteres apresentando o negócio",' +
+      '"servicos":[{"titulo":"...","descricao":"uma frase","preco":"só se foi informado"}],' +
       '"faq":[{"p":"pergunta do cliente","r":"resposta"}],"horario":"horário por extenso",' +
-      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '"}\n' +
+      '"paleta":"uma de: ' + paletas.join(', ') + '","fonte":"uma de: ' + fontes.join(', ') + '",' +
+      '"textoCta":"texto do botão principal","ctaTitulo":"título curto da chamada final","ctaTexto":"frase curta para fechar o contato"}\n' +
       'Inclua de 4 a 6 serviços e de 4 a 5 perguntas frequentes, baseados SÓ nas respostas acima. ' +
       'Se uma cor foi pedida nas respostas, escolha a paleta mais parecida.';
-    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2200));
+    var j = IA.extrairJSON(await IA.chamarBruto(configIA(), prompt, 2800));
 
+    if (j.badge) cfg.badge = String(j.badge);
     if (j.titulo) cfg.titulo = String(j.titulo);
     if (j.subtitulo) cfg.subtitulo = String(j.subtitulo);
+    if (Array.isArray(j.heroDestaques) && j.heroDestaques.length) cfg.heroDestaques = j.heroDestaques;
     if (j.sobre) cfg.sobreTexto = String(j.sobre);
     if (Array.isArray(j.servicos) && j.servicos.length) {
-      cfg.servicos = j.servicos.filter(function (s) { return s && s.nome; })
-        .map(function (s) { return { nome: String(s.nome), descricao: String(s.descricao || '') }; });
+      cfg.servicos = normalizarListaServicos(j.servicos);
     }
     if (Array.isArray(j.faq) && j.faq.length) {
       cfg.faq = j.faq.filter(function (f) { return f && f.p; })
@@ -6604,6 +6758,9 @@ async function rascunhoDasRespostas(idLead) {
     if (j.horario) cfg.horario = String(j.horario);
     if (j.paleta && SiteGen.PALETAS[j.paleta]) cfg.paleta = j.paleta;
     if (j.fonte && SiteGen.FONTES[j.fonte]) cfg.fonte = j.fonte;
+    if (j.textoCta) cfg.textoCta = String(j.textoCta);
+    if (j.ctaTitulo) cfg.ctaTitulo = String(j.ctaTitulo);
+    if (j.ctaTexto) cfg.ctaTexto = String(j.ctaTexto);
 
     salvarRascunho();
     anotar(l, '🪄 Site pré-montado a partir das respostas do questionário');
@@ -6630,7 +6787,8 @@ function cfgNovo() {
     nome: '', slogan: '', telefone: '', whatsapp: '', email: '', endereco: '', cidade: '',
     paleta: 'oceano', fonte: 'moderna', estilo: 'moderno', heroAlinhamento: 'esquerda',
     titulo: '', subtitulo: '', sobreTexto: '', servicos: [], faq: [],
-    secoes: ['servicos', 'sobre', 'faq', 'horario', 'contato'],
+    badge: '', heroDestaques: [], textoCta: '', ctaTitulo: '', ctaTexto: '',
+    secoes: ['numeros', 'sobre', 'servicos', 'depoimentos', 'faq', 'horario', 'contato'],
     horario: '', botaoFlutuante: true, animacoes: true, lgpd: true
   };
   try { Perfis.aplicar(c, 'generico'); } catch (e) {}
@@ -6662,7 +6820,7 @@ function pintarSite() {
   h += '<label>WhatsApp (só números)</label><input id="sWhats" inputmode="numeric" value="' + esc(cfg.whatsapp) + '" placeholder="66999998888">';
   h += '<label>O que o negócio faz (uma linha por serviço)</label>';
   h += '<textarea id="sServicos" placeholder="Bolos de aniversário&#10;Pão francês quentinho&#10;Salgados para festa">' +
-       esc((cfg.servicos || []).map(function (s) { return s.nome || s; }).join('\n')) + '</textarea>';
+       esc(normalizarListaServicos(cfg.servicos || []).map(function (s) { return s.titulo; }).join('\n')) + '</textarea>';
   h += '<button class="btn pequeno" onclick="aplicarPerfil()">🎨 Usar o modelo desse tipo de negócio</button>';
   h += '</div>';
 
@@ -6681,13 +6839,21 @@ function pintarSite() {
 
   h += '<div class="bloco">';
   h += '<h2>3. Aparência</h2>';
+  h += '<p class="ajuda">Agora dá para escolher o clima do site: mais limpo, elegante ou mais chamativo.</p>';
   var paletas = (typeof SiteGen !== 'undefined' && SiteGen.PALETAS) ? Object.keys(SiteGen.PALETAS) : ['oceano'];
   var fontes = (typeof SiteGen !== 'undefined' && SiteGen.FONTES) ? Object.keys(SiteGen.FONTES) : ['moderna'];
+  var estilos = (typeof SiteGen !== 'undefined' && SiteGen.ESTILOS) ? Object.keys(SiteGen.ESTILOS) : ['moderno'];
   h += '<div class="dupla">' +
     '<div><label>Cor</label><select id="sPaleta">' + paletas.map(function (p) {
       return '<option value="' + p + '"' + (cfg.paleta === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></div>' +
     '<div><label>Letra</label><select id="sFonte">' + fontes.map(function (f) {
       return '<option value="' + f + '"' + (cfg.fonte === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select></div>' +
+    '</div>';
+  h += '<div class="dupla">' +
+    '<div><label>Estilo</label><select id="sEstilo">' + estilos.map(function (e) {
+      return '<option value="' + e + '"' + (cfg.estilo === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></div>' +
+    '<div><label>Topo</label><select id="sAlinhamento">' + ['esquerda', 'centro'].map(function (a) {
+      return '<option value="' + a + '"' + (cfg.heroAlinhamento === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></div>' +
     '</div>';
   h += '</div>';
 
@@ -6763,18 +6929,19 @@ function lerFormulario() {
   if ($('#sWhats')) cfg.whatsapp = soNumero($('#sWhats').value);
   if ($('#sPaleta')) cfg.paleta = $('#sPaleta').value;
   if ($('#sFonte')) cfg.fonte = $('#sFonte').value;
+  if ($('#sEstilo')) cfg.estilo = $('#sEstilo').value;
+  if ($('#sAlinhamento')) cfg.heroAlinhamento = $('#sAlinhamento').value;
   if ($('#sPerfil')) cfg.perfil = $('#sPerfil').value;
   if ($('#sServicos')) {
     var linhas = $('#sServicos').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-    if (linhas.length) {
-      cfg.servicos = linhas.map(function (n, i) {
-        var antigo = (cfg.servicos || [])[i];
-        return { nome: n, descricao: (antigo && antigo.nome === n && antigo.descricao) || '' };
-      });
-    }
+    var antigos = normalizarListaServicos(cfg.servicos || []);
+    cfg.servicos = linhas.map(function (n, i) {
+      var antigo = antigos[i] || {};
+      return { titulo: n, descricao: antigo.descricao || '', preco: antigo.preco || '' };
+    });
   }
   if (!cfg.titulo) cfg.titulo = cfg.nome;
-  cfg.telefone = cfg.telefone || cfg.whatsapp;
+  cfg.telefone = cfg.whatsapp || cfg.telefone;
 }
 
 function aplicarPerfil() {
@@ -6822,12 +6989,25 @@ function salvarRascunho() {
 /* ─────────── modo turbo ─────────── */
 function dadosDoNegocio() {
   lerFormulario();
+  var l = LEAD_DO_SITE ? acharLead(LEAD_DO_SITE) : null;
+  var servs = normalizarListaServicos(cfg.servicos || []);
   return {
-    nome: cfg.nome, segmento: (cfg.perfil || 'generico').replace(/_/g, ' '),
+    nome: cfg.nome,
+    segmento: (cfg.perfil || 'generico').replace(/_/g, ' '),
     cidade: cfg.cidade || BD.config.cidadePadrao,
-    oQueFaz: (cfg.servicos || []).map(function (s) { return s.nome; }).join(', '),
-    servicos: (cfg.servicos || []).map(function (s) { return s.nome; }),
-    telefone: cfg.whatsapp, temFotos: false, temLogo: false
+    oQueFaz: servs.map(function (s) { return s.titulo; }).join(', '),
+    servicos: servs.map(function (s) { return s.titulo; }),
+    diferenciais: Array.isArray(cfg.diferenciais) ? cfg.diferenciais.join('; ') : String(cfg.diferenciais || ''),
+    telefone: cfg.whatsapp || (l ? l.telefone : ''),
+    endereco: cfg.endereco || (l ? l.endereco : ''),
+    horario: primeiraLinhaHorarios(cfg.horarios || cfg.horario || (l ? l.horario : '')),
+    temFotos: !!(cfg.heroImagem || cfg.sobreImagem || (cfg.galeria && String(cfg.galeria).trim())),
+    temLogo: !!cfg.logo,
+    observacoes: [
+      l && l.obs ? 'Anotações: ' + l.obs : '',
+      l && l.contato ? 'Contato do negócio: ' + l.contato : '',
+      respostasDoQuestionario(l)
+    ].filter(Boolean).join(' | ')
   };
 }
 
@@ -6870,14 +7050,19 @@ async function rodarTurbo() {
 
 function aplicarTurbo(r) {
   var t = r.textos || {};
+  if (t.badge) cfg.badge = t.badge;
   if (t.heroTitulo) cfg.titulo = t.heroTitulo;
   if (t.heroSubtitulo) cfg.subtitulo = t.heroSubtitulo;
+  if (t.heroDestaques && t.heroDestaques.length) cfg.heroDestaques = t.heroDestaques;
   if (t.slogan) cfg.slogan = t.slogan;
   if (t.sobre) cfg.sobreTexto = t.sobre;
   if (t.metaDescricao) cfg.descricao = t.metaDescricao;
   if (t.palavras) cfg.palavras = t.palavras;
+  if (t.textoCta) cfg.textoCta = t.textoCta;
+  if (t.ctaTitulo) cfg.ctaTitulo = t.ctaTitulo;
+  if (t.ctaTexto) cfg.ctaTexto = t.ctaTexto;
   if (t.ctaWhatsapp) cfg.whatsappMsg = t.ctaWhatsapp;
-  if (t.servicos && t.servicos.length) cfg.servicos = t.servicos;
+  if (t.servicos && t.servicos.length) cfg.servicos = normalizarListaServicos(t.servicos);
   if (t.faq && t.faq.length) cfg.faq = t.faq;
 
   var a = r.arte || {};
