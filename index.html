@@ -472,6 +472,25 @@ select {
 .placar b { display: block; font-size: 19px; color: #34d399; }
 .placar span { font-size: 10.5px; color: var(--fraco); }
 
+.cache-buscas { display: grid; gap: 10px; }
+.cache-item {
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(10,17,30,.92), rgba(8,14,25,.88));
+  box-shadow: var(--sombra2);
+}
+.cache-item-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cache-item-topo b { font-size: 14px; display: block; }
+.cache-item-topo span { font-size: 11px; color: var(--fraco); }
+.cache-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cache-tags .pill { font-size: 10.5px; }
+
 hr.sep { border: 0; border-top: 1px solid rgba(148,163,184,.12); margin: 18px 0; }
 .mini { font-size: 12px; color: var(--fraco); }
 
@@ -550,6 +569,20 @@ hr.sep { border: 0; border-top: 1px solid rgba(148,163,184,.12); margin: 18px 0;
     <button class="btn principal" id="btnBuscar" onclick="buscar()">🔍 Buscar agora</button>
     <button class="btn" id="btnRegiao" onclick="buscarRegiao()">🗺️ Caçar na região (cidades até ~300 km)</button>
     <p class="mini" id="fonteBusca" style="text-align:center"></p>
+  </div>
+
+  <div class="bloco">
+    <div class="bloco-topo">
+      <h2>💾 Banco local de buscas</h2>
+      <p>As pesquisas por cidade ficam guardadas no aparelho. Se você já buscou Rondonópolis, pode abrir em segundos sem consultar a internet de novo.</p>
+    </div>
+    <div id="buscasSalvas">
+      <div class="vazio">
+        <span class="emoji">🗂️</span>
+        <b>Nenhuma busca salva ainda</b>
+        <p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p>
+      </div>
+    </div>
   </div>
 
   <div class="bloco bloco-resultado">
@@ -5136,7 +5169,7 @@ var VAZIO = {
     geoapifyChave: 'aec5b014ccc54d76be718a03ab50c632', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
   },
-  leads: [], sites: []
+  leads: [], sites: [], buscas: []
 };
 
 var BD = carregar();
@@ -5151,7 +5184,7 @@ function carregar() {
     if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
     if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
     if (!d.config.geoapifyChave) d.config.geoapifyChave = VAZIO.config.geoapifyChave;
-    d.leads = d.leads || []; d.sites = d.sites || [];
+    d.leads = d.leads || []; d.sites = d.sites || []; d.buscas = d.buscas || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
 }
@@ -5381,6 +5414,7 @@ function ir(nome) {
   $('#tela-' + nome).classList.add('ativa');
   $$('.abas button').forEach(function (b) { b.classList.toggle('on', b.dataset.aba === nome); });
   window.scrollTo(0, 0);
+  if (nome === 'buscar') pintarBuscasSalvas();
   if (nome === 'clientes') pintarClientes();
   if (nome === 'site') pintarSite();
   if (nome === 'ajustes') pintarAjustes();
@@ -5431,6 +5465,188 @@ var ESPELHOS = [
 var ULTIMO_ESPELHO = null;   // o que funcionou da última vez entra na frente
 
 var ACHADOS = [];
+var LIMITE_BUSCAS_SALVAS = 12;
+
+function textoBuscaNormalizado(t) {
+  var s = String(t || '').toLowerCase().trim();
+  if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s.replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function chaveDoAchado(b, cidadePadrao) {
+  return textoBuscaNormalizado(b && b.nome) + '|' + textoBuscaNormalizado((b && b.cidade) || cidadePadrao || '');
+}
+
+function chaveDaBusca(cidade, cats, raio, fonte) {
+  return [
+    textoBuscaNormalizado(cidade),
+    (cats || []).slice().sort().join(','),
+    Number(raio) || 0,
+    fonte || fonteBuscaAtiva()
+  ].join('|');
+}
+
+function dataHoraBonita(ts) {
+  if (!ts) return 'agora';
+  try { return new Date(ts).toLocaleString('pt-BR'); }
+  catch (e) { return new Date(ts).toISOString(); }
+}
+
+function fonteBuscaBonita(fonte, enriquecida) {
+  if (fonte === 'geoapify') return enriquecida ? 'Geoapify + reforço de dados' : 'Geoapify';
+  if (fonte === 'google') return enriquecida ? 'Google + reforço do mapa' : 'Google Places';
+  return 'OpenStreetMap';
+}
+
+function filtrarAchadosSemSite(lista, soSemSite) {
+  return soSemSite ? (lista || []).filter(function (b) { return !b.temSite; }) : (lista || []).slice();
+}
+
+function ordenarAchados(lista) {
+  return (lista || []).slice().sort(function (a, b) {
+    return b.score - a.score || a.nome.localeCompare(b.nome);
+  });
+}
+
+function acharBuscaSalva(chave) {
+  return (BD.buscas || []).filter(function (b) { return b.id === chave; })[0] || null;
+}
+
+function salvarBuscaNoBanco(payload) {
+  if (!payload || !payload.id) return;
+  BD.buscas = (BD.buscas || []).filter(function (b) { return b.id !== payload.id; });
+  BD.buscas.unshift(payload);
+  if (BD.buscas.length > LIMITE_BUSCAS_SALVAS) BD.buscas = BD.buscas.slice(0, LIMITE_BUSCAS_SALVAS);
+  salvar();
+}
+
+function apagarBuscaSalva(chave) {
+  var antes = (BD.buscas || []).length;
+  BD.buscas = (BD.buscas || []).filter(function (b) { return b.id !== chave; });
+  if ((BD.buscas || []).length !== antes) {
+    salvar();
+    pintarBuscasSalvas();
+    recado('🗑️ Busca removida do banco local');
+  }
+}
+
+function limparBuscasSalvas() {
+  if (!(BD.buscas || []).length) { recado('Não há buscas salvas'); return; }
+  if (!confirm('Apagar todas as buscas salvas do aparelho?')) return;
+  BD.buscas = [];
+  salvar();
+  pintarBuscasSalvas();
+  recado('🧹 Banco local de buscas limpo');
+}
+
+function marcarCategoriasBusca(cats) {
+  cats = cats || [];
+  $$('#chips .chip').forEach(function (chip) {
+    chip.classList.toggle('on', cats.indexOf(chip.dataset.cat) >= 0);
+  });
+}
+
+function abrirBuscaSalva(chave) {
+  var busca = acharBuscaSalva(chave);
+  if (!busca) { recado('Busca não encontrada'); return; }
+  if ($('#bCidade')) $('#bCidade').value = busca.cidade || '';
+  if ($('#bRaio')) $('#bRaio').value = String(busca.raio || 0);
+  marcarCategoriasBusca(busca.cats || []);
+  renderizarBuscaSalva(busca);
+  recado('⚡ Busca aberta do banco local');
+}
+
+function atualizarBuscaSalva(chave) {
+  var busca = acharBuscaSalva(chave);
+  if (!busca) { recado('Busca não encontrada'); return; }
+  if ($('#bCidade')) $('#bCidade').value = busca.cidade || '';
+  if ($('#bRaio')) $('#bRaio').value = String(busca.raio || 0);
+  marcarCategoriasBusca(busca.cats || []);
+  buscar(true);
+}
+
+function renderizarBuscaSalva(busca, forcarSemSite) {
+  var soSemSite = typeof forcarSemSite === 'boolean' ? forcarSemSite : !!($('#bSoSemSite') && $('#bSoSemSite').checked);
+  var lista = ordenarAchados(filtrarAchadosSemSite(busca.achados || [], soSemSite));
+  ACHADOS = lista;
+  var brutos = (busca.achados || []).length;
+  var semSite = (busca.achados || []).filter(function (b) { return !b.temSite; }).length;
+  pintarAchados(busca.local || { nome: busca.cidade }, {
+    cache: true,
+    cacheEm: busca.atualizadoEm,
+    cacheId: busca.id,
+    fonte: busca.fonte,
+    fonteRica: busca.fonte !== 'osm',
+    enriquecida: !!busca.enriquecida,
+    soSemSite: soSemSite,
+    totalOriginal: brutos,
+    comNome: brutos,
+    tinhamSite: Math.max(0, brutos - semSite)
+  });
+}
+
+function pintarBuscasSalvas() {
+  var alvo = $('#buscasSalvas');
+  if (!alvo) return;
+  var buscas = (BD.buscas || []).slice().sort(function (a, b) { return (b.atualizadoEm || 0) - (a.atualizadoEm || 0); });
+  if (!buscas.length) {
+    alvo.innerHTML = '<div class="vazio"><span class="emoji">🗂️</span><b>Nenhuma busca salva ainda</b><p>Faça a primeira pesquisa e o app grava tudo aqui para reutilizar depois.</p></div>';
+    return;
+  }
+  alvo.innerHTML = '<div class="cache-buscas">' + buscas.map(function (b) {
+    var semSite = (b.achados || []).filter(function (x) { return !x.temSite; }).length;
+    var comTel = (b.achados || []).filter(function (x) { return !!x.telefone; }).length;
+    return '<div class="cache-item">' +
+      '<div class="cache-item-topo"><div><b>' + esc(b.cidade) + '</b><span>' + esc(fonteBuscaBonita(b.fonte, b.enriquecida)) + ' · ' + dataHoraBonita(b.atualizadoEm) + '</span></div>' +
+      '<span class="pill destaque">' + (b.achados || []).length + ' achados</span></div>' +
+      '<div class="cache-tags">' +
+        '<span class="pill">' + semSite + ' sem site</span>' +
+        '<span class="pill">' + comTel + ' com telefone</span>' +
+        '<span class="pill">raio ' + ((b.raio || 0) ? (b.raio + ' km') : 'cidade toda') + '</span>' +
+      '</div>' +
+      '<p class="mini" style="margin:10px 0 0">' + esc((b.cats || []).map(function (c) { return (CATEGORIAS[c] && CATEGORIAS[c].rotulo) || c; }).join(' • ')) + '</p>' +
+      '<div class="linha-btn" style="margin-top:10px">' +
+        '<button class="btn pequeno principal" onclick="abrirBuscaSalva(' + JSON.stringify(b.id) + ')">⚡ Abrir</button>' +
+        '<button class="btn pequeno" onclick="atualizarBuscaSalva(' + JSON.stringify(b.id) + ')">🔄 Atualizar</button>' +
+        '<button class="btn pequeno" onclick="apagarBuscaSalva(' + JSON.stringify(b.id) + ')">🗑️ Apagar</button>' +
+      '</div>' +
+      '</div>';
+  }).join('') + '</div>' +
+  '<button class="btn" style="margin-top:12px" onclick="limparBuscasSalvas()">🧹 Limpar banco local de buscas</button>';
+}
+
+function fundirAchado(base, extra) {
+  if (!base) return extra;
+  if (!extra) return base;
+  var r = Object.assign({}, base);
+  if (!r.telefone && extra.telefone) r.telefone = extra.telefone;
+  if (!r.email && extra.email) r.email = extra.email;
+  if ((!r.endereco || r.endereco.length < String(extra.endereco || '').length) && extra.endereco) r.endereco = extra.endereco;
+  if (!r.horario && extra.horario) r.horario = extra.horario;
+  if (!r.site && extra.site) r.site = extra.site;
+  if ((!r.categoria || r.categoria === 'outro') && extra.categoria) r.categoria = extra.categoria;
+  if (!r.lat && extra.lat) r.lat = extra.lat;
+  if (!r.lon && extra.lon) r.lon = extra.lon;
+  r.temSite = !!(r.site || r.temSite || extra.temSite);
+  r.temRedeSocial = !!(r.temRedeSocial || extra.temRedeSocial);
+  r.score = pontuar(r);
+  return r;
+}
+
+function mesclarAchados(listaBase, listaExtra, cidadePadrao) {
+  var mapa = {}, ordem = [];
+  (listaBase || []).forEach(function (b) {
+    var k = chaveDoAchado(b, cidadePadrao);
+    if (!mapa[k]) ordem.push(k);
+    mapa[k] = fundirAchado(mapa[k], b);
+  });
+  (listaExtra || []).forEach(function (b) {
+    var k = chaveDoAchado(b, cidadePadrao);
+    if (!mapa[k]) ordem.push(k);
+    mapa[k] = fundirAchado(mapa[k], b);
+  });
+  return ordem.map(function (k) { return mapa[k]; }).filter(Boolean);
+}
 
 function pintarChips() {
   var alvo = $('#chips');
@@ -5538,6 +5754,95 @@ function pontuar(b) {
     (b.endereco ? 10 : 0) + (b.email ? 10 : 0) + (b.horario ? 5 : 0);
 }
 
+async function buscarOSMEm(cidade, cats, raio, soSemSite, aviso) {
+  var local = await acharCidade(cidade);
+  var filtros = [];
+  cats.forEach(function (c) {
+    (CATEGORIAS[c].filtros || []).forEach(function (f) { if (filtros.indexOf(f) < 0) filtros.push(f); });
+  });
+
+  var area = raio > 0
+    ? '(around:' + Math.round(raio * 1000) + ',' + local.lat + ',' + local.lon + ')'
+    : '(' + local.bbox.join(',') + ')';
+
+  var partes = filtros.map(function (f) { return 'nwr[' + f + ']' + area + ';'; });
+  var q = '[out:json][timeout:50];(' + partes.join('') + ');out center 300;';
+  var json = await consultarOverpass(q, aviso);
+
+  var vistos = {}, lista = [], comNome = 0, descartadosPorTerSite = 0;
+  (json.elements || []).forEach(function (el) {
+    var t = el.tags || {};
+    var nome = t.name || t['name:pt'] || t.brand;
+    if (!nome) return;
+    var ch = nome.toLowerCase().trim() + '|' + (t['addr:street'] || '').toLowerCase();
+    if (vistos[ch]) return;
+    vistos[ch] = 1;
+    comNome++;
+
+    var site = t.website || t['contact:website'] || t.url || null;
+    var fb = t['contact:facebook'] || t.facebook || null;
+    var ig = t['contact:instagram'] || t.instagram || null;
+    var temSite = !!site;
+    if (soSemSite && temSite) { descartadosPorTerSite++; return; }
+
+    var p = el.center || el;
+    var rua = [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(', ');
+    var bairro = t['addr:suburb'] || t['addr:neighbourhood'] || null;
+
+    var b = {
+      osmId: el.type + '/' + el.id,
+      nome: nome,
+      categoria: t.shop || t.amenity || t.office || t.tourism || t.leisure || 'outro',
+      telefone: t.phone || t['contact:phone'] || t['contact:mobile'] || null,
+      email: t.email || t['contact:email'] || null,
+      endereco: [rua, bairro].filter(Boolean).join(' - ') || null,
+      cidade: t['addr:city'] || cidade,
+      site: site, temSite: temSite,
+      temRedeSocial: !!(fb || ig),
+      horario: t.opening_hours || null,
+      lat: p.lat, lon: p.lon
+    };
+    b.score = pontuar(b);
+    lista.push(b);
+  });
+
+  return {
+    local: local,
+    lista: lista,
+    info: {
+      brutos: (json.elements || []).length,
+      comNome: comNome,
+      tinhamSite: descartadosPorTerSite,
+      soSemSite: !!soSemSite,
+      cats: cats.length,
+      fonte: 'osm',
+      fonteRica: false
+    }
+  };
+}
+
+async function enriquecerAchados(cidade, cats, raio, listaBase, fonteBase, aviso) {
+  var lista = (listaBase || []).slice();
+  var enriquecida = false;
+
+  if (fonteBase === 'geoapify' && googlePronto()) {
+    try {
+      if (aviso) aviso('Google: puxando telefone e site para completar a busca…');
+      lista = mesclarAchados(lista, await buscarGoogleEm(cidade, cats), cidade);
+      enriquecida = true;
+    } catch (e) {}
+  }
+
+  try {
+    if (aviso) aviso('Mapa: cruzando horário, telefone e site quando existir…');
+    var osm = await buscarOSMEm(cidade, cats, raio, false, aviso);
+    lista = mesclarAchados(lista, osm.lista, cidade);
+    if (osm.lista.length) enriquecida = true;
+  } catch (e) {}
+
+  return { lista: lista, enriquecida: enriquecida };
+}
+
 /* ─────────── Google Places (busca rica, opcional) ───────────
    O mapa gratuito (OpenStreetMap) tem pouca empresa em cidade pequena.
    Com a chave do Google Places a busca acha muito mais — com telefone
@@ -5635,7 +5940,7 @@ function lugarGeoapifyParaAchado(f, cidade, rotulo) {
   return b;
 }
 
-async function buscarGeoapifyEm(cidade, cats, aviso) {
+async function buscarGeoapifyEm(cidade, cats, aviso, raio) {
   var local = GEO_CACHE[cidade.toLowerCase()];
   if (!local) {
     if (aviso) aviso('Geoapify: achando ' + cidade + ' no mapa…');
@@ -5648,7 +5953,8 @@ async function buscarGeoapifyEm(cidade, cats, aviso) {
     var catsGeo = GEOAPIFY_CATS[cats[i]] || [];
     if (!catsGeo.length) continue;
     if (aviso) aviso('Geoapify: procurando ' + rotulo.toLowerCase() + ' em ' + cidade + '…');
-    var features = await geoapifyBusca(catsGeo, local.lon, local.lat, 15000);
+    var raioM = (Number(raio) || 0) > 0 ? Math.round(Number(raio) * 1000) : 15000;
+    var features = await geoapifyBusca(catsGeo, local.lon, local.lat, raioM);
     features.forEach(function (f) {
       var b = lugarGeoapifyParaAchado(f, cidade, rotulo);
       if (!b) return;
@@ -5739,10 +6045,12 @@ function atualizarFonteBusca() {
   if (!el) return;
   var f = fonteBuscaAtiva();
   el.textContent = f === 'geoapify'
-    ? '🟢 Busca turbinada: Geoapify (grátis sem cartão)'
+    ? (googlePronto()
+        ? '🟢 Busca turbinada: Geoapify + Google + mapa (mais completa e salva no banco local)'
+        : '🟢 Busca turbinada: Geoapify + mapa (salva no banco local)')
     : f === 'google'
-      ? '🟢 Busca turbinada: Google Places'
-      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify em Ajustes pra achar muito mais.';
+      ? '🟢 Busca turbinada: Google Places + mapa (salva no banco local)'
+      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify ou Google em Ajustes pra achar mais e guardar no banco local.';
 }
 
 /* Caçada em todas as cidades da região de uma vez.
@@ -5807,7 +6115,7 @@ async function buscarRegiao() {
   $('#btnRegiao').disabled = false;
 }
 
-async function buscar() {
+async function buscar(forcar) {
   var cidade = $('#bCidade').value.trim();
   if (!cidade) { recado('Escreva a cidade'); return; }
 
@@ -5816,107 +6124,75 @@ async function buscar() {
 
   var soSemSite = $('#bSoSemSite').checked;
   var raio = Number($('#bRaio').value) || 0;
+  var fonte = fonteBuscaAtiva();
+  var chave = chaveDaBusca(cidade, cats, raio, fonte);
+  var cache = acharBuscaSalva(chave);
 
-  BD.config.cidadePadrao = cidade; salvar();
+  BD.config.cidadePadrao = cidade;
+  salvar();
+  pintarBuscasSalvas();
+
+  if (cache && !forcar) {
+    renderizarBuscaSalva(cache, soSemSite);
+    return;
+  }
 
   var painel = $('#bResultado');
   painel.innerHTML = '<div class="rodando-tela"><div class="roda"></div>' +
     '<b>Procurando em ' + esc(cidade) + '…</b>' +
-    '<p class="mini">Isso leva de 10 a 40 segundos. Não feche a tela.</p></div>';
+    '<p class="mini">Isso leva de 10 a 40 segundos. Na próxima vez a busca abre do banco local.</p></div>';
   $('#btnBuscar').disabled = true;
 
-  /* com chave Geoapify ou Google ligada, a busca vai pra lá — muito mais empresas */
-  var fonte = fonteBuscaAtiva();
-  if (fonte !== 'osm') {
-    try {
-      var avisoFn = function (msg) {
-        var b = $('#bResultado .rodando-tela b');
-        if (b) b.textContent = msg;
-      };
-      var listaG = fonte === 'geoapify'
-        ? await buscarGeoapifyEm(cidade, cats, avisoFn)
-        : await buscarGoogleEm(cidade, cats, avisoFn);
-      if (soSemSite) listaG = listaG.filter(function (b) { return !b.temSite; });
-      listaG.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
-      ACHADOS = listaG;
-      pintarAchados({ nome: cidade + (fonte === 'geoapify' ? ' (Geoapify)' : ' (Google Places)') },
-        { fonteRica: true, soSemSite: soSemSite });
-    } catch (e) {
-      painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(e.message || String(e)) + '</div>' +
-        '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
-    }
-    $('#btnBuscar').disabled = false;
-    return;
-  }
-
   try {
-    var local = await acharCidade(cidade);
-
-    var filtros = [];
-    cats.forEach(function (c) {
-      (CATEGORIAS[c].filtros || []).forEach(function (f) { if (filtros.indexOf(f) < 0) filtros.push(f); });
-    });
-
-    var area = raio > 0
-      ? '(around:' + Math.round(raio * 1000) + ',' + local.lat + ',' + local.lon + ')'
-      : '(' + local.bbox.join(',') + ')';
-
-    /* nwr = node + way + relation numa linha só. Metade do tamanho da consulta,
-       o que deixa ela mais rápida e menos sujeita a ser recusada. */
-    var partes = filtros.map(function (f) { return 'nwr[' + f + ']' + area + ';'; });
-
-    var q = '[out:json][timeout:50];(' + partes.join('') + ');out center 300;';
-    var json = await consultarOverpass(q, function (msg) {
+    var avisoFn = function (msg) {
+      var b = $('#bResultado .rodando-tela b');
       var p = $('#bResultado .rodando-tela p');
-      if (p) p.textContent = msg;
+      if (b) b.textContent = msg;
+      if (p && msg && /Falando com o servidor|Perguntando para|Geoapify|Google|Mapa/.test(msg)) p.textContent = msg;
+    };
+
+    var pacote, listaBruta, enriquecida = false;
+    if (fonte !== 'osm') {
+      listaBruta = fonte === 'geoapify'
+        ? await buscarGeoapifyEm(cidade, cats, avisoFn, raio)
+        : await buscarGoogleEm(cidade, cats, avisoFn);
+      pacote = { local: GEO_CACHE[cidade.toLowerCase()] || { nome: cidade + ' (' + fonteBuscaBonita(fonte, false) + ')' }, info: { fonte: fonte, fonteRica: true } };
+      var reforco = await enriquecerAchados(cidade, cats, raio, listaBruta, fonte, avisoFn);
+      listaBruta = reforco.lista;
+      enriquecida = reforco.enriquecida;
+    } else {
+      pacote = await buscarOSMEm(cidade, cats, raio, false, function (msg) {
+        var p = $('#bResultado .rodando-tela p');
+        if (p) p.textContent = msg;
+      });
+      listaBruta = pacote.lista;
+    }
+
+    listaBruta = ordenarAchados(listaBruta);
+    salvarBuscaNoBanco({
+      id: chave,
+      cidade: cidade,
+      cats: cats.slice().sort(),
+      raio: raio,
+      fonte: fonte,
+      enriquecida: !!enriquecida,
+      atualizadoEm: Date.now(),
+      local: pacote.local,
+      achados: listaBruta
     });
+    pintarBuscasSalvas();
 
-    var vistos = {}, lista = [], comNome = 0, descartadosPorTerSite = 0;
-    (json.elements || []).forEach(function (el) {
-      var t = el.tags || {};
-      var nome = t.name || t['name:pt'] || t.brand;
-      if (!nome) return;
-      var ch = nome.toLowerCase().trim() + '|' + (t['addr:street'] || '').toLowerCase();
-      if (vistos[ch]) return;
-      vistos[ch] = 1;
-      comNome++;
-
-      var site = t.website || t['contact:website'] || t.url || null;
-      var fb = t['contact:facebook'] || t.facebook || null;
-      var ig = t['contact:instagram'] || t.instagram || null;
-      var temSite = !!site;
-      if (soSemSite && temSite) { descartadosPorTerSite++; return; }
-
-      var p = el.center || el;
-      var rua = [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(', ');
-      var bairro = t['addr:suburb'] || t['addr:neighbourhood'] || null;
-
-      var b = {
-        osmId: el.type + '/' + el.id,
-        nome: nome,
-        categoria: t.shop || t.amenity || t.office || t.tourism || t.leisure || 'outro',
-        telefone: t.phone || t['contact:phone'] || t['contact:mobile'] || null,
-        email: t.email || t['contact:email'] || null,
-        endereco: [rua, bairro].filter(Boolean).join(' - ') || null,
-        cidade: t['addr:city'] || cidade,
-        site: site, temSite: temSite,
-        temRedeSocial: !!(fb || ig),
-        horario: t.opening_hours || null,
-        lat: p.lat, lon: p.lon
-      };
-      b.score = pontuar(b);
-      lista.push(b);
-    });
-
-    lista.sort(function (a, b) { return b.score - a.score || a.nome.localeCompare(b.nome); });
-    ACHADOS = lista;
-    pintarAchados(local, {
-      brutos: (json.elements || []).length,
-      comNome: comNome,
-      tinhamSite: descartadosPorTerSite,
+    ACHADOS = ordenarAchados(filtrarAchadosSemSite(listaBruta, soSemSite));
+    pintarAchados(pacote.local || { nome: cidade }, Object.assign({}, pacote.info || {}, {
+      fonte: fonte,
+      fonteRica: fonte !== 'osm',
+      enriquecida: !!enriquecida,
+      cacheId: chave,
+      cacheEm: Date.now(),
+      gravadoAgora: true,
       soSemSite: soSemSite,
-      cats: cats.length
-    });
+      totalOriginal: listaBruta.length
+    }));
   } catch (e) {
     var msg = e.message || String(e);
     var dica = '';
@@ -5934,7 +6210,9 @@ async function buscar() {
              'Espere um minuto e tente de novo. Se continuar, use ⚙️ Ajustes → 🩺 Testar a conexão.</div>';
     }
     painel.innerHTML = '<div class="aviso ruim"><b>Não deu certo</b><br>' + esc(msg) + '</div>' +
-      dica + '<button class="btn" onclick="buscar()">🔄 Tentar de novo</button>';
+      (cache ? '<div class="aviso bom"><b>Mas a busca antiga ficou guardada.</b><br>' +
+        '<button class="btn principal" onclick="abrirBuscaSalva(' + JSON.stringify(chave) + ')">⚡ Abrir do banco local</button></div>' : '') +
+      dica + '<button class="btn" onclick="buscar(true)">🔄 Tentar de novo</button>';
   }
   $('#btnBuscar').disabled = false;
 }
@@ -5942,9 +6220,20 @@ async function buscar() {
 function pintarAchados(local, info) {
   var painel = $('#bResultado');
   info = info || {};
+  var faixaFonte = '';
+  if (info.cache || info.gravadoAgora || info.fonte) {
+    faixaFonte = '<div class="aviso ' + (info.cache ? 'bom' : 'info') + '">' +
+      '<b>' + (info.cache ? '⚡ Aberto do banco local' : '💾 Busca salva no banco local') + '</b><br>' +
+      esc(fonteBuscaBonita(info.fonte || 'osm', info.enriquecida)) +
+      (info.totalOriginal ? ' · ' + info.totalOriginal + ' achados brutos' : '') +
+      (info.cacheEm ? ' · ' + dataHoraBonita(info.cacheEm) : '') +
+      (info.enriquecida ? '<br>O app cruzou fontes para tentar puxar telefone, site, horário e endereço quando houver.' : '') +
+      (info.cacheId ? '<div class="linha-btn" style="margin-top:10px"><button class="btn pequeno" onclick="atualizarBuscaSalva(' + JSON.stringify(info.cacheId) + ')">🔄 Atualizar esta busca</button></div>' : '') +
+      '</div>';
+  }
 
   if (!ACHADOS.length) {
-    var h = '<div class="vazio"><span class="emoji">🔍</span><b>Nada encontrado</b>';
+    var h = faixaFonte + '<div class="vazio"><span class="emoji">🔍</span><b>Nada encontrado</b>';
 
     if (info.tinhamSite > 0) {
       /* achou empresas, mas todas já tinham site */
@@ -5973,6 +6262,7 @@ function pintarAchados(local, info) {
   BD.leads.forEach(function (l) { if (l.osmId) salvos[l.osmId] = 1; });
 
   painel.innerHTML =
+    faixaFonte +
     '<div class="placar">' +
       '<div><b>' + ACHADOS.length + '</b><span>encontradas</span></div>' +
       '<div><b>' + semSite + '</b><span>sem site</span></div>' +
@@ -8198,20 +8488,24 @@ function pintarAjustes() {
   h += '</div>';
 
   h += '<div class="bloco"><h2>🔍 Busca de clientes</h2>';
-  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito (poucas empresas em cidade pequena). ' +
-    'Com uma chave ela acha MUITO mais — com telefone e dizendo quem já tem site.</p>';
+  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito. Com Geoapify ou Google ela acha muito mais. ' +
+    'Agora as buscas por cidade também ficam guardadas no banco local do aparelho para abrir de novo sem consultar a internet toda vez.</p>';
   h += '<label>Chave do Geoapify (recomendada — grátis, sem cartão)</label>' +
     '<input id="aGeoapify" type="password" value="' + esc(c.geoapifyChave) + '" placeholder="cole aqui" autocapitalize="none">';
   h += '<p class="ajuda mini">Crie de graça em <b>myprojects.geoapify.com</b>: registre, crie um projeto, ' +
-    'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada.</p>';
+    'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada. O Geoapify acha volume, mas telefone e horário dependem do que a loja cadastrou nas fontes públicas.</p>';
   h += '<button class="btn" onclick="testarGeoapify()">🔍 Testar a chave Geoapify</button>';
   h += '<div id="aGeoapifyResultado"></div>';
   h += '<label style="margin-top:14px">Chave do Google Places (alternativa)</label>' +
     '<input id="aGmaps" type="password" value="' + esc(c.gmapsChave) + '" placeholder="AIza…" autocapitalize="none">';
   h += '<p class="ajuda mini">console.cloud.google.com → projeto → ative <b>Places API (New)</b> → Credenciais. ' +
-    'Os primeiros US$ 200 por mês o Google não cobra, mas pede cartão. Se as duas chaves estiverem aqui, o app usa o Geoapify.</p>';
+    'Os primeiros US$ 200 por mês o Google não cobra, mas pede cartão. Se as duas chaves estiverem aqui, o app usa Geoapify para achar mais e cruza com Google/mapa para tentar completar telefone, site e endereço.</p>';
   h += '<button class="btn" onclick="testarGmaps()">🔍 Testar a chave Google</button>';
   h += '<div id="aGmapsResultado"></div>';
+  h += '<div class="aviso info" style="margin-top:14px"><b>💾 Banco local de buscas</b><br>' +
+    'Hoje há <b>' + ((BD.buscas || []).length) + '</b> buscas salvas neste aparelho. ' +
+    'Use isso para reaproveitar cidades como Rondonópolis sem consultar tudo de novo.</div>';
+  h += '<button class="btn" onclick="limparBuscasSalvas()">🧹 Limpar buscas salvas</button>';
   h += '</div>';
 
   h += '<div class="bloco"><h2>💰 Pix</h2>';
@@ -8260,6 +8554,7 @@ function pintarAjustes() {
   h += '<div class="placar" style="margin:10px 0">' +
     '<div><b>' + BD.leads.length + '</b><span>clientes</span></div>' +
     '<div><b>' + BD.sites.length + '</b><span>sites</span></div>' +
+    '<div><b>' + ((BD.buscas || []).length) + '</b><span>buscas salvas</span></div>' +
     '<div><b>' + (SALVA_DE_VERDADE ? '✅' : '⚠️') + '</b><span>' + (SALVA_DE_VERDADE ? 'salvando' : 'só na memória') + '</span></div>' +
     '</div>';
   h += '<button class="btn principal" onclick="exportar()">⬇️ Baixar backup</button>';
@@ -8502,6 +8797,7 @@ function iniciar() {
 
   pintarChips();
   atualizarFonteBusca();
+  pintarBuscasSalvas();
   $('#bCidade').value = BD.config.cidadePadrao || '';
   $('#fundoModal').onclick = fechar;
   $$('.abas button').forEach(function (b) {
