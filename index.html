@@ -269,6 +269,14 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 hr.sep { border: 0; border-top: 1px solid var(--borda); margin: 16px 0; }
 .mini { font-size: 12px; color: var(--fraco); }
 
+/* ─────────── roleta de cores ─────────── */
+.roleta-wrap { text-align: center; margin-top: 14px; }
+.roleta-moldura { width: 260px; height: 260px; margin: 6px auto 0; max-width: 78vw; max-height: 78vw; }
+.roleta-moldura svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 16px rgba(0,0,0,.45)); }
+.roleta-moldura .fatia { cursor: pointer; }
+.roleta-moldura .fatia:active { opacity: .8; }
+#btnGirar { margin-top: 10px; }
+
 </style>
 </head>
 <body>
@@ -6689,6 +6697,12 @@ function pintarSite() {
     '<div><label>Letra</label><select id="sFonte">' + fontes.map(function (f) {
       return '<option value="' + f + '"' + (cfg.fonte === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select></div>' +
     '</div>';
+  h += '<div class="roleta-wrap">';
+  h += '<label style="display:block;text-align:center">🎡 Roleta de cores — gire e deixe a sorte escolher</label>';
+  h += '<div class="roleta-moldura" id="roletaMoldura"></div>';
+  h += '<div class="mini" id="roletaResultado" style="margin-top:8px"></div>';
+  h += '<button class="btn turbo" id="btnGirar" onclick="girarRoleta()">🎡 Girar a roleta</button>';
+  h += '</div>';
   h += '</div>';
 
   h += '<button class="btn principal" onclick="verSite()">👀 Ver como ficou</button>';
@@ -6731,6 +6745,7 @@ function pintarSite() {
 
   $('#tela-site').innerHTML = h;
   pintarEtapas();
+  desenharRoleta();
 }
 
 /* Desenha o andamento do time. Fica visível depois de pronto também —
@@ -6775,6 +6790,125 @@ function lerFormulario() {
   }
   if (!cfg.titulo) cfg.titulo = cfg.nome;
   cfg.telefone = cfg.telefone || cfg.whatsapp;
+}
+
+/* ─────────── roleta de cores ───────────
+   Disco com uma fatia por paleta e um braço no meio.
+   Gira o braço, ele para numa cor e ela vira a cor do site. */
+var ROLETA_ANGULO = 0;
+var ROLETA_GIRANDO = false;
+
+function roletaPaletas() {
+  return (typeof SiteGen !== 'undefined' && SiteGen.PALETAS) ? Object.keys(SiteGen.PALETAS) : ['oceano'];
+}
+
+function desenharRoleta() {
+  var mold = $('#roletaMoldura');
+  if (!mold) return;
+  var nomes = roletaPaletas();
+  var n = nomes.length, fatia = 360 / n;
+  var raio = 118, ondeNome = 82;
+  function pt(ang, r) {
+    var a = ang * Math.PI / 180;
+    return [130 + r * Math.sin(a), 130 - r * Math.cos(a)];
+  }
+  var s = '<svg viewBox="0 0 260 260" role="img" aria-label="Roleta de cores">';
+  s += '<circle cx="130" cy="130" r="127" fill="#0b1220" stroke="#475569" stroke-width="4"/>';
+  for (var i = 0; i < n; i++) {
+    var a0 = i * fatia, a1 = a0 + fatia, am = a0 + fatia / 2;
+    var p0 = pt(a0, raio), p1 = pt(a1, raio);
+    var cor = '#64748b';
+    try { cor = SiteGen.PALETAS[nomes[i]].p || cor; } catch (e) {}
+    s += '<path class="fatia" data-i="' + i + '" d="M130,130 L' + p0[0].toFixed(1) + ',' + p0[1].toFixed(1) +
+      ' A' + raio + ',' + raio + ' 0 0 1 ' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) +
+      ' Z" fill="' + cor + '" stroke="#0f172a" stroke-width="2"/>';
+    var pn = pt(am, ondeNome);
+    s += '<text x="' + pn[0].toFixed(1) + '" y="' + pn[1].toFixed(1) + '" fill="#fff" font-size="10.5"' +
+      ' font-weight="700" text-anchor="middle" dominant-baseline="middle"' +
+      ' transform="rotate(' + am.toFixed(1) + ' ' + pn[0].toFixed(1) + ' ' + pn[1].toFixed(1) + ')"' +
+      ' stroke="rgba(0,0,0,.45)" stroke-width="2.5" style="paint-order:stroke;pointer-events:none">' +
+      esc(nomes[i]) + '</text>';
+    var pp = pt(a0, raio - 5);
+    s += '<circle cx="' + pp[0].toFixed(1) + '" cy="' + pp[1].toFixed(1) + '" r="3.2" fill="#f8fafc" stroke="#0f172a" stroke-width="1"/>';
+  }
+  /* o braço: agulha amarela que aponta pra cima + botão redondo no meio */
+  s += '<g id="bracoRoleta" style="cursor:pointer">';
+  s += '<polygon points="130,16 140,132 130,122 120,132" fill="#fbbf24" stroke="#0f172a" stroke-width="2"/>';
+  s += '<circle cx="130" cy="130" r="21" fill="#fbbf24" stroke="#0f172a" stroke-width="3"/>';
+  s += '<text x="130" y="131" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="900" fill="#0f172a" style="pointer-events:none">GO</text>';
+  s += '</g></svg>';
+  mold.innerHTML = s;
+  /* começa apontando pra cor que já está escolhida */
+  var atual = nomes.indexOf(cfg && cfg.paleta);
+  ROLETA_ANGULO = (atual >= 0 ? atual * fatia + fatia / 2 : 0);
+  pintarBraco();
+  /* tocar numa fatia escolhe a cor direto */
+  var fatias = mold.querySelectorAll('.fatia');
+  for (var k = 0; k < fatias.length; k++) {
+    (function (el) {
+      el.addEventListener('click', function () { roletaEscolher(parseInt(el.getAttribute('data-i'), 10), true); });
+    })(fatias[k]);
+  }
+  var braco = $('#bracoRoleta');
+  if (braco) braco.addEventListener('click', girarRoleta);
+  roletaResultado();
+}
+
+function pintarBraco() {
+  var b = $('#bracoRoleta');
+  if (b) b.setAttribute('transform', 'rotate(' + ROLETA_ANGULO + ' 130 130)');
+}
+
+function girarRoleta() {
+  if (ROLETA_GIRANDO) return;
+  var nomes = roletaPaletas();
+  var n = nomes.length, fatia = 360 / n;
+  var btn = $('#btnGirar');
+  ROLETA_GIRANDO = true;
+  if (btn) { btn.disabled = true; btn.textContent = '🎡 Girando…'; }
+  var alvo = Math.floor(Math.random() * n);
+  var margem = Math.min(6, fatia / 2 - 2);
+  var destino = alvo * fatia + margem + Math.random() * (fatia - margem * 2);
+  var voltas = 5 + Math.floor(Math.random() * 3);
+  var inicio = ((ROLETA_ANGULO % 360) + 360) % 360;
+  var total = voltas * 360 + (((destino - inicio) % 360 + 360) % 360);
+  var t0 = null, DUR = 3800;
+  function passo(t) {
+    if (!t0) t0 = t;
+    var p = Math.min(1, (t - t0) / DUR);
+    var e = 1 - Math.pow(1 - p, 4);
+    ROLETA_ANGULO = inicio + total * e;
+    pintarBraco();
+    if (p < 1) { requestAnimationFrame(passo); return; }
+    ROLETA_ANGULO = inicio + total;
+    pintarBraco();
+    ROLETA_GIRANDO = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🎡 Girar a roleta'; }
+    roletaEscolher(alvo, false);
+  }
+  requestAnimationFrame(passo);
+}
+
+function roletaEscolher(i, moverBraco) {
+  if (ROLETA_GIRANDO) return;
+  var nomes = roletaPaletas();
+  if (i < 0 || i >= nomes.length || !cfg) return;
+  cfg.paleta = nomes[i];
+  var sel = $('#sPaleta');
+  if (sel) sel.value = nomes[i];
+  if (moverBraco) {
+    var fatia = 360 / nomes.length;
+    ROLETA_ANGULO = i * fatia + fatia / 2;
+    pintarBraco();
+  }
+  salvarRascunho();
+  roletaResultado();
+  recado('🎨 Cor do site: ' + nomes[i]);
+}
+
+function roletaResultado() {
+  var el = $('#roletaResultado');
+  if (el && cfg) el.innerHTML = 'Cor atual: <b>' + esc(cfg.paleta || '—') + '</b> · toque numa fatia pra escolher direto';
 }
 
 function aplicarPerfil() {
