@@ -4106,6 +4106,11 @@ function iaChaveEfetiva() {
   return '';
 }
 function iaPronta() { return !!BD.config.iaAtiva && !!iaChaveEfetiva(); }
+/* o bloco principal (telas) precisa destas funções: expõe no escopo global */
+if (typeof window !== 'undefined') {
+  window.iaPronta = iaPronta;
+  window.iaChaveEfetiva = iaChaveEfetiva;
+}
 
 /* Guarda o modelo que respondeu por último em cada provedor, para não
    pagar o pedágio da descoberta a cada chamada da mesma sessão. */
