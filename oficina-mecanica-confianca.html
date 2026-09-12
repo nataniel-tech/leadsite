@@ -16,8 +16,8 @@
 <meta property="og:image" content="">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230284c7'/><text x='50' y='68' font-size='46' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>OM</text></svg>">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"AutoRepair","name":"Oficina Mecânica Confiança","description":"Seu carro pronto no mesmo dia","telephone":"66 99800-2211","address":{"@type":"PostalAddress","streetAddress":"Rua das Oficinas, 340 - Vila Aurora, Rondonópolis - MT"},"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"07:30","closes":"18:00"}],"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.7","reviewCount":"93"}}<\/script>
-<script>window.LS_EDIT={"nome":"Oficina Mecânica Confiança","whatsapp":"66 99800-2211","horario":[{"dia":"Segunda a Sexta","hora":"07:30 - 18:00"},{"dia":"Sábado","hora":"30 - 12:00"}],"promo":"","atualizadoEm":"2026-09-12T16:56:08.379Z"};<\/script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"AutoRepair","name":"Oficina Mecânica Confiança","description":"Seu carro pronto no mesmo dia","telephone":"66 99800-2211","address":{"@type":"PostalAddress","streetAddress":"Rua das Oficinas, 340 - Vila Aurora, Rondonópolis - MT"},"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"07:30","closes":"18:00"}],"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.7","reviewCount":"93"}}</script>
+<script>window.LS_EDIT={"nome":"Oficina Mecânica Confiança","whatsapp":"66 99800-2211","horario":[{"dia":"Segunda a Sexta","hora":"07:30 - 18:00"},{"dia":"Sábado","hora":"30 - 12:00"}],"promo":"","atualizadoEm":"2026-09-12T16:56:08.379Z"};</script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--p:#0284c7;--d:#0c4a6e;--a:#38bdf8;--r:16px;--sh:0 10px 30px rgba(0,0,0,.08);--txt:#1a2230;--mute:#5b6774;--line:#e6e9ee;--card:#ffffff;--bg:#ffffff;--bg2:#f0f9ff}
@@ -248,6 +248,9 @@ section{padding:52px 0}
 .cta h2{font-size:clamp(1.4rem,4vw,2rem);margin-bottom:12px}
 .cta p{opacity:.94;margin-bottom:26px;font-size:1rem;max-width:540px;margin-left:auto;margin-right:auto}
 .mapa{width:100%;height:320px;border:0;border-radius:var(--r);box-shadow:var(--sh);margin-top:32px}
+.mapa-wrap{position:relative}
+.mapa-link{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 18px;border-radius:12px;border:1px solid var(--line);color:var(--txt);background:var(--card);text-decoration:none;font-weight:600;font-size:.95rem}
+.mapa-wrap.vazio .mapa{display:none}
 
 /* rodapé */
 footer{background:#0c4a6e;color:#fff;padding:48px 0 24px;text-align:center;font-size:.95rem}
@@ -458,7 +461,23 @@ footer .fp{opacity:.72;margin-bottom:6px}
      
     </div>
    </div>
-   <iframe class="mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Rua%20das%20Oficinas%2C%20340%20-%20Vila%20Aurora%2C%20Rondon%C3%B3polis%20-%20MT&output=embed" title="Localização de Oficina Mecânica Confiança no mapa"></iframe>
+     <div class="mapa-wrap">
+   <iframe class="mapa" id="mapaSite" loading="lazy" title="Localização de Oficina Mecânica Confiança no mapa do OpenStreetMap"></iframe>
+   <a class="mapa-link" href="https://www.openstreetmap.org/search?query=Rua%20das%20Oficinas%2C%20340%20-%20Vila%20Aurora%2C%20Rondon%C3%B3polis%20-%20MT" target="_blank" rel="noopener">📍 Abrir no mapa (OpenStreetMap)</a>
+   <script>
+   (function () {
+    var alvo = document.getElementById('mapaSite'); if (!alvo) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent("Rua das Oficinas, 340 - Vila Aurora, Rondonópolis - MT"))
+     .then(function (r) { return r.json(); })
+     .then(function (j) {
+      if (!j || !j[0]) throw 0;
+      var b = j[0].boundingbox, d = .006;
+      alvo.src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + (+b[2] - d) + ',' + (+b[0] - d) + ',' + (+b[3] + d) + ',' + (+b[1] + d) + '&layer=mapnik&marker=' + ((+b[0] + +b[1]) / 2) + ',' + ((+b[2] + +b[3]) / 2);
+     })
+     .catch(function () { var w = alvo.parentNode; if (w) w.classList.add('vazio'); });
+   })();
+   </script>
+  </div>
   </div>
  </section>
 </main>
@@ -523,7 +542,7 @@ footer .fp{opacity:.72;margin-bottom:6px}
   document.getElementById('lgpdok').onclick=function(){localStorage.setItem('lgpd_ok','1');lg.style.display='none';};
  }catch(e){}
 })();
-<\/script>
+</script>
 
 
 </body>

@@ -602,6 +602,9 @@ section{padding:52px 0}
 .cta h2{font-size:clamp(1.4rem,4vw,2rem);margin-bottom:12px}
 .cta p{opacity:.94;margin-bottom:26px;font-size:1rem;max-width:540px;margin-left:auto;margin-right:auto}
 .mapa{width:100%;height:320px;border:0;border-radius:var(--r);box-shadow:var(--sh);margin-top:32px}
+.mapa-wrap{position:relative}
+.mapa-link{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 18px;border-radius:12px;border:1px solid var(--line);color:var(--txt);background:var(--card);text-decoration:none;font-weight:600;font-size:.95rem}
+.mapa-wrap.vazio .mapa{display:none}
 
 /* rodapé */
 footer{background:${dark?'#06090d':pal.d};color:#fff;padding:48px 0 24px;text-align:center;font-size:.95rem}
@@ -996,7 +999,24 @@ ${c.lgpd ? `.lgpd{position:fixed;left:14px;right:14px;bottom:14px;max-width:560p
      ${c.telefone ? `<a href="tel:+55${attr(soDigitos(c.telefone))}" class="btn b2">${I.phone}<span>Ligar agora</span></a>` : ''}
     </div>
    </div>
-   ${c.mapa && c.endereco ? `<iframe class="mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(c.endereco)}&output=embed" title="Localização de ${attr(nome)} no mapa"></iframe>` : ''}
+   ${c.mapa && c.endereco ? `
+  <div class="mapa-wrap">
+   <iframe class="mapa" id="mapaSite" loading="lazy" title="Localização de ${attr(nome)} no mapa do OpenStreetMap"></iframe>
+   <a class="mapa-link" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(c.endereco)}" target="_blank" rel="noopener">📍 Abrir no mapa (OpenStreetMap)</a>
+   <script>
+   (function () {
+    var alvo = document.getElementById('mapaSite'); if (!alvo) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(${JSON.stringify(String(c.endereco))}))
+     .then(function (r) { return r.json(); })
+     .then(function (j) {
+      if (!j || !j[0]) throw 0;
+      var b = j[0].boundingbox, d = .006;
+      alvo.src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + (+b[2] - d) + ',' + (+b[0] - d) + ',' + (+b[3] + d) + ',' + (+b[1] + d) + '&layer=mapnik&marker=' + ((+b[0] + +b[1]) / 2) + ',' + ((+b[2] + +b[3]) / 2);
+     })
+     .catch(function () { var w = alvo.parentNode; if (w) w.classList.add('vazio'); });
+   })();
+   <\/script>
+  </div>` : ''}
   </div>
  </section>`;
 
@@ -1045,8 +1065,8 @@ ${c.dominio ? `<link rel="canonical" href="https://${attr(String(c.dominio).repl
 ${capa ? `<meta property="og:image" content="${attr(/^https?:/.test(capa.url) ? capa.url : '')}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='${encodeURIComponent(pal.p)}'/><text x='50' y='68' font-size='46' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>${encodeURIComponent(iniciais)}</text></svg>">
-<script type="application/ld+json">${JSON.stringify(schema)}<\\/script>
-<script>window.LS_EDIT=${JSON.stringify(JSON.parse(lsEdit))};<\\/script>
+<script type="application/ld+json">${JSON.stringify(schema)}<\/script>
+<script>window.LS_EDIT=${JSON.stringify(JSON.parse(lsEdit))};<\/script>
 <style>${CSS}</style>
 </head>
 <body>
@@ -1119,10 +1139,10 @@ ${c.lgpd ? `<div class="lgpd" id="lgpd" role="dialog" aria-label="Aviso de priva
   document.getElementById('lgpdok').onclick=function(){localStorage.setItem('lgpd_ok','1');lg.style.display='none';};
  }catch(e){}` : ''}
 })();
-<\\/script>
-${c.ga4 ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${attr(c.ga4)}"><\\/script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${attr(c.ga4)}');<\\/script>` : ''}
-${c.pixel ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${attr(c.pixel)}');fbq('track','PageView');<\\/script>` : ''}
+<\/script>
+${c.ga4 ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${attr(c.ga4)}"><\/script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${attr(c.ga4)}');<\/script>` : ''}
+${c.pixel ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${attr(c.pixel)}');fbq('track','PageView');<\/script>` : ''}
 </body>
 </html>`;
   }

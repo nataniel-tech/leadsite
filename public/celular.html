@@ -3700,6 +3700,9 @@ section{padding:${est.sec} 0;position:relative}
 .cta h2{font-size:clamp(1.55rem,3.4vw,2.25rem);margin-bottom:14px}
 .cta p{opacity:.94;margin-bottom:32px;font-size:1.06rem;max-width:560px;margin-left:auto;margin-right:auto}
 .mapa{width:100%;height:360px;border:0;border-radius:var(--r);box-shadow:var(--sh);margin-top:40px;filter:${dark?'invert(.9) hue-rotate(180deg)':'none'}}
+.mapa-wrap{position:relative}
+.mapa-link{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 18px;border-radius:12px;border:1px solid var(--line);color:var(--txt);background:var(--card);text-decoration:none;font-weight:600;font-size:.95rem}
+.mapa-wrap.vazio .mapa{display:none}
 
 /* ── rodapé ── */
 footer{background:${dark?'#06090d':pal.d};color:#fff;padding:56px 0 28px;text-align:center}
@@ -3918,7 +3921,24 @@ ${sec.contato ? `
     ${c.telefone ? `<a href="tel:+55${attr(soDigitos(c.telefone))}" class="btn b2">${I.phone}<span>Ligar agora</span></a>` : ''}
    </div>
   </div>
-  ${c.mapa && c.endereco ? `<iframe class="mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(c.endereco)}&output=embed" title="Localização de ${attr(nome)} no mapa"></iframe>` : ''}
+  ${c.mapa && c.endereco ? `
+  <div class="mapa-wrap">
+   <iframe class="mapa" id="mapaSite" loading="lazy" title="Localização de ${attr(nome)} no mapa do OpenStreetMap"></iframe>
+   <a class="mapa-link" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(c.endereco)}" target="_blank" rel="noopener">📍 Abrir no mapa (OpenStreetMap)</a>
+   <script>
+   (function () {
+    var alvo = document.getElementById('mapaSite'); if (!alvo) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(${JSON.stringify(String(c.endereco))}))
+     .then(function (r) { return r.json(); })
+     .then(function (j) {
+      if (!j || !j[0]) throw 0;
+      var b = j[0].boundingbox, d = .006;
+      alvo.src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + (+b[2] - d) + ',' + (+b[0] - d) + ',' + (+b[3] + d) + ',' + (+b[1] + d) + '&layer=mapnik&marker=' + ((+b[0] + +b[1]) / 2) + ',' + ((+b[2] + +b[3]) / 2);
+     })
+     .catch(function () { var w = alvo.parentNode; if (w) w.classList.add('vazio'); });
+   })();
+   <\/script>
+  </div>` : ''}
  </div>
 </section>` : ''}
 </main>
@@ -5216,7 +5236,7 @@ function atualizarFonteBusca() {
     ? '🟢 Busca turbinada: Geoapify (grátis sem cartão)'
     : f === 'google'
       ? '🟢 Busca turbinada: Google Places'
-      : '⚪ Busca no mapa gratuito (OpenStreetMap). Cole uma chave do Geoapify em Ajustes pra achar muito mais.';
+      : '🟢 Busca pelo OpenStreetMap — grátis, sem chave e sem cadastro.';
 }
 
 /* Caçada em todas as cidades da região de uma vez.
@@ -7569,9 +7589,9 @@ function pintarAjustes() {
   h += '</div>';
 
   h += '<div class="bloco"><h2>🔍 Busca de clientes</h2>';
-  h += '<p class="ajuda">Sem chave, a busca usa o mapa gratuito (poucas empresas em cidade pequena). ' +
-    'Com uma chave ela acha MUITO mais — com telefone e dizendo quem já tem site.</p>';
-  h += '<label>Chave do Geoapify (recomendada — grátis, sem cartão)</label>' +
+  h += '<p class="ajuda">Sem chave, a busca usa o OpenStreetMap — grátis e sem cadastro. ' +
+    'Com a chave (opcional) a busca acha mais empresas, com telefone e dizendo quem já tem site.</p>';
+  h += '<label>Chave do Geoapify (opcional — sem ela o app usa o OpenStreetMap grátis)</label>' +
     '<input id="aGeoapify" type="password" value="' + esc(c.geoapifyChave) + '" placeholder="cole aqui" autocapitalize="none">';
   h += '<p class="ajuda mini">Crie de graça em <b>myprojects.geoapify.com</b>: registre, crie um projeto, ' +
     'a chave aparece sozinha em API Keys. São 3.000 créditos por dia sem pagar nada.</p>';
