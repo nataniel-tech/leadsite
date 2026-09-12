@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LeadSite — Prospecção, CRM e Criação de Sites</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+</head>
+<body>
+
+<header class="topo">
+  <div class="marca"><i>LS</i><div><b>LeadSite</b><span>Prospecção · CRM · Sites</span></div></div>
+  <nav class="abas">
+    <button class="aba ativa" data-aba="buscar"><em>1</em> Prospectar</button>
+    <button class="aba" data-aba="crm"><em>2</em> Gerenciar <b id="badgeCrm" class="badge">0</b></button>
+    <button class="aba" data-aba="criar"><em>3</em> Criar site</button>
+  </nav>
+</header>
+
+<!-- ══════════ PARTE 1: PROSPECÇÃO ══════════ -->
+<main id="painel-buscar" class="painel ativo">
+  <div class="hero-p">
+    <h1>Encontre empresas <span>sem site</span> perto de você</h1>
+    <p>Busca real no OpenStreetMap via Overpass API — grátis, sem chave de API. Filtramos quem já tem site e ranqueamos os melhores leads.</p>
+  </div>
+
+  <section class="cartao">
+    <div class="linha">
+      <div class="campo grow">
+        <label>Cidade <small>obrigatório</small></label>
+        <input id="cidade" placeholder="Ex.: Rondonópolis, MT" value="Rondonópolis, Mato Grosso, Brasil">
+      </div>
+      <div class="campo">
+        <label>Raio</label>
+        <select id="raio">
+          <option value="0">Cidade inteira</option>
+          <option value="2">2 km do centro</option>
+          <option value="5" selected>5 km do centro</option>
+          <option value="10">10 km do centro</option>
+          <option value="25">25 km do centro</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Limite</label>
+        <select id="limite">
+          <option>50</option><option selected>120</option><option>250</option><option>500</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Segmentos <small>nenhum selecionado = todos</small></label>
+      <div id="cats" class="chips"></div>
+    </div>
+
+    <div class="linha entre">
+      <div class="toggles">
+        <label class="check"><input type="checkbox" id="semSite" checked><span>Só empresas sem site</span></label>
+        <label class="check"><input type="checkbox" id="comTel"><span>Só com telefone</span></label>
+      </div>
+      <button id="btnBuscar" class="btn primario grande">🔍 Buscar empresas</button>
+    </div>
+  </section>
+
+  <div id="statusBusca"></div>
+
+  <section id="resultados" class="oculto">
+    <div class="stats" id="stats"></div>
+    <div class="barra-acoes">
+      <div>
+        <label class="check"><input type="checkbox" id="selTodos"><span>Selecionar todos</span></label>
+        <span class="conta" id="contaSel">0 selecionados</span>
+      </div>
+      <div class="grupo-btn">
+        <select id="ordemBusca" style="width:auto"><option value="score">Melhor potencial</option>
+          <option value="nome">Nome A-Z</option><option value="cat">Por segmento</option></select>
+        <button id="btnCsv" class="btn fantasma">⬇ CSV</button>
+        <button id="btnSalvar" class="btn primario">💾 Salvar no CRM</button>
+      </div>
+    </div>
+    <div id="lista" class="cards"></div>
+  </section>
+</main>
+
+<!-- ══════════ PARTE 2: CRM ══════════ -->
+<main id="painel-crm" class="painel">
+  <div class="hero-p"><h1>Gerenciar & Comunicar</h1><p>Funil de vendas + mensagens prontas de WhatsApp e e-mail com um clique.</p></div>
+  <div class="stats" id="statsCrm"></div>
+  <div class="barra-acoes">
+    <div class="filtros" id="filtrosStatus"></div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      <input id="buscaCrm" class="busca" placeholder="🔎 Buscar por nome, categoria...">
+      <select id="ordemCrm" style="width:auto"><option value="recente">Mais recentes</option>
+        <option value="score">Melhor potencial</option><option value="nome">Nome A-Z</option>
+        <option value="antigo">Mais antigos</option></select>
+      <div class="abas" style="padding:3px">
+        <button class="aba ativa" id="vLista" style="padding:7px 13px">☰ Lista</button>
+        <button class="aba" id="vKanban" style="padding:7px 13px">▦ Funil</button>
+      </div>
+      <button class="btn fantasma pequeno" id="btnCsvCrm">⬇ CSV</button>
+    </div>
+  </div>
+  <div id="listaCrm" class="cards"></div>
+  <div id="kanban" class="kanban oculto"></div>
+</main>
+
+<!-- ══════════ PARTE 3: CONSTRUTOR ══════════ -->
+<main id="painel-criar" class="painel">
+  <div class="construtor">
+    <div class="form-col">
+      <div class="hero-p sm">
+        <h1>Criar o site</h1>
+        <p id="paraQuem">Preencha as preferências do cliente — o preview atualiza em tempo real.</p>
+      </div>
+
+      <details open class="grupo"><summary>⚡ Início rápido</summary>
+        <div class="campo">
+          <label>Segmento da empresa <small>preenche textos, serviços, depoimentos e cores</small></label>
+          <select id="perfilSel"></select>
+        </div>
+        <p style="font-size:.8rem;color:var(--mute);margin-top:-6px">Escolha o segmento e o site já nasce pronto. Nome e contatos não são alterados.</p>
+      </details>
+
+      <details open class="grupo"><summary>🏢 Identidade</summary>
+        <div class="campo"><label>Nome da empresa</label><input data-c="nome" value="Minha Empresa"></div>
+        <div class="campo"><label>Slogan / frase curta</label><input data-c="slogan" value="Qualidade e confiança em cada atendimento"></div>
+        <div class="campo"><label>Título grande do topo</label><input data-c="titulo" placeholder="Deixe vazio para usar o nome"></div>
+        <div class="campo"><label>Selo acima do título</label><input data-c="badge" value="Atendimento em Rondonópolis"></div>
+      </details>
+
+      <details open class="grupo"><summary>🎨 Preferências visuais</summary>
+        <div class="campo"><label>Paleta de cores</label><div id="paletas" class="paletas"></div></div>
+        <div class="linha">
+          <div class="campo grow"><label>Estilo</label><select data-c="estilo">
+            <option value="moderno">Moderno (cantos arredondados)</option>
+            <option value="minimalista">Minimalista (reto e limpo)</option>
+            <option value="elegante">Elegante (sóbrio)</option>
+            <option value="ousado">Ousado (grande e marcante)</option>
+          </select></div>
+          <div class="campo grow"><label>Tipografia</label><select data-c="fonte">
+            <option value="moderna">Moderna</option><option value="classica">Clássica (serifada)</option>
+            <option value="tech">Tech</option><option value="friendly">Descontraída</option>
+          </select></div>
+        </div>
+        <div class="linha">
+          <div class="campo grow"><label>Alinhamento do topo</label><select data-c="heroAlinhamento">
+            <option value="center">Centralizado</option><option value="left">À esquerda</option>
+          </select></div>
+          <div class="campo grow"><label>Tema</label><select data-c="escuro">
+            <option value="">Claro</option><option value="1">Escuro</option>
+          </select></div>
+        </div>
+        <div class="campo"><label>Imagem de fundo do topo <small>URL</small></label><input data-c="heroImagem" placeholder="https://..."></div>
+      </details>
+
+      <details class="grupo"><summary>🧩 Seções do site</summary>
+        <div class="chips" id="secoes"></div>
+      </details>
+
+      <details class="grupo"><summary>📖 Sobre</summary>
+        <div class="campo"><label>Título</label><input data-c="sobreTitulo" value="Quem somos"></div>
+        <div class="campo"><label>Texto</label><textarea data-c="sobreTexto" rows="4">Somos uma empresa local comprometida em oferecer o melhor atendimento e produtos de qualidade para nossos clientes.</textarea></div>
+        <div class="campo"><label>Imagem <small>URL</small></label><input data-c="sobreImagem" placeholder="https://..."></div>
+        <div class="campo"><label>Diferenciais <small>um por linha</small></label><textarea data-c="diferenciais" rows="4">Mais de 10 anos de experiência
+Atendimento personalizado
+Melhor preço da região
+Garantia em todos os serviços</textarea></div>
+      </details>
+
+      <details class="grupo"><summary>🛠 Serviços</summary>
+        <div class="campo"><label>Título da seção</label><input data-c="rotuloServicos" value="Nossos serviços"></div>
+        <div class="campo"><label>Subtítulo</label><input data-c="servicosSub" value="Soluções completas para você"></div>
+        <div id="servicos" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addServico">+ Adicionar serviço</button>
+      </details>
+
+      <details class="grupo"><summary>⭐ Depoimentos</summary>
+        <div class="aviso" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 13px;font-size:.85rem;color:#92400e;margin-bottom:12px">⚠️ Só frases que clientes <b>realmente falaram</b>. Sem depoimento, o site mostra apenas a nota do Google (se houver) — nunca inventamos avaliações.</div>
+        <div id="depoimentos" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addDep">+ Adicionar depoimento</button>
+      </details>
+
+      <details class="grupo"><summary>🖼 Galeria <small>URLs, uma por linha</small></summary>
+        <div class="campo"><textarea data-c="galeria" rows="4" placeholder="https://exemplo.com/foto1.jpg"></textarea></div>
+      </details>
+
+      <details class="grupo"><summary>🕐 Horários</summary>
+        <div id="horarios" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addHor">+ Adicionar linha</button>
+      </details>
+
+      <details open class="grupo"><summary>📞 Contato</summary>
+        <div class="linha">
+          <div class="campo grow"><label>WhatsApp</label><input data-c="whatsapp" placeholder="66 99999-9999"></div>
+          <div class="campo grow"><label>Telefone</label><input data-c="telefone" placeholder="(66) 3421-0000"></div>
+        </div>
+        <div class="campo"><label>E-mail</label><input data-c="email" placeholder="contato@empresa.com.br"></div>
+        <div class="campo"><label>Endereço</label><input data-c="endereco" placeholder="Rua Exemplo, 123 - Centro"></div>
+        <div class="linha">
+          <div class="campo grow"><label>Instagram</label><input data-c="instagram" placeholder="@empresa"></div>
+          <div class="campo grow"><label>Facebook</label><input data-c="facebook" placeholder="empresa"></div>
+        </div>
+        <div class="campo"><label>Texto do botão principal</label><input data-c="textoCta" value="Chamar no WhatsApp"></div>
+        <label class="check"><input type="checkbox" data-c="mapa" checked><span>Mostrar mapa do endereço</span></label>
+        <label class="check"><input type="checkbox" data-c="botaoFlutuante" checked><span>Botão flutuante de WhatsApp</span></label>
+      </details>
+
+      <details class="grupo"><summary>🖼 Logo e imagens</summary>
+        <div class="campo"><label>Logo da empresa</label>
+          <div class="upl"><input type="file" id="upLogo" accept="image/*"><span>📤 Enviar logo</span></div>
+          <div id="prevLogo" class="prevImg"></div>
+          <input data-c="logo" placeholder="ou cole a URL da logo">
+        </div>
+        <div class="campo"><label>Imagem de fundo do topo</label>
+          <div class="upl"><input type="file" id="upHero" accept="image/*"><span>📤 Enviar foto de capa</span></div>
+          <input data-c="heroImagem" placeholder="ou cole a URL">
+        </div>
+        <div class="campo"><label>Imagem da seção "Sobre"</label>
+          <div class="upl"><input type="file" id="upSobre" accept="image/*"><span>📤 Enviar foto</span></div>
+          <input data-c="sobreImagem" placeholder="ou cole a URL">
+        </div>
+        <div class="campo"><label>Galeria <small>uma URL por linha</small></label>
+          <div class="upl"><input type="file" id="upGal" accept="image/*" multiple><span>📤 Enviar várias fotos</span></div>
+          <textarea data-c="galeria" rows="3" placeholder="https://..."></textarea>
+        </div>
+        <p class="dica">As imagens enviadas são reduzidas e embutidas no arquivo — o site continua sendo um único HTML.</p>
+      </details>
+
+      <details class="grupo"><summary>📊 Números de destaque</summary>
+        <div id="numeros" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addNum">+ Adicionar número</button>
+      </details>
+
+      <details class="grupo"><summary>👥 Equipe</summary>
+        <div id="equipe" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addEq">+ Adicionar pessoa</button>
+      </details>
+
+      <details class="grupo"><summary>❓ Perguntas frequentes</summary>
+        <div id="faq" class="repetidor"></div>
+        <button class="btn fantasma pequeno" id="addFaq">+ Adicionar pergunta</button>
+      </details>
+
+      <details class="grupo"><summary>🏷 Promoção em destaque</summary>
+        <div class="campo"><label>Faixa no topo do site</label><input data-c="promoTexto" placeholder="Ex.: 10% OFF na primeira compra"></div>
+        <div class="campo"><label>Validade</label><input data-c="promoValidade" placeholder="Ex.: até 30/09"></div>
+      </details>
+
+      <details class="grupo"><summary>⭐ Reputação <small style="color:var(--warn)">só dados reais</small></summary>
+        <div class="linha">
+          <div class="campo grow"><label>Nota média</label><input data-c="notaMedia" placeholder="Ex.: 4,9"></div>
+          <div class="campo grow"><label>Nº de avaliações</label><input data-c="qtdAvaliacoes" placeholder="Ex.: 187"></div>
+        </div>
+        <div class="linha">
+          <div class="campo grow"><label>Anos de mercado</label><input data-c="anosAtendimento" placeholder="Ex.: 12"></div>
+          <div class="campo grow"><label>Bairro atendido</label><input data-c="bairro" placeholder="Ex.: Centro"></div>
+        </div>
+        <div class="campo"><label>Faixa de preço</label><select data-c="precoFaixa">
+          <option value="">Não informar</option><option value="$">$ — econômico</option>
+          <option value="$$">$$ — moderado</option><option value="$$$">$$$ — alto</option></select></div>
+        <div class="campo"><label>Mostrar preços no site</label><select data-c="mostrarPrecos">
+          <option value="true">Sim, mostrar preços</option><option value="false">Não, só "consulte valores"</option></select></div>
+      </details>
+
+      <details class="grupo"><summary>🔍 SEO e Google</summary>
+        <div class="campo"><label>Descrição para o Google <small>até 158 caracteres</small></label><textarea data-c="descricao" rows="2" placeholder="Deixe vazio para usar o slogan"></textarea></div>
+        <div class="campo"><label>Palavras-chave</label><input data-c="palavras" placeholder="padaria rondonópolis, pão artesanal"></div>
+        <div class="campo"><label>Domínio</label><input data-c="dominio" placeholder="suaempresa.com.br"></div>
+        <div class="campo"><label>Tipo de negócio <small>dados estruturados</small></label><select data-c="tipoNegocio">
+          <option value="LocalBusiness">Negócio local (geral)</option><option value="Restaurant">Restaurante</option>
+          <option value="Bakery">Padaria</option><option value="Store">Loja</option>
+          <option value="BeautySalon">Salão de beleza</option><option value="AutoRepair">Oficina</option>
+          <option value="HealthAndBeautyBusiness">Saúde e beleza</option><option value="ProfessionalService">Serviço profissional</option>
+          <option value="Hotel">Hotel</option><option value="School">Escola</option></select></div>
+        <div class="campo"><label>CNPJ <small>aparece no rodapé</small></label><input data-c="cnpj" placeholder="00.000.000/0000-00"></div>
+        <div class="linha">
+          <div class="campo grow"><label>Google Analytics</label><input data-c="ga4" placeholder="G-XXXXXXX"></div>
+          <div class="campo grow"><label>Meta Pixel</label><input data-c="pixel" placeholder="123456789"></div>
+        </div>
+      </details>
+
+      <details class="grupo"><summary>⚙️ Recursos do site</summary>
+        <label class="check"><input type="checkbox" data-c="formularioContato"><span>Formulário de contato (envia pro WhatsApp)</span></label>
+        <label class="check"><input type="checkbox" data-c="animacoes" checked><span>Animações ao rolar a página</span></label>
+        <label class="check"><input type="checkbox" data-c="lgpd"><span>Aviso de cookies (LGPD)</span></label>
+        <label class="check"><input type="checkbox" data-c="creditos" checked><span>Assinatura "Site desenvolvido por Nataniel"</span></label>
+        <div class="campo" style="margin-top:12px"><label>Mensagem que abre no WhatsApp</label><input data-c="whatsappMsg" placeholder="Olá! Vim pelo site e gostaria de mais informações."></div>
+      </details>
+
+      <div class="acoes-form">
+        <button id="btnBaixar" class="btn primario">⬇ Baixar HTML</button>
+        <button id="btnPublicar" class="btn escuro">🚀 Publicar</button>
+        <button id="btnAbrir" class="btn fantasma">↗ Abrir</button>
+        <button id="btnLimpar" class="btn fantasma">🗑 Limpar</button>
+      </div>
+      <div id="avisoPub"></div>
+    </div>
+
+    <div class="preview-col">
+      <div class="preview-topo">
+        <div class="pontos"><s></s><s></s><s></s></div>
+        <div class="url-fake" id="urlFake">preview do site</div>
+        <div class="disp">
+          <button class="d ativa" data-w="100%">🖥</button>
+          <button class="d" data-w="768px">📱</button>
+        </div>
+      </div>
+      <iframe id="preview"></iframe>
+    </div>
+  </div>
+</main>
+
+<div id="modal" class="modal"><div class="modal-caixa"><button class="fechar" id="fecharModal">×</button><div id="modalConteudo"></div></div></div>
+<div id="toast" class="toast"></div>
+
+<script src="/sitegen.js"></script>
+<script src="/perfis.js"></script>
+<script src="/brief-schema.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

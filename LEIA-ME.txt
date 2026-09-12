@@ -1,0 +1,13 @@
+BACKUP — versão estável de 06/09/2026 (antes da expansão final)
+================================================================
+Esta é a cópia funcional do LeadSite ANTES das melhorias grandes.
+Se algo quebrar na versão nova, use esta pasta:
+
+    cd ~/leadsite-backup-v1
+    node server.js
+
+O que esta versão já tem e funciona:
+ - Prospecção via Overpass/OpenStreetMap (230 empresas testadas em Rondonópolis)
+ - CRM com funil, 7 modelos de mensagem (Nataniel / R$ 97)
+ - Construtor com 24 perfis de segmento
+ - Questionário de 46 perguntas que gera o site sozinho

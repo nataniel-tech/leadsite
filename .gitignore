@@ -1,0 +1,7 @@
+# dados de runtime (leads, fotos enviadas)
+data/db.json
+data/fotos/
+# backups e temporários
+*.tmp
+*.log
+.DS_Store

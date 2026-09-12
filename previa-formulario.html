@@ -1,0 +1,2230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Briefing — Seu site</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f4f6fb;--card:#fff;--line:#e3e8f0;--txt:#16203a;--mute:#64748b;--p:#4f46e5;--p2:#7c3aed;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--r:14px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.55;font-size:16px}
+.casca{max-width:760px;margin:0 auto;padding:22px 16px 60px}
+.topo{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
+.topo i{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;display:grid;place-items:center;font-style:normal;font-weight:800;flex:0 0 auto}
+.topo b{display:block;font-size:1.02rem}
+.topo span{font-size:.82rem;color:var(--mute)}
+.barra{margin:0 4px 18px}
+.trilho{background:var(--line);border-radius:99px;height:8px;overflow:hidden}
+.preenche{background:linear-gradient(90deg,var(--p),var(--p2));height:100%;width:0;border-radius:99px;transition:width .4s}
+.leg{display:flex;justify-content:space-between;font-size:.8rem;color:var(--mute);margin-top:6px}
+.cartao{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px 22px;display:grid;gap:22px;box-shadow:0 4px 18px rgba(30,41,59,.05)}
+.cartao h1{font-size:1.35rem;letter-spacing:-.3px}
+.cartao .desc{color:var(--mute);font-size:.92rem;margin-top:-16px}
+.q{display:grid;gap:8px}
+.q label{font-weight:700;font-size:.95rem}
+.q .ajuda{font-size:.82rem;color:var(--mute);font-weight:400}
+input,textarea{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;font:inherit;font-size:.98rem;background:#fafbfe;transition:.15s}
+input:focus,textarea:focus{outline:0;border-color:var(--p);background:#fff;box-shadow:0 0 0 4px rgba(79,70,229,.1)}
+.opcoes{display:grid;gap:10px}
+.opcao{display:flex;gap:13px;align-items:flex-start;border:1.5px solid var(--line);border-radius:11px;padding:14px;cursor:pointer;transition:.15s;background:#fafbfe}
+.opcao:hover{border-color:var(--p)}
+.opcao.on{border-color:var(--p);background:#eef2ff;box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+.opcao input{width:auto;margin-top:3px;accent-color:var(--p)}
+.opcao b{display:block;font-size:.95rem}
+.opcao small{color:var(--mute);font-size:.82rem}
+.seg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.seg{border:1.5px solid var(--line);border-radius:11px;padding:13px 8px;text-align:center;cursor:pointer;background:#fafbfe;font-size:.88rem;font-weight:600;transition:.15s}
+.seg:hover{border-color:var(--p)}
+.seg.on{border-color:var(--p);background:#eef2ff}
+.seg em{display:block;font-style:normal;font-size:1.5rem;margin-bottom:4px}
+.cor-grid{display:flex;flex-wrap:wrap;gap:10px}
+.cor{width:46px;height:46px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.15s}
+.cor.on{border-color:var(--txt);transform:scale(1.12)}
+/* lista de serviços */
+.lista{display:grid;gap:12px}
+.item{display:grid;gap:8px;border:1.5px solid var(--line);border-radius:11px;padding:13px;background:#fafbfe}
+.item .lin{display:flex;gap:8px;align-items:center}
+.item .lin input:first-child{flex:1}
+.item .preco{width:110px;flex:0 0 auto}
+/* fotos */
+.fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.foto{position:relative;border-radius:11px;overflow:hidden;border:2px solid transparent}
+.foto.on{border-color:var(--p)}
+.foto img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.foto .capa{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.65);color:#fff;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:99px}
+.foto button{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:0;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.9rem}
+.up{border:2px dashed var(--line);border-radius:11px;padding:22px;text-align:center;cursor:pointer;background:#fafbfe;color:var(--mute);font-size:.9rem;transition:.15s}
+.up:hover{border-color:var(--p);color:var(--p)}
+.up b{display:block;color:var(--txt);margin-bottom:2px}
+.banco-note{font-size:.82rem;color:var(--mute)}
+.botoes{display:flex;gap:12px;flex-wrap:wrap}
+.bt{flex:1;min-width:150px;border:0;border-radius:11px;padding:15px 20px;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;transition:.18s;min-height:50px}
+.bt.pri{background:linear-gradient(90deg,var(--p),var(--p2));color:#fff;box-shadow:0 6px 18px rgba(79,70,229,.3)}
+.bt.pri:hover{transform:translateY(-2px)}
+.bt.pri:disabled{opacity:.6;transform:none}
+.bt.sec{background:#fff;border:1.5px solid var(--line);color:var(--txt)}
+.bt.sec:hover{border-color:var(--p)}
+/* final: preview + ajustes */
+.final{display:grid;grid-template-columns:1fr;gap:18px}
+.preview{position:sticky;top:12px;align-self:start}
+.preview iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--r);background:#fff;box-shadow:0 8px 30px rgba(30,41,59,.12)}
+.ajustes{display:grid;gap:14px;align-content:start}
+.aj{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.aj b{display:block;font-size:.9rem;margin-bottom:10px}
+.aj .mini{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);border-radius:99px;padding:7px 14px;font-size:.85rem;cursor:pointer;background:#fafbfe;font-weight:600}
+.chip.on{border-color:var(--p);background:#eef2ff}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;font-size:.9rem;font-weight:600}
+.tog .sw{width:44px;height:26px;border-radius:99px;background:#cbd5e1;position:relative;transition:.2s;flex:0 0 auto}
+.tog .sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 5px rgba(0,0,0,.25)}
+.tog.on .sw{background:var(--p)}
+.tog.on .sw::after{left:21px}
+.fim{text-align:center;padding:38px 22px}
+.selo{width:64px;height:64px;border-radius:50%;background:#dcfce7;color:var(--ok);display:grid;place-items:center;font-size:1.9rem;margin:0 auto 16px;font-weight:800}
+.fim h2{font-size:1.4rem;margin-bottom:10px}
+.fim p{color:var(--mute);margin-bottom:18px}
+.link{background:#eef2ff;border:1px solid #c7d2fe;border-radius:11px;padding:14px;font-family:ui-monospace,monospace;font-size:.9rem;word-break:break-all;margin-bottom:16px;text-align:left}
+.molde{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:16px;box-shadow:0 8px 30px rgba(30,41,59,.1)}
+.cbeco{background:#f1f5f9;border-bottom:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:6px}
+.cbeco s{width:9px;height:9px;border-radius:50%;background:#e2e8f0;display:block}
+.cbeco em{flex:1;background:#fff;border-radius:99px;padding:4px 12px;font-style:normal;font-size:.78rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.molde iframe{width:100%;height:420px;border:0;background:#fff}
+.extras{margin-top:14px}
+.extras details{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:10px;overflow:hidden}
+.extras summary{padding:15px 18px;font-weight:700;cursor:pointer;list-style:none;font-size:.92rem}
+.extras summary::after{content:'+';float:right;color:var(--p);font-weight:800}
+.extras details[open] summary::after{content:'–'}
+.extras .corpo{padding:0 18px 18px;display:grid;gap:16px}
+.aviso{background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:12px 14px;font-size:.85rem;color:#92400e}
+@media(min-width:900px){
+ .final{grid-template-columns:1.15fr .85fr}
+ .preview iframe{height:640px}
+}
+</style>
+</head>
+<body>
+<div class="casca">
+  <div style="background:linear-gradient(90deg,#4f46e5,#7c3aed);color:#fff;padding:9px 18px;font-size:.82rem;font-weight:600;text-align:center;border-radius:11px;margin-bottom:20px">
+  📝 PRÉVIA — este é o formulário que o cliente recebe. Preencha até o fim para ver o site sendo gerado.
+</div>
+<div class="topo"><i>LS</i><div><b id="tTitulo">Briefing do seu site</b><span id="tSub">Leva uns 5 minutos — o site fica pronto no final</span></div></div>
+  <div class="barra" id="barra">
+    <div class="trilho"><div class="preenche" id="preenche"></div></div>
+    <div class="leg"><span id="legEtapa"></span><span id="legPct"></span></div>
+  </div>
+  <div id="palco"></div>
+</div>
+<script>
+/* Gerador de sites v3 — layouts por ramo, variação anti-igualdade, prova social real.
+   Funciona no navegador e no Node. Saída: um único HTML autossuficiente e leve.
+   Regras de ouro:
+   - NUNCA inventar depoimento, nota, anos de mercado ou avaliações.
+   - Até 6 fotos, sempre leves (URLs; o servidor hospeda os uploads).
+   - Mobile-first: botões grandes, uma coluna no celular, duas+ no desktop. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.SiteGen = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+
+  const PALETAS = {
+    esmeralda:  { p:'#059669', d:'#064e3b', l:'#ecfdf5', a:'#10b981' },
+    oceano:     { p:'#0284c7', d:'#0c4a6e', l:'#f0f9ff', a:'#38bdf8' },
+    vinho:      { p:'#be123c', d:'#4c0519', l:'#fff1f2', a:'#f43f5e' },
+    ambar:      { p:'#d97706', d:'#451a03', l:'#fffbeb', a:'#f59e0b' },
+    violeta:    { p:'#7c3aed', d:'#2e1065', l:'#f5f3ff', a:'#a78bfa' },
+    grafite:    { p:'#334155', d:'#0f172a', l:'#f8fafc', a:'#64748b' },
+    floresta:   { p:'#4d7c0f', d:'#1a2e05', l:'#f7fee7', a:'#84cc16' },
+    coral:      { p:'#ea580c', d:'#431407', l:'#fff7ed', a:'#fb923c' },
+    turquesa:   { p:'#0d9488', d:'#042f2e', l:'#f0fdfa', a:'#2dd4bf' },
+    rosa:       { p:'#db2777', d:'#500724', l:'#fdf2f8', a:'#f472b6' },
+    indigo:     { p:'#4f46e5', d:'#1e1b4b', l:'#eef2ff', a:'#818cf8' },
+    bronze:     { p:'#92400e', d:'#3f2004', l:'#fefce8', a:'#d97706' },
+  };
+
+  const FONTES = {
+    moderna:  { h:"'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif", b:"'Segoe UI',system-ui,sans-serif" },
+    classica: { h:"Georgia,'Times New Roman',serif", b:"Georgia,'Times New Roman',serif" },
+    tech:     { h:"'Inter','SF Pro Display',system-ui,sans-serif", b:"'Inter',system-ui,sans-serif" },
+    friendly: { h:"'Trebuchet MS',Verdana,sans-serif", b:"'Trebuchet MS',Verdana,sans-serif" },
+    editorial:{ h:"'Playfair Display',Georgia,serif", b:"'Segoe UI',system-ui,sans-serif" },
+  };
+
+  const ESTILOS = {
+    minimalista: { radius:'4px',  shadow:'none', border:'1px solid rgba(0,0,0,.08)' },
+    moderno:     { radius:'16px', shadow:'0 10px 30px rgba(0,0,0,.08)', border:'1px solid var(--line)' },
+    elegante:    { radius:'2px',  shadow:'0 2px 12px rgba(0,0,0,.06)', border:'1px solid rgba(0,0,0,.1)' },
+    ousado:      { radius:'24px', shadow:'0 18px 45px rgba(0,0,0,.16)', border:'1px solid var(--line)' },
+  };
+
+  /* fotos de banco por ramo (ilustrativas, com crédito no rodapé) */
+  const BANCO = {
+    padaria:'/fotos/banco/padaria.jpg', restaurante:'/fotos/banco/restaurante.jpg',
+    lanchonete:'/fotos/banco/restaurante.jpg', bar_cafe:'/fotos/banco/restaurante.jpg',
+    oficina:'/fotos/banco/oficina.jpg', autopecas:'/fotos/banco/oficina.jpg',
+    salao:'/fotos/banco/salao.jpg', clinica:'/fotos/banco/clinica.jpg',
+    farmacia:'/fotos/banco/mercado.jpg', hotel:'/fotos/banco/hotel.jpg',
+    academia:'/fotos/banco/academia.jpg', petshop:'/fotos/banco/petshop.jpg',
+    mercado:'/fotos/banco/mercado.jpg', floricultura:'/fotos/banco/floricultura.jpg',
+    veterinaria:'/fotos/banco/petshop.jpg',
+  };
+
+  /* comportamento por ramo: bloco exclusivo, rótulo e CTA */
+  const RAMOS = {
+    padaria:      { bloco:'menu',   rotulo:'Cardápio',        cta:'Pedir pelo WhatsApp', tipo:'Bakery',              verbo:'pedir' },
+    restaurante:  { bloco:'menu',   rotulo:'Cardápio',        cta:'Fazer pedido',        tipo:'Restaurant',         verbo:'pedir' },
+    lanchonete:   { bloco:'menu',   rotulo:'Cardápio',        cta:'Fazer pedido',        tipo:'Restaurant',         verbo:'pedir' },
+    bar_cafe:     { bloco:'menu',   rotulo:'Cardápio',        cta:'Fazer pedido',        tipo:'Restaurant',         verbo:'pedir' },
+    mercado:      { bloco:'menu',   rotulo:'Produtos',        cta:'Pedir pelo WhatsApp', tipo:'GroceryStore',       verbo:'pedir' },
+    petshop:      { bloco:'menu',   rotulo:'Produtos e serviços', cta:'Pedir pelo WhatsApp', tipo:'PetStore',       verbo:'pedir' },
+    floricultura: { bloco:'menu',   rotulo:'Buquês e arranjos', cta:'Encomendar',        tipo:'Florist',            verbo:'encomendar' },
+    oficina:      { bloco:'oficina',rotulo:'Serviços',        cta:'Pedir orçamento',     tipo:'AutoRepair',         verbo:'orçar' },
+    autopecas:    { bloco:'oficina',rotulo:'Peças e serviços',cta:'Pedir orçamento',     tipo:'AutoPartsStore',     verbo:'orçar' },
+    salao:        { bloco:'agenda', rotulo:'Serviços e valores',cta:'Agendar horário',   tipo:'BeautySalon',        verbo:'agendar' },
+    clinica:      { bloco:'convenios', rotulo:'Especialidades', cta:'Agendar consulta',  tipo:'MedicalClinic',      verbo:'agendar' },
+    farmacia:     { bloco:'convenios', rotulo:'Serviços',      cta:'Falar no WhatsApp',   tipo:'Pharmacy',           verbo:'consultar' },
+    hotel:        { bloco:'quartos', rotulo:'Acomodações',     cta:'Reservar agora',      tipo:'Hotel',              verbo:'reservar' },
+    academia:     { bloco:'planos',  rotulo:'Planos',          cta:'Começar agora',       tipo:'HealthClub',         verbo:'assinar' },
+    advocacia:    { bloco:'areas',   rotulo:'Áreas de atuação',cta:'Falar com advogado',  tipo:'LegalService',       verbo:'consultar' },
+    imobiliaria:  { bloco:'areas',   rotulo:'Como trabalhamos',cta:'Falar com corretor',  tipo:'RealEstateAgent',    verbo:'consultar' },
+    escola:       { bloco:'areas',   rotulo:'Cursos',          cta:'Garantir vaga',       tipo:'EducationalOrganization', verbo:'matricular' },
+    papelaria:    { bloco:'areas',   rotulo:'O que você encontra', cta:'Pedir pelo WhatsApp', tipo:'Store',           verbo:'pedir' },
+    lavanderia:   { bloco:'areas',   rotulo:'Serviços',        cta:'Pedir coleta',        tipo:'DryCleaningOrLaundry', verbo:'pedir' },
+    otica:        { bloco:'areas',   rotulo:'Serviços',        cta:'Agendar avaliação',   tipo:'Optician',           verbo:'agendar' },
+    construcao:   { bloco:'areas',   rotulo:'Produtos e serviços', cta:'Pedir orçamento', tipo:'HardwareStore',      verbo:'orçar' },
+    moveis:       { bloco:'areas',   rotulo:'Linhas de móveis',cta:'Pedir orçamento',     tipo:'FurnitureStore',     verbo:'orçar' },
+    eletronicos:  { bloco:'areas',   rotulo:'Produtos e assistência', cta:'Falar no WhatsApp', tipo:'ElectronicsStore', verbo:'consultar' },
+    roupas:       { bloco:'areas',   rotulo:'Coleções',        cta:'Falar no WhatsApp',   tipo:'ClothingStore',      verbo:'consultar' },
+    veterinaria:  { bloco:'menu',   rotulo:'Serviços',        cta:'Agendar pelo WhatsApp',tipo:'VeterinaryCare',     verbo:'agendar' },
+  };
+  const RAMO_PADRAO = { bloco:'cards', rotulo:'Serviços', cta:'Pedir orçamento', tipo:'LocalBusiness', verbo:'orçar' };
+
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const attr = esc;
+  const soDigitos = (s) => String(s || '').replace(/\D/g, '');
+  const linhas = (s) => Array.isArray(s) ? s.filter(Boolean) : String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+  function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+
+  const I = {
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+    phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+    pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>',
+    wa:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-1.7-.9-2.9-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5s-.7-1.6-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.6.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>',
+    insta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>',
+    face:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v7h3v-7h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>',
+    up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+    tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    carro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 13h18v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="15" r="1.5"/><circle cx="17" cy="15" r="1.5"/></svg>',
+    escudo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><polyline points="9 11.5 11 13.5 15 9.5"/></svg>',
+    calendario:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    cama:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4"/><path d="M2 9h20v3a2 2 0 0 1-2 2h-3v4H7v-4H4a2 2 0 0 1-2-2z"/><path d="M7 9V6h4v3"/></svg>',
+    raio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.5"/><circle cx="19" cy="21" r="1.5"/><path d="M2 3h3l2.6 12.4A2 2 0 0 0 9.6 17H19a2 2 0 0 0 2-1.6L23 7H6"/></svg>',
+  };
+
+  function horariosSchema(hs) {
+    const MAPA = {
+      'segunda':'Monday','terça':'Tuesday','terca':'Tuesday','quarta':'Wednesday','quinta':'Thursday',
+      'sexta':'Friday','sábado':'Saturday','sabado':'Saturday','domingo':'Sunday',
+    };
+    const out = [];
+    for (const h of (hs || [])) {
+      if (!h || !h.dia || !h.hora) continue;
+      const m = String(h.hora).match(/(\d{1,2})[:h](\d{2})?\s*[-–às]+\s*(\d{1,2})[:h](\d{2})?/i);
+      if (!m) continue;
+      const abre = `${m[1].padStart(2,'0')}:${m[2] || '00'}`;
+      const fecha = `${m[3].padStart(2,'0')}:${m[4] || '00'}`;
+      const dia = String(h.dia).toLowerCase();
+      const dias = [];
+      if (dia.includes('a sex') || dia.includes('a sext')) dias.push('Monday','Tuesday','Wednesday','Thursday','Friday');
+      else for (const [k, v] of Object.entries(MAPA)) if (dia.includes(k)) dias.push(v);
+      if (dias.length) out.push({ '@type':'OpeningHoursSpecification', dayOfWeek:[...new Set(dias)], opens:abre, closes:fecha });
+    }
+    return out;
+  }
+
+  function gerar(cfg) {
+    const c = cfg || {};
+    const nome = (c.nome || 'Minha Empresa').trim();
+    const pal = PALETAS[c.paleta] || PALETAS.esmeralda;
+    const fnt = FONTES[c.fonte] || FONTES.moderna;
+    const est = ESTILOS[c.estilo] || ESTILOS.moderno;
+    const sec = c.secoes || {};
+    const dark = !!c.escuro && c.escuro !== '0';
+    const ramo = RAMOS[c.perfil] || RAMO_PADRAO;
+
+    /* ── variação determinística: dois clientes do mesmo ramo nunca ficam iguais ── */
+    const variante = Number.isInteger(c.variante) ? c.variante : hash(nome + '|' + (c.perfil || '')) % 3;
+
+    /* ── contato / WhatsApp com mensagem por seção ── */
+    const tel = soDigitos(c.whatsapp);
+    const waNum = tel ? (tel.length <= 11 ? '55' + tel : tel) : '';
+    const msgs = c.msgs || {};
+    const msgPadrao = msgs.geral || `Olá! Vim pelo site da ${nome} e gostaria de mais informações.`;
+    const msgDe = (tipo, extra) => {
+      const base = msgs[tipo];
+      if (base) return extra ? base + ' ' + extra : base;
+      return msgPadrao;
+    };
+    const waLink = (extra) => waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(extra || msgPadrao)}` : '';
+
+    /* ── serviços (aceita campo categoria para cardápios agrupados) ── */
+    const servicos = (c.servicos || []).filter(s => s && s.titulo);
+    const mostrarPrecos = c.mostrarPrecos !== false && c.mostrarPrecos !== 'nao' && c.mostrarPrecos !== 'false';
+    const grupos = [];
+    for (const s of servicos) {
+      const g = (s.categoria || '').trim();
+      let item = grupos.find(x => x.nome === g);
+      if (!item) { item = { nome: g, itens: [] }; grupos.push(item); }
+      item.itens.push(s);
+    }
+
+    const depos = (c.depoimentos || []).filter(d => d && d.texto);      // só reais, nunca inventados
+    const numeros = (c.numeros || []).filter(n => n && n.valor);
+    const faq = (c.faq || []).filter(f => f && f.p && f.r);
+    const equipe = (c.equipe || []).filter(e => e && e.nome);
+    const horarios = (c.horarios || []).filter(h => h && h.dia);
+    const difs = linhas(c.diferenciais);
+    const convenios = linhas(c.convenios).slice(0, 10);
+
+    /* ── fotos: até 6, leves ── */
+    let fotos = (Array.isArray(c.fotos) ? c.fotos : [])
+      .map(f => typeof f === 'string' ? { url: f } : f)
+      .filter(f => f && f.url)
+      .slice(0, 6);
+    /* compat legado do construtor */
+    if (!fotos.length && c.heroImagem) fotos.unshift({ url: c.heroImagem, alt: 'Ambiente da ' + nome });
+    if (c.sobreImagem && !fotos.some(f => f.url === c.sobreImagem)) fotos.push({ url: c.sobreImagem, alt: 'Interior da ' + nome });
+    for (const g of linhas(c.galeria)) if (fotos.length < 6) fotos.push({ url: g });
+    /* banco ilustrativo do ramo quando o cliente não mandou nenhuma foto */
+    let usaBanco = false;
+    if (!fotos.length && BANCO[c.perfil]) { usaBanco = true; fotos.push({ url: BANCO[c.perfil], alt: nome, credito: 'imagem ilustrativa' }); }
+    const capa = fotos[0] || null;
+    const galeria = fotos.slice(1, 6);
+
+    /* ── prova social REAL: nunca inventar números ── */
+    const nota = String(c.notaMedia || '').replace(/[^\d.,]/g, '').trim();
+    const qtd = String(c.qtdAvaliacoes || '').replace(/\D/g, '');
+    const anos = String(c.anosAtendimento || c.anos || '').replace(/\D/g, '');
+    const bairro = String(c.bairro || '').trim();
+    const prova = {
+      nota: nota || '', qtd: qtd || '', anos: anos || '', bairro: bairro || '',
+      link: c.linkAvaliacoes || c.linkGoogle || '',
+    };
+    const temProva = !!(prova.nota || prova.anos || prova.bairro);
+
+    /* ── hero: 3 tipos ── */
+    let heroTipo = c.heroTipo;
+    if (!heroTipo || heroTipo === 'auto') {
+      if (capa && variante === 1) heroTipo = 'split';
+      else if (capa) heroTipo = 'foto';
+      else heroTipo = 'faixa';
+    }
+    if (heroTipo === 'foto' && !capa) heroTipo = 'faixa';
+    if (heroTipo === 'split' && !capa) heroTipo = 'faixa';
+
+    const dark2 = dark ? '#0b0f14' : '#ffffff';
+    const bg2 = dark ? '#111820' : pal.l;
+    const txt = dark ? '#e8eef4' : '#1a2230';
+    const mute = dark ? '#9aa8b6' : '#5b6774';
+    const line = dark ? '#1e2833' : '#e6e9ee';
+    const card = dark ? '#141c25' : '#ffffff';
+
+    const nav = [];
+    if (sec.sobre) nav.push(['#sobre', 'Sobre']);
+    if (servicos.length) nav.push(['#servicos', c.rotuloServicos || ramo.rotulo]);
+    if (galeria.length) nav.push(['#galeria', 'Fotos']);
+    if (equipe.length) nav.push(['#equipe', 'Equipe']);
+    if (depos.length || nota) nav.push(['#avaliacoes', 'Avaliações']);
+    if (faq.length) nav.push(['#faq', 'Dúvidas']);
+    if (horarios.length) nav.push(['#horario', 'Horário']);
+    nav.push(['#contato', 'Contato']);
+
+    const iniciais = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'ME';
+    const descricao = (c.descricao || c.slogan || c.sobreTexto || `${nome} — atendimento de qualidade.`)
+      .toString().split('\n')[0].slice(0, 158);
+    const marca = c.logo
+      ? `<img src="${attr(c.logo)}" alt="Logo ${attr(nome)}" class="logoimg">`
+      : `<i aria-hidden="true">${esc(iniciais)}</i>`;
+
+    const schema = {
+      '@context':'https://schema.org', '@type': c.tipoNegocio || ramo.tipo,
+      name: nome, description: descricao,
+      ...(c.logo && /^https?:/.test(c.logo) ? { logo: c.logo, image: c.logo } : {}),
+      ...(c.telefone || c.whatsapp ? { telephone: c.telefone || c.whatsapp } : {}),
+      ...(c.email ? { email: c.email } : {}),
+      ...(c.endereco ? { address: { '@type':'PostalAddress', streetAddress: c.endereco } } : {}),
+      ...(c.precoFaixa ? { priceRange: c.precoFaixa } : {}),
+      ...(horariosSchema(horarios).length ? { openingHoursSpecification: horariosSchema(horarios) } : {}),
+      ...(nota ? { aggregateRating: { '@type':'AggregateRating', ratingValue: nota.replace(',', '.'), reviewCount: qtd || '5' } } : {}),
+      ...(c.instagram || c.facebook ? { sameAs: [
+        c.instagram ? (String(c.instagram).startsWith('http') ? c.instagram : 'https://instagram.com/' + String(c.instagram).replace('@','')) : null,
+        c.facebook ? (String(c.facebook).startsWith('http') ? c.facebook : 'https://facebook.com/' + c.facebook) : null,
+      ].filter(Boolean) } : {}),
+    };
+
+    const anim = c.animacoes !== false;
+    const rv = anim ? ' data-rv' : '';
+    const textoCta = c.textoCta || ramo.cta || 'Chamar no WhatsApp';
+
+    /* ============ CSS (mobile-first) ============ */
+    const CSS = `
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--p:${pal.p};--d:${pal.d};--a:${pal.a};--r:${est.radius};--sh:${est.shadow};--txt:${txt};--mute:${mute};--line:${line};--card:${card};--bg:${dark2};--bg2:${bg2}}
+html{scroll-behavior:smooth;scroll-padding-top:74px;-webkit-text-size-adjust:100%}
+body{font-family:${fnt.b};color:var(--txt);background:var(--bg);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;font-size:16px}
+h1,h2,h3,h4{font-family:${fnt.h};line-height:1.15;font-weight:800;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+svg{width:1em;height:1em;display:block;flex:0 0 auto}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+:focus-visible{outline:3px solid var(--a);outline-offset:3px;border-radius:4px}
+.pular{position:absolute;left:-9999px;top:0;background:var(--p);color:#fff;padding:12px 20px;z-index:999;border-radius:0 0 8px 0}
+.pular:focus{left:0}
+
+/* cabeçalho */
+header{position:sticky;top:0;z-index:90;background:${dark?'rgba(11,15,20,.88)':'rgba(255,255,255,.92)'};backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-family:${fnt.h};font-weight:800;font-size:1.02rem;min-width:0}
+.logo i{width:38px;height:38px;border-radius:${est.radius==='4px'?'7px':est.radius};background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-size:.82rem;font-style:normal;letter-spacing:.5px;flex:0 0 auto}
+.logo b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logoimg{height:40px;width:auto;max-width:150px;object-fit:contain}
+.menu{display:none}
+.menu.aberto{display:flex;position:fixed;inset:64px 0 auto 0;flex-direction:column;background:var(--bg);padding:18px 20px 26px;gap:4px;border-bottom:1px solid var(--line);box-shadow:0 14px 30px rgba(0,0,0,.18);max-height:calc(100vh - 64px);overflow:auto}
+.menu a{color:var(--mute);font-weight:600;font-size:1rem;padding:13px 8px;border-bottom:1px solid var(--line)}
+.menu a:last-child{border-bottom:0}
+.menu a.navcta{background:var(--p);color:#fff;text-align:center;border-radius:var(--r);border:0;margin-top:8px;font-weight:700}
+.burger{display:block;background:none;border:0;color:var(--txt);cursor:pointer;padding:10px;border-radius:8px}
+.burger span{display:block;width:23px;height:2.5px;background:currentColor;border-radius:2px;transition:.28s}
+.burger span+span{margin-top:5px}
+.burger[aria-expanded=true] span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+.burger[aria-expanded=true] span:nth-child(2){opacity:0}
+.burger[aria-expanded=true] span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+
+/* faixa de promoção */
+.promo{background:linear-gradient(90deg,var(--d),var(--p));color:#fff;text-align:center;padding:10px 16px;font-size:.9rem;font-weight:650;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}
+.promo svg{width:16px;height:16px}
+
+/* botões — grandes o suficiente no celular */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 26px;border-radius:var(--r);font-weight:750;font-size:1rem;transition:transform .2s,box-shadow .2s;border:0;cursor:pointer;font-family:inherit;min-height:50px;width:100%}
+.btn:hover{transform:translateY(-2px)}
+.b1{background:#fff;color:var(--d)}
+.b2{background:rgba(255,255,255,.14);color:#fff;border:2px solid rgba(255,255,255,.55)}
+.bwa{background:#25D366;color:#fff}
+.bp{background:var(--p);color:#fff}
+.bmin{width:auto;min-height:42px;padding:10px 18px;font-size:.88rem}
+.btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btns.btc{justify-content:center}
+
+/* hero foto cheia */
+.hero{position:relative;overflow:hidden;color:#fff;text-align:center}
+.hero.foto{padding:64px 0 58px;background:linear-gradient(rgba(4,8,12,.66),rgba(4,8,12,.8)),url('${capa ? attr(capa.url) : ''}') center/cover no-repeat}
+.hero.foto::after{content:'';position:absolute;inset:0;background:radial-gradient(800px 380px at 50% -10%,rgba(255,255,255,.12),transparent 62%);pointer-events:none}
+.hero .wrap{position:relative;z-index:2}
+.hero h1{font-size:clamp(1.85rem,6.4vw,3.3rem);margin-bottom:14px;text-shadow:0 2px 24px rgba(0,0,0,.3)}
+.hero .sub{font-size:clamp(1rem,2.4vw,1.22rem);opacity:.95;max-width:620px;margin:0 auto 26px}
+.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:6px 16px;border-radius:99px;font-size:.76rem;font-weight:750;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(6px)}
+
+/* hero split: texto à esquerda, foto à direita */
+.hero.split{color:var(--txt);background:var(--bg2);padding:34px 0;text-align:left}
+.hero.split .wrap{display:grid;grid-template-columns:1fr;gap:24px;align-items:center}
+.hero.split h1{font-size:clamp(1.7rem,5.6vw,2.7rem);margin-bottom:12px;text-shadow:none}
+.hero.split .sub{color:var(--mute);margin:0 0 24px}
+.hero.split .btns{justify-content:flex-start}
+.hero.split .foto-hero{border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.hero.split .foto-hero img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.hero.split .selo{background:${pal.p}1a;border:1px solid ${pal.p}44;color:var(--p)}
+
+/* hero faixa curta (sem foto) */
+.hero.faixa{padding:40px 0;background:linear-gradient(135deg,var(--d) 0%,var(--p) 62%,var(--a) 130%);text-align:center}
+.hero.faixa h1{font-size:clamp(1.6rem,5.4vw,2.5rem);margin-bottom:10px}
+.hero.faixa .sub{margin-bottom:22px}
+.hero.faixa.esq{text-align:left}
+.hero.faixa.esq .btns{justify-content:flex-start}
+.hero.faixa.esq .sub{margin-left:0}
+
+/* prova social */
+.prova{border-bottom:1px solid var(--line);background:var(--bg2)}
+.prova .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:14px 20px}
+.pch{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:.88rem;font-weight:650;color:var(--txt)}
+.pch svg{color:var(--p);width:16px;height:16px}
+.pch .st{color:#f59e0b}
+.pch b{font-weight:800}
+.pch .vivo{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pisca 2s infinite}
+.pch .morto{width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block}
+@keyframes pisca{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* seções */
+section{padding:52px 0}
+.alt{background:var(--bg2)}
+.cab{text-align:center;max-width:660px;margin:0 auto 34px}
+.cab.esq{text-align:left;margin-left:0}
+.kick{color:var(--p);font-weight:800;font-size:.76rem;letter-spacing:1.7px;text-transform:uppercase;margin-bottom:10px}
+.cab h2{font-size:clamp(1.55rem,4.4vw,2.3rem);margin-bottom:12px}
+.cab p{color:var(--mute);font-size:1rem}
+
+[data-rv]{opacity:0;transform:translateY(22px);transition:opacity .65s cubic-bezier(.2,.7,.3,1),transform .65s cubic-bezier(.2,.7,.3,1)}
+[data-rv].vis{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){[data-rv]{opacity:1!important;transform:none!important;transition:none}html{scroll-behavior:auto}}
+
+/* sobre */
+.sobre{display:grid;grid-template-columns:1fr;gap:30px;align-items:center}
+.sobre h2{font-size:clamp(1.5rem,4vw,2.1rem);margin-bottom:14px}
+.sobre p{color:var(--mute);margin-bottom:12px}
+.sobre img{width:100%;border-radius:var(--r);box-shadow:var(--sh);aspect-ratio:4/3;object-fit:cover}
+.plist{list-style:none;margin-top:20px;display:grid;gap:11px}
+.plist li{display:flex;gap:11px;align-items:flex-start;font-weight:620}
+.plist svg{color:var(--p);width:20px;height:20px;margin-top:3px}
+
+/* cardápio / tabela de preços */
+.grupo{margin-bottom:30px}
+.grupo h3{font-size:1.12rem;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.grupo h3::after{content:'';flex:1;height:1px;background:var(--line)}
+.item{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px dashed var(--line)}
+.item:last-child{border-bottom:0}
+.item .nm{font-weight:700;font-size:1rem}
+.item .ds{color:var(--mute);font-size:.88rem;margin-top:1px}
+.item .pr{font-family:${fnt.h};font-weight:800;color:var(--p);white-space:nowrap;font-size:1rem}
+.item .sep{flex:1;border-bottom:2px dotted var(--line);align-self:flex-end;margin-bottom:6px}
+.menu-box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:22px 22px 14px}
+
+/* oficina: passos + garantia */
+.passos{display:grid;grid-template-columns:1fr;gap:16px;counter-reset:ps}
+.passo{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;gap:16px;align-items:flex-start;box-shadow:var(--sh)}
+.passo .n{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-weight:800;font-family:${fnt.h};flex:0 0 auto;counter-increment:ps}
+.passo .n::before{content:counter(ps)}
+.passo h3{font-size:1.05rem;margin-bottom:4px}
+.passo p{color:var(--mute);font-size:.92rem}
+.garantia{display:flex;align-items:center;gap:14px;background:${pal.p}14;border:1px solid ${pal.p}44;color:var(--txt);border-radius:var(--r);padding:18px 22px;margin-top:22px;font-weight:650}
+.garantia svg{color:var(--p);width:26px;height:26px}
+.garantia small{display:block;color:var(--mute);font-weight:500}
+
+/* agenda do salão */
+.agenda{display:grid;grid-template-columns:1fr;gap:22px;align-items:start}
+.agenda .grade{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.agenda .grade div{display:flex;justify-content:space-between;gap:12px;padding:15px 20px;border-bottom:1px solid var(--line);font-size:.95rem}
+.agenda .grade div:last-child{border-bottom:0}
+.agenda .grade div:nth-child(odd){background:${dark?'rgba(255,255,255,.02)':'rgba(0,0,0,.015)'}}
+.agenda .grade b{font-weight:700}
+.agenda .grade span{color:var(--mute);font-weight:600;font-variant-numeric:tabular-nums}
+.agenda .hj{display:inline-flex;align-items:center;gap:6px;background:${pal.p}1a;color:var(--p);padding:4px 12px;border-radius:99px;font-size:.78rem;font-weight:750;margin-left:8px;white-space:nowrap}
+
+/* convênios (clínica) */
+.convs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:6px}
+.conv{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:10px 20px;font-size:.92rem;font-weight:650;box-shadow:var(--sh)}
+
+/* quartos (hotel) */
+.quartos{display:grid;grid-template-columns:1fr;gap:20px}
+.quarto{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column}
+.quarto img{width:100%;aspect-ratio:16/10;object-fit:cover}
+.quarto .qd{padding:20px;display:flex;flex-direction:column;gap:8px;flex:1}
+.quarto h3{font-size:1.12rem}
+.quarto p{color:var(--mute);font-size:.92rem;flex:1}
+.quarto .pr{font-family:${fnt.h};font-weight:800;color:var(--p);font-size:1.25rem}
+
+/* planos (academia) */
+.planos{display:grid;grid-template-columns:1fr;gap:20px}
+.plano{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px}
+.plano.rec{background:linear-gradient(160deg,${pal.p}10,var(--card) 55%);border-color:${pal.p}66}
+.plano h3{font-size:1.1rem}
+.plano .pr{font-family:${fnt.h};font-weight:800;font-size:1.7rem;color:var(--p)}
+.plano .pr small{font-size:.85rem;color:var(--mute);font-weight:600}
+.plano ul{list-style:none;display:grid;gap:8px;margin:6px 0;flex:1}
+.plano li{display:flex;gap:9px;align-items:flex-start;font-size:.93rem}
+.plano svg{color:var(--p);width:18px;height:18px;margin-top:2px}
+
+/* áreas de atuação */
+.areas{display:grid;grid-template-columns:1fr;gap:12px}
+.area{display:flex;gap:13px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh)}
+.area svg{color:var(--p);width:22px;height:22px;margin-top:2px}
+.area b{display:block;font-size:1rem}
+.area span{color:var(--mute);font-size:.9rem}
+
+/* cards de serviços (padrão) */
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+.card{background:var(--card);padding:26px;border-radius:var(--r);box-shadow:var(--sh);border:${est.border==='none'?'1px solid var(--line)':est.border};display:flex;flex-direction:column;gap:8px}
+.card h3{font-size:1.12rem}
+.card p{color:var(--mute);font-size:.94rem;flex:1}
+.card .preco{font-family:${fnt.h};font-weight:800;color:var(--p);font-size:1.25rem;border-top:1px dashed var(--line);padding-top:12px;margin-top:6px}
+.ico{width:48px;height:48px;border-radius:${est.radius==='4px'?'9px':est.radius};background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-size:1.3rem;margin-bottom:6px}
+
+/* galeria */
+.gal{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gal figure{position:relative;overflow:hidden;border-radius:var(--r);box-shadow:var(--sh);aspect-ratio:1}
+.gal img{width:100%;height:100%;object-fit:cover}
+.gal figcaption{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-size:.74rem;padding:18px 10px 8px;opacity:0;transition:opacity .25s}
+.gal figure:hover figcaption{opacity:1}
+
+/* depoimentos — só reais */
+.dep{background:var(--card);padding:26px;border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--line);display:flex;flex-direction:column}
+.estrelas{display:flex;gap:3px;color:#f59e0b;font-size:1rem;margin-bottom:12px}
+.dep p{font-style:italic;margin-bottom:18px;font-size:1rem;flex:1}
+.quem{display:flex;align-items:center;gap:12px}
+.quem .av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-weight:800}
+.quem strong{display:block;font-size:.95rem}
+.quem span{font-size:.83rem;color:var(--mute)}
+/* faixa do Google (nota real, sem depoimentos) */
+.gfaixa{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:24px;max-width:640px;margin:0 auto;text-align:center}
+.gfaixa .n{font-family:${fnt.h};font-size:2.6rem;font-weight:800;color:#f59e0b;line-height:1}
+.gfaixa .star{color:#f59e0b;font-size:1.1rem;display:flex;gap:2px}
+.gfaixa p{color:var(--mute);font-size:.92rem}
+
+/* faq */
+.faq{max-width:760px;margin:0 auto;display:grid;gap:12px}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.faq summary{padding:18px 20px;font-weight:700;cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;font-size:1rem}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'';margin-left:auto;width:10px;height:10px;border-right:2.5px solid var(--p);border-bottom:2.5px solid var(--p);transform:rotate(45deg);transition:transform .3s;flex:0 0 auto}
+.faq details[open] summary::after{transform:rotate(-135deg)}
+.faq .resp{padding:0 20px 20px;color:var(--mute);font-size:.95rem}
+
+/* horário */
+.hor{max-width:560px;margin:0 auto;background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--line);overflow:hidden}
+.hor div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.hor div:last-child{border-bottom:0}
+.hor div:nth-child(odd){background:${dark?'rgba(255,255,255,.02)':'rgba(0,0,0,.015)'}}
+.hor b{font-weight:700}
+.hor span{color:var(--mute);font-variant-numeric:tabular-nums;font-weight:600}
+.hor .ab{color:var(--p);font-weight:800}
+
+/* contato */
+.cts{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:36px}
+.ct{background:var(--card);padding:24px 20px;border-radius:var(--r);border:1px solid var(--line);text-align:center;box-shadow:var(--sh)}
+.ct .ico{margin:0 auto 12px}
+.ct strong{display:block;font-size:.74rem;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.ct a,.ct p{font-weight:700;font-size:1rem;word-break:break-word}
+.ct a:hover{color:var(--p)}
+.cta{background:linear-gradient(135deg,var(--d),var(--p));color:#fff;text-align:center;border-radius:var(--r);padding:44px 24px;position:relative;overflow:hidden}
+.cta h2{font-size:clamp(1.4rem,4vw,2rem);margin-bottom:12px}
+.cta p{opacity:.94;margin-bottom:26px;font-size:1rem;max-width:540px;margin-left:auto;margin-right:auto}
+.mapa{width:100%;height:320px;border:0;border-radius:var(--r);box-shadow:var(--sh);margin-top:32px}
+
+/* rodapé */
+footer{background:${dark?'#06090d':pal.d};color:#fff;padding:48px 0 24px;text-align:center;font-size:.95rem}
+footer .logo{justify-content:center;margin-bottom:12px;color:#fff}
+footer .fp{opacity:.72;margin-bottom:6px}
+.soc{display:flex;gap:12px;justify-content:center;margin:22px 0}
+.soc a{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:1.15rem;transition:background .22s,transform .22s}
+.soc a:hover{background:var(--a);transform:translateY(-3px)}
+.copy{border-top:1px solid rgba(255,255,255,.13);margin-top:24px;padding-top:20px;opacity:.55;font-size:.82rem;line-height:1.8}
+
+/* flutuantes */
+.float{position:fixed;right:16px;bottom:16px;width:58px;height:58px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center;font-size:1.7rem;box-shadow:0 8px 28px rgba(37,211,102,.48);z-index:95;transition:transform .22s}
+.float:hover{transform:scale(1.1)}
+.float::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid #25D366;animation:onda 2.4s infinite;pointer-events:none}
+@keyframes onda{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+.topo-btn{position:fixed;right:18px;bottom:86px;width:46px;height:46px;border-radius:50%;background:var(--card);color:var(--p);border:1px solid var(--line);display:grid;place-items:center;font-size:1.15rem;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:94;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .3s,transform .22s}
+.topo-btn.on{opacity:1;pointer-events:auto}
+
+${c.lgpd ? `.lgpd{position:fixed;left:14px;right:14px;bottom:14px;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;box-shadow:0 14px 40px rgba(0,0,0,.28);z-index:98;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.87rem}
+.lgpd p{flex:1;min-width:200px;color:var(--mute)}
+.lgpd button{background:var(--p);color:#fff;border:0;padding:12px 20px;border-radius:calc(var(--r) - 2px);font:inherit;font-weight:700;cursor:pointer;min-height:44px}` : ''}
+
+/* ── desktop ── */
+@media(min-width:760px){
+ .burger{display:none}
+ .menu{display:flex;align-items:center;gap:22px;list-style:none;font-size:.92rem}
+ .menu a{color:var(--mute);font-weight:600;padding:6px 0;border:0;position:relative}
+ .menu a::after{content:'';position:absolute;left:0;bottom:0;width:0;height:2px;background:var(--p);transition:width .25s}
+ .menu a:hover{color:var(--p)}
+ .menu a:hover::after{width:100%}
+ .menu a.navcta{background:var(--p);color:#fff;padding:11px 20px;border-radius:var(--r);font-weight:700}
+ .menu a.navcta::after{display:none}
+ .btn{width:auto}
+ .hero.foto{padding:96px 0 84px}
+ .hero.split{padding:60px 0}
+ .hero.split .wrap{grid-template-columns:1.05fr .95fr;gap:48px}
+ .hero.faixa{padding:56px 0}
+ section{padding:72px 0}
+ .sobre{grid-template-columns:${c.sobreImagem || (fotos.length > 1) ? '1.05fr .95fr' : '1fr'};gap:48px}
+ .grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+ .passos{grid-template-columns:repeat(3,1fr)}
+ .quartos{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+ .planos{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+ .areas{grid-template-columns:1fr 1fr}
+ .cts{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+ .gal{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+ .agenda{grid-template-columns:1fr 1fr;gap:34px}
+ .dep-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;display:grid}
+ .item{padding:16px 6px}
+ .hero.faixa.esq .wrap{max-width:1080px}
+}
+@media print{
+ header,.float,.topo-btn,.lgpd,.mapa,.burger,.promo{display:none!important}
+ body{background:#fff;color:#000}
+ .hero{background:#fff!important;color:#000!important;padding:30px 0}
+ section{padding:20px 0;break-inside:avoid}
+ a{text-decoration:underline}
+}
+`;
+
+    /* ============ seções HTML ============ */
+    const secHero = (() => {
+      const badge = c.badge ? `<span class="selo">${esc(c.badge)}</span>` : '';
+      const tit = `<h1>${esc(c.titulo || nome)}</h1>`;
+      const sub = (c.slogan || c.descricao) ? `<p class="sub">${esc(c.slogan || c.descricao)}</p>` : '';
+      const btns = `<div class="btns">
+        ${waNum ? `<a href="${attr(waLink(msgDe('hero')))}" target="_blank" rel="noopener" class="btn bwa">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+        ${servicos.length ? `<a href="#servicos" class="btn b2">Ver ${esc((c.rotuloServicos || ramo.rotulo).toLowerCase())}</a>` : ''}
+      </div>`;
+      if (heroTipo === 'split') {
+        return `<div class="hero split">
+  <div class="wrap">
+   <div>${badge}${tit}${sub}${btns}</div>
+   <div class="foto-hero"><img src="${attr(capa.url)}" alt="${attr(capa.alt || 'Foto de ' + nome)}" fetchpriority="high"></div>
+  </div>
+ </div>`;
+      }
+      const cls = heroTipo === 'faixa' ? 'faixa' + (variante === 2 ? ' esq' : '') : 'foto';
+      return `<div class="hero ${cls}">
+  <div class="wrap">${badge}${tit}${sub}${btns}</div>
+ </div>`;
+    });
+
+    const secProva = (() => {
+      const chips = [];
+      if (prova.nota) chips.push(`<span class="pch"><span class="st">${I.star}${I.star}${I.star}${I.star}${I.star}</span><b>${esc(prova.nota)}</b>${prova.qtd ? `<span style="color:var(--mute)">(${esc(prova.qtd)} no Google)</span>` : ''}</span>`);
+      if (horarios.length) chips.push(`<span class="pch" id="pchAgora">${I.clock}<span><span class="vivo" id="pchDot"></span><b id="pchTxt">Verificando horário…</b></span></span>`);
+      if (prova.bairro) chips.push(`<span class="pch">${I.pin}Atende em <b>${esc(prova.bairro)}</b></span>`);
+      if (prova.anos) chips.push(`<span class="pch">${I.escudo}<b>${esc(prova.anos)} anos</b> de experiência</span>`);
+      if (!chips.length) return '';
+      return `<div class="prova" aria-label="Informações de confiança"><div class="wrap">${chips.join('')}</div></div>`;
+    });
+
+    const secSobre = (() => {
+      if (!sec.sobre && !difs.length) return '';
+      const texto = c.sobreTexto || c.descricao || '';
+      const paragrafos = texto ? String(texto).split(/\n+/).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('\n    ') : '';
+      const fotoSobre = c.sobreImagem || (galeria[0] && variante === 1 ? galeria[0].url : '');
+      return `<section id="sobre">
+  <div class="wrap">
+   <div class="sobre">
+    <div${rv}>
+     <div class="kick">Sobre nós</div>
+     <h2>${esc(c.sobreTitulo || 'Quem somos')}</h2>
+     ${paragrafos || ''}
+     ${difs.length ? `<ul class="plist">
+     ${difs.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('\n     ')}
+    </ul>` : ''}
+    </div>
+    ${fotoSobre ? `<div${rv}><img src="${attr(fotoSobre)}" alt="Ambiente da ${attr(nome)}" loading="lazy" decoding="async"></div>` : ''}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    /* ---- bloco do ramo ---- */
+    const btnPedir = (s) => waNum ? `<a class="btn bwa bmin" target="_blank" rel="noopener" href="${attr(waLink(msgDe('servicos', `Quero ${ramo.verbo} ${s.titulo}`)))}">${I.wa} ${esc(ramo.verbo === 'pedir' ? 'Pedir' : ramo.verbo.charAt(0).toUpperCase() + ramo.verbo.slice(1))}</a>` : '';
+
+    const secMenu = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">${esc(c.rotuloServicos || ramo.rotulo)}</div>
+    <h2>${esc(c.rotuloServicos || ramo.rotulo)}${c.servicosSub ? ' · ' + esc(c.servicosSub) : ''}</h2>
+    ${c.promoTexto ? `<p>${esc(c.promoTexto)}</p>` : ''}
+   </div>
+   <div class="menu-box"${rv}>
+    ${grupos.map(g => `<div class="grupo">
+     ${g.nome ? `<h3>${esc(g.nome)}</h3>` : ''}
+     ${g.itens.map(s => `<div class="item">
+      <div style="flex:1;min-width:0"><div class="nm">${esc(s.titulo)}</div>${s.descricao ? `<div class="ds">${esc(s.descricao)}</div>` : ''}</div>
+      ${mostrarPrecos && s.preco ? `<div class="pr">${esc(s.preco)}</div>` : ''}
+      ${btnPedir(s)}
+     </div>`).join('\n     ')}
+    </div>`).join('\n    ')}
+   </div>
+   ${waNum ? `<div class="btns" style="margin-top:28px"><a href="${attr(waLink(msgDe('servicos')))}" target="_blank" rel="noopener" class="btn bp">${I.cart}<span>${esc(textoCta)}</span></a></div>` : ''}
+  </div>
+ </section>`;
+
+    const secOficina = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">${esc(c.rotuloServicos || 'Serviços')}</div>
+    <h2>${esc(c.sobreTitulo || 'Traga seu carro que a gente resolve')}</h2>
+    ${c.servicosSub ? `<p>${esc(c.servicosSub)}</p>` : `<p>Orçamento sem compromisso pelo WhatsApp.</p>`}
+   </div>
+   <div class="passos">
+    <div class="passo"${rv}><div class="n"></div><div><h3>Chame no WhatsApp</h3><p>Mande uma foto ou descreva o problema. Você recebe o orçamento na hora.</p></div></div>
+    <div class="passo"${rv}><div class="n"></div><div><h3>Traga o carro</h3><p>Agende o melhor horário e deixe o serviço com a nossa equipe.</p></div></div>
+    <div class="passo"${rv}><div class="n"></div><div><h3>Retire revisado</h3><p>Avisamos quando estiver pronto, com tudo testado e limpo.</p></div></div>
+   </div>
+   ${c.garantia !== false ? `<div class="garantia"${rv}>${I.escudo}<span>Serviço com garantia<small>${esc(c.garantiaTexto || 'Condições informadas no balcão.')}</small></span></div>` : ''}
+   <div class="menu-box" style="margin-top:22px"${rv}>
+    ${servicos.map(s => `<div class="item">
+     <div style="flex:1;min-width:0"><div class="nm">${esc(s.titulo)}</div>${s.descricao ? `<div class="ds">${esc(s.descricao)}</div>` : ''}</div>
+     ${mostrarPrecos && s.preco ? `<div class="pr">${esc(s.preco)}</div>` : ''}
+     ${btnPedir(s)}
+    </div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+
+    const secAgenda = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">${esc(c.rotuloServicos || 'Serviços e valores')}</div>
+    <h2>${esc(c.sobreTitulo || 'Agende seu horário')}</h2>
+    <p>Escolha o serviço e chame no WhatsApp para garantir sua vaga.</p>
+   </div>
+   <div class="agenda">
+    <div${rv}>
+     <div class="grade">
+      ${horarios.map(h => `<div><b>${esc(h.dia)}</b><span>${esc(h.hora || 'Fechado')}</span></div>`).join('\n      ')}
+      ${!horarios.length ? `<div><b>Segunda a sexta</b><span>09:00 – 19:00</span></div><div><b>Sábado</b><span>09:00 – 13:00</span></div>` : ''}
+     </div>
+     ${waNum ? `<div class="btns" style="margin-top:18px"><a href="${attr(waLink(msgDe('servicos')))}" target="_blank" rel="noopener" class="btn bp">${I.calendario}<span>${esc(textoCta)}</span></a></div>` : ''}
+    </div>
+    <div class="menu-box"${rv}>
+     ${servicos.map(s => `<div class="item">
+      <div style="flex:1;min-width:0"><div class="nm">${esc(s.titulo)}</div>${s.descricao ? `<div class="ds">${esc(s.descricao)}</div>` : ''}</div>
+      ${mostrarPrecos && s.preco ? `<div class="pr">${esc(s.preco)}</div>` : ''}
+      ${btnPedir(s)}
+     </div>`).join('\n     ')}
+    </div>
+   </div>
+  </div>
+ </section>`;
+
+    const secConvenios = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">${esc(c.rotuloServicos || 'Especialidades')}</div>
+    <h2>${esc(c.sobreTitulo || 'Atendimento com hora marcada')}</h2>
+   </div>
+   ${convenios.length ? `<div class="convs"${rv}>${convenios.map(x => `<span class="conv">${esc(x)}</span>`).join('')}</div>` : ''}
+   <div class="cab" style="margin-top:20px"><p>${esc(c.servicosSub || 'Agende pelo WhatsApp e receba a confirmação na hora.')}</p></div>
+   <div class="grid">
+    ${servicos.map(s => `<article class="card"${rv}>
+     <h3>${esc(s.titulo)}</h3>
+     ${s.descricao ? `<p>${esc(s.descricao)}</p>` : ''}
+     ${mostrarPrecos && s.preco ? `<div class="preco">${esc(s.preco)}</div>` : ''}
+     ${waNum ? `<a class="btn bp bmin" target="_blank" rel="noopener" href="${attr(waLink(msgDe('servicos', `Quero ${ramo.verbo} ${s.titulo}`)))}">${I.wa} ${esc(textoCta)}</a>` : ''}
+    </article>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+
+    const secQuartos = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">${esc(c.rotuloServicos || 'Acomodações')}</div>
+    <h2>${esc(c.sobreTitulo || 'Escolha seu quarto')}</h2>
+    <p>Reserve direto pelo WhatsApp, sem taxa de site.</p>
+   </div>
+   <div class="quartos">
+    ${(c.quartos || servicos.map(s => ({ nome: s.titulo, descricao: s.descricao, preco: s.preco }))).filter(q => q && q.nome).slice(0, 6).map((q, i) => `<div class="quarto"${rv}>
+     ${fotos[i + 1] ? `<img src="${attr(fotos[i + 1].url)}" alt="${attr(q.nome)}" loading="lazy" decoding="async">` : ''}
+     <div class="qd"><h3>${esc(q.nome)}</h3>${q.descricao ? `<p>${esc(q.descricao)}</p>` : ''}
+     ${q.preco ? `<div class="pr">${esc(q.preco)}</div>` : ''}
+     ${waNum ? `<a class="btn bwa bmin" target="_blank" rel="noopener" href="${attr(waLink(msgDe('servicos', `Quero reservar o quarto ${q.nome}`)))}">${I.wa} Reservar</a>` : ''}</div>
+    </div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+
+    const secPlanos = () => {
+      const planos = (c.planos || [
+        { nome:'Mensal', preco: servicos[0]?.preco || '', itens:['Acesso livre a todos os aparelhos','Avaliação física incluso'] },
+        { nome:'Trimestral', preco: servicos[1]?.preco || '', itens:['Tudo do plano mensal','Acompanhamento com professor'] },
+        { nome:'Anual', preco: servicos[2]?.preco || '', itens:['Tudo do trimestral','Congelamento de 30 dias'] },
+      ]).filter(p => p && p.nome);
+      return `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">${esc(c.rotuloServicos || 'Planos')}</div><h2>${esc(c.sobreTitulo || 'Comece hoje mesmo')}</h2></div>
+   <div class="planos">
+    ${planos.map((p, i) => `<div class="plano${i === 1 ? ' rec' : ''}"${rv}>
+     <h3>${esc(p.nome)}</h3>
+     ${p.preco ? `<div class="pr">${esc(p.preco)}<small>${esc(p.periodo || '/mês')}</small></div>` : ''}
+     <ul>${(p.itens || []).map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('')}</ul>
+     ${waNum ? `<a class="btn bwa bmin" target="_blank" rel="noopener" href="${attr(waLink(msgDe('servicos', `Quero assinar o plano ${p.nome}`)))}">${I.wa} ${esc(textoCta)}</a>` : ''}
+    </div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    };
+
+    const secAreas = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">${esc(c.rotuloServicos || ramo.rotulo)}</div><h2>${esc(c.sobreTitulo || 'Como podemos ajudar')}</h2></div>
+   <div class="areas">
+    ${servicos.map(s => `<div class="area"${rv}>${I.check}<div><b>${esc(s.titulo)}</b>${s.descricao ? `<span>${esc(s.descricao)}</span>` : ''}${mostrarPrecos && s.preco ? ` <span style="color:var(--p);font-weight:800">${esc(s.preco)}</span>` : ''}</div></div>`).join('\n    ')}
+   </div>
+   ${waNum ? `<div class="btns" style="margin-top:30px"><a href="${attr(waLink(msgDe('servicos')))}" target="_blank" rel="noopener" class="btn bp">${I.wa}<span>${esc(textoCta)}</span></a></div>` : ''}
+  </div>
+ </section>`;
+
+    const secCards = () => `<section id="servicos" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}">
+    <div class="kick">O que oferecemos</div>
+    <h2>${esc(c.rotuloServicos || 'Nossos serviços')}</h2>
+    ${c.servicosSub ? `<p>${esc(c.servicosSub)}</p>` : ''}
+   </div>
+   <div class="grid">
+    ${servicos.map(s => `<article class="card"${rv}>
+     <div class="ico" aria-hidden="true">${I.check}</div>
+     <h3>${esc(s.titulo)}</h3>
+     ${s.descricao ? `<p>${esc(s.descricao)}</p>` : ''}
+     ${mostrarPrecos && s.preco ? `<div class="preco">${esc(s.preco)}</div>` : ''}
+     ${waNum ? `<a class="btn bp bmin" target="_blank" rel="noopener" href="${attr(waLink(msgDe('servicos', `Quero ${ramo.verbo} ${s.titulo}`)))}">${I.wa} ${esc(textoCta)}</a>` : ''}
+    </article>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+
+    const blocoRamo = { menu: secMenu, oficina: secOficina, agenda: secAgenda, convenios: secConvenios, quartos: secQuartos, planos: secPlanos, areas: secAreas, cards: secCards }[ramo.bloco] || secCards;
+
+    const secGaleria = (() => {
+      if (!galeria.length) return '';
+      return `<section id="galeria">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Fotos</div><h2>${esc(c.galeriaTitulo || 'Conheça a ' + nome)}</h2></div>
+   <div class="gal">
+    ${galeria.map((f, i) => `<figure${rv}><img src="${attr(f.url)}" alt="${attr(f.alt || nome + ' — foto ' + (i + 1))}" loading="lazy" decoding="async">${f.credito ? `<figcaption>${esc(f.credito)}</figcaption>` : ''}</figure>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    const secEquipe = (() => {
+      if (!equipe.length) return '';
+      return `<section id="equipe" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Nosso time</div><h2>${esc(c.equipeTitulo || 'Quem vai te atender')}</h2></div>
+   <div class="grid">
+    ${equipe.map(m => `<div class="card" style="text-align:center"${rv}>
+     <div class="av-txt" style="width:88px;height:88px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,var(--p),var(--a));color:#fff;display:grid;place-items:center;font-size:1.9rem;font-weight:800">${esc(String(m.nome).trim().charAt(0).toUpperCase())}</div>
+     <h3>${esc(m.nome)}</h3><p style="margin-top:-4px">${esc(m.cargo || '')}</p>
+    </div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    const secAvaliacoes = (() => {
+      if (depos.length) {
+        return `<section id="avaliacoes">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Avaliações</div><h2>O que dizem sobre nós</h2>
+   ${nota ? `<p>Nota <b style="color:#f59e0b">${esc(nota)}</b>${qtd ? ' · ' + esc(qtd) + ' avaliações no Google' : ''}</p>` : ''}</div>
+   <div class="dep-grid">
+    ${depos.map(x => `<blockquote class="dep"${rv}>
+     <div class="estrelas" aria-label="5 estrelas">${I.star.repeat(5)}</div>
+     <p>&ldquo;${esc(x.texto)}&rdquo;</p>
+     <footer class="quem">
+      <div class="av" aria-hidden="true">${esc(String(x.autor || 'C').trim().charAt(0).toUpperCase())}</div>
+      <div><strong>${esc(x.autor || 'Cliente')}</strong><span>${esc(x.papel || 'Cliente')}</span></div>
+     </footer>
+    </blockquote>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+      }
+      /* sem depoimento: só nota real do Google, nunca frase inventada */
+      if (nota) {
+        const link = prova.link || `https://www.google.com/search?q=${encodeURIComponent(nome)}`;
+        return `<section id="avaliacoes">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Avaliações</div><h2>O que os clientes acham</h2></div>
+   <a class="gfaixa"${rv} href="${attr(link)}" target="_blank" rel="noopener">
+    <div><div class="n">${esc(nota)}</div></div>
+    <div style="text-align:left">
+     <div class="star">${I.star.repeat(5)}</div>
+     <p><b>${esc(nota)} no Google</b>${qtd ? ` — ${esc(qtd)} avaliações` : ''}<br>Veja o que estão dizendo</p>
+    </div>
+   </a>
+  </div>
+ </section>`;
+      }
+      return '';
+    });
+
+    const secFaq = (() => {
+      if (!faq.length) return '';
+      return `<section id="faq" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Dúvidas frequentes</div><h2>${esc(c.faqTitulo || 'Perguntas frequentes')}</h2></div>
+   <div class="faq">
+    ${faq.map((f, i) => `<details${i === 0 ? ' open' : ''}${rv}><summary>${esc(f.p)}</summary><div class="resp">${esc(f.r)}</div></details>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    const secHorario = (() => {
+      if (!horarios.length) return '';
+      return `<section id="horario">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Atendimento</div><h2>Horário de funcionamento</h2></div>
+   <div class="hor"${rv}>
+    ${horarios.map(h => `<div><b>${esc(h.dia)}</b><span>${esc(h.hora || 'Fechado')}</span></div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    const secNumeros = (() => {
+      if (!numeros.length) return '';
+      return `<section class="alt" aria-label="Números">
+  <div class="wrap">
+   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:18px;text-align:center">
+    ${numeros.map(n => `<div${rv}><div style="font-family:${fnt.h};font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1">${esc(n.valor)}</div><div style="color:var(--mute);font-size:.9rem;font-weight:600">${esc(n.rotulo || '')}</div></div>`).join('\n    ')}
+   </div>
+  </div>
+ </section>`;
+    });
+
+    const secContato = () => `<section id="contato" class="alt">
+  <div class="wrap">
+   <div class="cab${rv}"><div class="kick">Contato</div><h2>${esc(c.contatoTitulo || 'Fale com a gente')}</h2>${c.contatoSub ? `<p>${esc(c.contatoSub)}</p>` : ''}</div>
+   <div class="cts">
+    ${waNum ? `<div class="ct"${rv}><div class="ico">${I.wa}</div><strong>WhatsApp</strong><a href="${attr(waLink(msgDe('contato')))}" target="_blank" rel="noopener">${esc(c.whatsapp)}</a></div>` : ''}
+    ${c.telefone ? `<div class="ct"${rv}><div class="ico">${I.phone}</div><strong>Telefone</strong><a href="tel:+55${attr(soDigitos(c.telefone))}">${esc(c.telefone)}</a></div>` : ''}
+    ${c.email ? `<div class="ct"${rv}><div class="ico">${I.mail}</div><strong>E-mail</strong><a href="mailto:${attr(c.email)}">${esc(c.email)}</a></div>` : ''}
+    ${c.endereco ? `<div class="ct"${rv}><div class="ico">${I.pin}</div><strong>Endereço</strong><p>${esc(c.endereco)}</p></div>` : ''}
+   </div>
+   <div class="cta"${rv}>
+    <h2>${esc(c.ctaTitulo || 'Pronto para começar?')}</h2>
+    <p>${esc(c.ctaTexto || 'Chame agora no WhatsApp e receba atendimento rápido.')}</p>
+    <div class="btns">
+     ${waNum ? `<a href="${attr(waLink(msgDe('contato')))}" target="_blank" rel="noopener" class="btn b1">${I.wa}<span>${esc(textoCta)}</span></a>` : ''}
+     ${c.telefone ? `<a href="tel:+55${attr(soDigitos(c.telefone))}" class="btn b2">${I.phone}<span>Ligar agora</span></a>` : ''}
+    </div>
+   </div>
+   ${c.mapa && c.endereco ? `<iframe class="mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(c.endereco)}&output=embed" title="Localização de ${attr(nome)} no mapa"></iframe>` : ''}
+  </div>
+ </section>`;
+
+    /* dados para edição futura (window.LS_EDIT) */
+    const lsEdit = JSON.stringify({
+      nome, whatsapp: c.whatsapp || '', horario: horarios, promo: c.promoTexto || '',
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    /* JS aberto-agora: melhora o texto com o horário de hoje */
+    const jsAgora = horarios.length ? `
+(function(){
+  var el=document.getElementById('pchAgora');if(!el)return;
+  var d=new Date(),dia=d.getDay(),hm=d.getHours()*60+d.getMinutes();
+  var lista=${JSON.stringify(horarios.map(h => ({ d:String(h.dia).toLowerCase(), h:String(h.hora || '') })))};
+  var idx={0:'domingo',1:'segunda',2:'ter',3:'quarta',4:'quinta',5:'sexta',6:'s\\u00e1b'};
+  var aberto=false,fecha='';
+  lista.forEach(function(x){
+    var casa=x.d.indexOf(idx[dia])>=0||((dia>=1&&dia<=5)&&(x.d.indexOf('a sex')>=0));
+    if(!casa)return;
+    var m=x.h.match(/(\\d{1,2})[:h](\\d{2})?\\s*[-\\u2013\\u00e0s]+\\s*(\\d{1,2})[:h](\\d{2})?/);
+    if(!m)return;
+    var ini=+m[1]*60+(+(m[2]||0)),fim=+m[3]*60+(+(m[4]||0));
+    if(hm>=ini&&hm<=fim){aberto=true;fecha=m[3]+':'+(m[4]||'00');}
+  });
+  var dot=document.getElementById('pchDot'),txt=document.getElementById('pchTxt');
+  dot.className=aberto?'vivo':'morto';
+  txt.textContent=aberto?(fecha?'Aberto agora · fecha \\u00e0s '+fecha+'h':'Aberto agora'):'Fechado agora';
+})();` : '';
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(nome)}${c.slogan ? ' | ' + esc(c.slogan.slice(0, 60)) : ''}</title>
+<meta name="description" content="${attr(descricao)}">
+<meta name="theme-color" content="${pal.p}">
+<meta name="author" content="${attr(nome)}">
+${c.palavras ? `<meta name="keywords" content="${attr(c.palavras)}">` : ''}
+${c.dominio ? `<link rel="canonical" href="https://${attr(String(c.dominio).replace(/^https?:\/\//, ''))}/">` : ''}
+<meta property="og:type" content="website">
+<meta property="og:title" content="${attr(nome)}">
+<meta property="og:description" content="${attr(descricao)}">
+<meta property="og:locale" content="pt_BR">
+${capa ? `<meta property="og:image" content="${attr(/^https?:/.test(capa.url) ? capa.url : '')}">` : ''}
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='${encodeURIComponent(pal.p)}'/><text x='50' y='68' font-size='46' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>${encodeURIComponent(iniciais)}</text></svg>">
+<script type="application/ld+json">${JSON.stringify(schema)}<\\/script>
+<script>window.LS_EDIT=${JSON.stringify(JSON.parse(lsEdit))};<\\/script>
+<style>${CSS}</style>
+</head>
+<body>
+<a href="#conteudo" class="pular">Pular para o conteúdo</a>
+${c.promoTexto ? `<div class="promo">${I.tag}<span>${esc(c.promoTexto)}</span></div>` : ''}
+<header id="cab">
+ <div class="wrap">
+  <nav class="nav" aria-label="Menu principal">
+   <a href="#" class="logo" aria-label="${attr(nome)} — início">${marca}<b>${esc(nome)}</b></a>
+   <ul class="menu" id="menu">
+    ${nav.map(([h, t]) => `<li><a href="${h}">${esc(t)}</a></li>`).join('\n    ')}
+    ${waNum ? `<li><a href="${attr(waLink(msgDe('hero')))}" target="_blank" rel="noopener" class="navcta">${esc(textoCta)}</a></li>` : ''}
+   </ul>
+   <button class="burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
+  </nav>
+ </div>
+</header>
+<main id="conteudo">
+${secHero()}
+${secProva()}
+${secNumeros()}
+${variante === 0 ? secSobre() + blocoRamo() : blocoRamo() + secSobre()}
+${secGaleria()}
+${secEquipe()}
+${secAvaliacoes()}
+${secFaq()}
+${secHorario()}
+${secContato()}
+</main>
+<footer>
+ <div class="wrap">
+  <div class="logo">${marca}<b>${esc(nome)}</b></div>
+  ${c.slogan ? `<p class="fp">${esc(c.slogan)}</p>` : ''}
+  ${c.endereco ? `<p class="fp">${esc(c.endereco)}</p>` : ''}
+  ${c.telefone || c.whatsapp ? `<p class="fp">${esc(c.telefone || c.whatsapp)}${c.email ? ' · ' + esc(c.email) : ''}</p>` : ''}
+  ${c.cnpj ? `<p class="fp">CNPJ ${esc(c.cnpj)}</p>` : ''}
+  ${(c.instagram || c.facebook || waNum) ? `<div class="soc">
+   ${c.instagram ? `<a href="${attr(String(c.instagram).startsWith('http') ? c.instagram : 'https://instagram.com/' + String(c.instagram).replace('@', ''))}" target="_blank" rel="noopener" aria-label="Instagram de ${attr(nome)}">${I.insta}</a>` : ''}
+   ${c.facebook ? `<a href="${attr(String(c.facebook).startsWith('http') ? c.facebook : 'https://facebook.com/' + c.facebook)}" target="_blank" rel="noopener" aria-label="Facebook de ${attr(nome)}">${I.face}</a>` : ''}
+   ${waNum ? `<a href="${attr(waLink(msgDe('geral')))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${attr(nome)}">${I.wa}</a>` : ''}
+  </div>` : ''}
+  ${usaBanco ? `<p class="fp" style="opacity:.5;font-size:.8rem">Fotos ilustrativas — envie as suas pelo WhatsApp e a gente troca.</p>` : ''}
+  <div class="copy">&copy; ${new Date().getFullYear()} ${esc(nome)}. Todos os direitos reservados.${c.creditos !== false ? '<br>Site desenvolvido por Nataniel' : ''}</div>
+ </div>
+</footer>
+${waNum && c.botaoFlutuante !== false ? `<a href="${attr(waLink(msgDe('geral')))}" target="_blank" rel="noopener" class="float" aria-label="Falar no WhatsApp">${I.wa}</a>` : ''}
+<button class="topo-btn" id="btopo" aria-label="Voltar ao topo">${I.up}</button>
+${c.lgpd ? `<div class="lgpd" id="lgpd" role="dialog" aria-label="Aviso de privacidade">
+ <p>Usamos cookies para melhorar sua experiência neste site.</p>
+ <button id="lgpdok">Entendi</button>
+</div>` : ''}
+<script>
+(function(){
+ var cab=document.getElementById('cab'),bt=document.getElementById('btopo');
+ var menu=document.getElementById('menu'),bg=document.getElementById('burger');
+ function scroll(){var y=window.scrollY||0;if(cab)cab.classList.toggle('rolou',y>10);if(bt)bt.classList.toggle('on',y>520);}
+ window.addEventListener('scroll',scroll,{passive:true});scroll();
+ if(bt)bt.onclick=function(){window.scrollTo({top:0,behavior:'smooth'})};
+ if(bg&&menu){
+  bg.onclick=function(){var a=menu.classList.toggle('aberto');bg.setAttribute('aria-expanded',a?'true':'false');bg.setAttribute('aria-label',a?'Fechar menu':'Abrir menu');};
+  menu.querySelectorAll('a').forEach(function(a){a.onclick=function(){menu.classList.remove('aberto');bg.setAttribute('aria-expanded','false');};});
+ }
+ ${anim ? `if('IntersectionObserver' in window){
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target);}});},{threshold:.08,rootMargin:'0px 0px -30px 0px'});
+  document.querySelectorAll('[data-rv]').forEach(function(el){el.style.transitionDelay='0ms';io.observe(el);});
+ }else{document.querySelectorAll('[data-rv]').forEach(function(el){el.classList.add('vis');});}` : ''}
+ ${jsAgora}
+ ${c.lgpd ? `try{var lg=document.getElementById('lgpd');
+  if(localStorage.getItem('lgpd_ok'))lg.style.display='none';
+  document.getElementById('lgpdok').onclick=function(){localStorage.setItem('lgpd_ok','1');lg.style.display='none';};
+ }catch(e){}` : ''}
+})();
+<\\/script>
+${c.ga4 ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${attr(c.ga4)}"><\\/script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${attr(c.ga4)}');<\\/script>` : ''}
+${c.pixel ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${attr(c.pixel)}');fbq('track','PageView');<\\/script>` : ''}
+</body>
+</html>`;
+  }
+
+  return { gerar, PALETAS, FONTES, ESTILOS, RAMOS, BANCO };
+});
+
+</script>
+<script>
+/* Perfis prontos por segmento — preenchem textos, serviços e cores automaticamente.
+   Funciona no navegador e no Node. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Perfis = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+
+const d = (texto, autor, papel) => ({ texto, autor, papel: papel || 'Cliente' });
+
+const PERFIS = {
+  padaria: {
+    rotulo:'Padaria / Confeitaria', paleta:'ambar', fonte:'friendly',
+    slogan:'Pão quentinho e doces artesanais todos os dias',
+    sobreTitulo:'Nossa padaria',
+    sobreTexto:'Produzimos tudo diariamente, com fermentação natural e ingredientes selecionados.\nDo pão francês da manhã ao bolo da sua festa, cada receita é feita com o cuidado de quem faz por gosto.',
+    diferenciais:['Fornada fresca várias vezes ao dia','Encomendas para festas e eventos','Café da manhã e lanche da tarde','Atendimento de segunda a domingo'],
+    rotuloServicos:'O que fazemos', servicosSub:'Feito na hora, do nosso forno para a sua mesa',
+    servicos:[
+      { titulo:'Pães artesanais', descricao:'Pão francês, integral, australiano e de fermentação natural, saindo quentinho do forno.', preco:'A partir de R$ 12/kg' },
+      { titulo:'Bolos e tortas', descricao:'Bolos caseiros no balcão e tortas sob encomenda para aniversários e comemorações.', preco:'Sob encomenda' },
+      { titulo:'Salgados e lanches', descricao:'Coxinha, esfiha, pão de queijo e sanduíches naturais feitos na hora.', preco:'A partir de R$ 6' },
+    ],
+    depoimentos:[ d('O melhor pão da região, sem exagero. Passo aqui todo dia antes do trabalho.','Marcos Pereira'),
+                  d('Encomendei o bolo de aniversário da minha filha e ficou perfeito. Recomendo demais!','Juliana Alves') ],
+  },
+
+  restaurante: {
+    rotulo:'Restaurante', paleta:'vinho', fonte:'classica',
+    slogan:'Comida caseira feita com capricho',
+    sobreTitulo:'Sobre o restaurante',
+    sobreTexto:'Servimos comida de verdade, daquela que lembra a casa da avó. Nosso buffet é montado todos os dias com ingredientes frescos.\nAmbiente familiar, atendimento próximo e aquele tempero que faz o cliente voltar.',
+    diferenciais:['Buffet variado todos os dias','Ambiente climatizado e familiar','Marmitex e delivery','Estacionamento para clientes'],
+    rotuloServicos:'Nosso cardápio', servicosSub:'Sabor caseiro em cada prato',
+    servicos:[
+      { titulo:'Almoço executivo', descricao:'Buffet completo com carnes, saladas, guarnições e sobremesa inclusa.', preco:'R$ 39,90' },
+      { titulo:'Marmitex', descricao:'Marmita quentinha e bem servida, com entrega em toda a cidade.', preco:'A partir de R$ 22' },
+      { titulo:'Eventos e grupos', descricao:'Espaço reservado para confraternizações, aniversários e almoços de empresa.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Comida excelente e porção muito bem servida. Virou meu almoço de todo dia.','Roberto Lima'),
+                  d('Atendimento rápido mesmo lotado. A sobremesa é um capítulo à parte!','Fernanda Castro') ],
+  },
+
+  lanchonete: {
+    rotulo:'Lanchonete / Hamburgueria', paleta:'coral', fonte:'friendly',
+    slogan:'O lanche que mata sua fome de verdade',
+    sobreTitulo:'Quem somos',
+    sobreTexto:'Hambúrguer artesanal, pão macio e ingredientes frescos preparados na hora do pedido.\nNada de lanche montado às pressas: aqui cada pedido sai como se fosse pra gente mesmo.',
+    diferenciais:['Carne artesanal 100% bovina','Entrega rápida em toda a cidade','Combos que cabem no bolso','Aberto até tarde'],
+    rotuloServicos:'Nosso cardápio', servicosSub:'Peça pelo WhatsApp e receba em casa',
+    servicos:[
+      { titulo:'Hambúrgueres artesanais', descricao:'Blend de 160g, queijo derretido, molho da casa e pão brioche.', preco:'A partir de R$ 24' },
+      { titulo:'Porções para dividir', descricao:'Batata frita, frango a passarinho e calabresa acebolada.', preco:'A partir de R$ 32' },
+      { titulo:'Combos e promoções', descricao:'Lanche + bebida + batata com preço especial todos os dias.', preco:'A partir de R$ 35' },
+    ],
+    depoimentos:[ d('Melhor hambúrguer da cidade e chega rapidinho. Peço toda sexta!','Diego Martins'),
+                  d('Porção generosa e atendimento simpático. Recomendo o combo da casa.','Patrícia Nunes') ],
+  },
+
+  bar_cafe: {
+    rotulo:'Bar / Cafeteria', paleta:'grafite', fonte:'moderna',
+    slogan:'O ponto de encontro que você procurava',
+    sobreTitulo:'Sobre nós',
+    sobreTexto:'Um espaço pensado para você relaxar depois do expediente, encontrar os amigos ou trabalhar com um bom café.\nBebidas bem servidas, petiscos preparados na hora e um ambiente que convida a ficar.',
+    diferenciais:['Chope sempre gelado','Música ao vivo nos fins de semana','Petiscos preparados na hora','Wi-fi liberado para clientes'],
+    rotuloServicos:'O que servimos', servicosSub:'Do café da manhã ao happy hour',
+    servicos:[
+      { titulo:'Bebidas', descricao:'Chope, drinks autorais, cafés especiais e sucos naturais.', preco:'A partir de R$ 9' },
+      { titulo:'Petiscos', descricao:'Tábuas para compartilhar, porções e lanches rápidos.', preco:'A partir de R$ 28' },
+      { titulo:'Eventos', descricao:'Reserve o espaço para aniversários e confraternizações.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Ambiente agradável e atendimento nota dez. Virou nosso ponto fixo.','Lucas Ferreira'),
+                  d('O café é excelente e dá pra trabalhar tranquilo. Adoro esse lugar.','Camila Rocha') ],
+  },
+
+  mercado: {
+    rotulo:'Mercado / Hortifruti', paleta:'floresta', fonte:'moderna',
+    slogan:'Tudo o que sua casa precisa, pertinho de você',
+    sobreTitulo:'Sobre o mercado',
+    sobreTexto:'Somos um mercado de bairro que conhece o cliente pelo nome. Produtos frescos, preço justo e reposição diária.\nAqui você resolve a compra da semana sem enfrentar fila de supermercado grande.',
+    diferenciais:['Hortifruti reposto diariamente','Açougue com carnes selecionadas','Entrega no bairro','Aceitamos todos os cartões e Pix'],
+    rotuloServicos:'Nossos setores', servicosSub:'Qualidade e preço justo em cada corredor',
+    servicos:[
+      { titulo:'Hortifruti', descricao:'Frutas, verduras e legumes fresquinhos, com reposição todos os dias.', preco:'' },
+      { titulo:'Açougue e frios', descricao:'Cortes bovinos, suínos, aves e frios fatiados na hora.', preco:'' },
+      { titulo:'Mercearia e bebidas', descricao:'Itens de despensa, limpeza, higiene e bebidas geladas.', preco:'' },
+    ],
+    depoimentos:[ d('Preço melhor que o do supermercado grande e o atendimento é muito mais humano.','Sandra Oliveira'),
+                  d('As verduras são sempre fresquinhas. Faço minha feira aqui há anos.','José Carlos') ],
+  },
+
+  salao: {
+    rotulo:'Salão de Beleza / Estética', paleta:'violeta', fonte:'moderna',
+    slogan:'Realçando a sua beleza com cuidado e técnica',
+    sobreTitulo:'Sobre o salão',
+    sobreTexto:'Nossa equipe é formada por profissionais em constante atualização, usando produtos de marcas reconhecidas.\nMais do que um serviço, oferecemos um momento de cuidado com você.',
+    diferenciais:['Profissionais especializados','Produtos de alta qualidade','Atendimento com hora marcada','Ambiente climatizado e acolhedor'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Agende pelo WhatsApp e garanta seu horário',
+    servicos:[
+      { titulo:'Cabelo', descricao:'Corte, escova, coloração, mechas e tratamentos de reconstrução.', preco:'A partir de R$ 50' },
+      { titulo:'Unhas', descricao:'Manicure, pedicure, alongamento e nail art personalizada.', preco:'A partir de R$ 35' },
+      { titulo:'Estética e sobrancelhas', descricao:'Design de sobrancelhas, limpeza de pele e depilação.', preco:'A partir de R$ 30' },
+    ],
+    depoimentos:[ d('Saio sempre me sentindo outra pessoa. Profissionais maravilhosas!','Aline Souza'),
+                  d('Respeitam o horário marcado e o resultado é sempre impecável.','Bruna Ribeiro') ],
+  },
+
+  academia: {
+    rotulo:'Academia', paleta:'esmeralda', fonte:'tech',
+    slogan:'Seu melhor shape começa aqui',
+    sobreTitulo:'Sobre a academia',
+    sobreTexto:'Estrutura completa, equipamentos modernos e acompanhamento profissional de verdade.\nSeja para emagrecer, ganhar massa ou só cuidar da saúde, montamos um treino para o seu objetivo.',
+    diferenciais:['Avaliação física gratuita','Professores presentes em todos os horários','Equipamentos novos e revisados','Sem taxa de matrícula'],
+    rotuloServicos:'Modalidades', servicosSub:'Treine do seu jeito, no seu ritmo',
+    servicos:[
+      { titulo:'Musculação', descricao:'Área completa de peso livre e máquinas, com treino individualizado.', preco:'A partir de R$ 89/mês' },
+      { titulo:'Aulas coletivas', descricao:'Funcional, spinning, dança e ginástica em vários horários.', preco:'Incluso no plano' },
+      { titulo:'Personal trainer', descricao:'Acompanhamento exclusivo para acelerar seus resultados.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Ambiente motivador e professores que realmente corrigem o exercício.','Thiago Barbosa'),
+                  d('Perdi 12 kg em 6 meses com o acompanhamento daqui. Recomendo!','Renata Dias') ],
+  },
+
+  oficina: {
+    rotulo:'Oficina Mecânica', paleta:'oceano', fonte:'tech',
+    slogan:'Seu carro nas mãos de quem entende',
+    sobreTitulo:'Sobre a oficina',
+    sobreTexto:'Diagnóstico honesto, orçamento antes do serviço e prazo cumprido. É assim que trabalhamos desde o início.\nAtendemos veículos nacionais e importados com equipamento de diagnóstico eletrônico.',
+    diferenciais:['Orçamento sem compromisso','Garantia em peças e serviços','Diagnóstico eletrônico computadorizado','Mecânicos com anos de experiência'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Manutenção completa para o seu veículo',
+    servicos:[
+      { titulo:'Revisão geral', descricao:'Checagem completa de freios, suspensão, motor e sistema elétrico.', preco:'A partir de R$ 150' },
+      { titulo:'Troca de óleo e filtros', descricao:'Óleo sintético ou mineral, com troca de filtros e checklist incluso.', preco:'A partir de R$ 120' },
+      { titulo:'Injeção eletrônica', descricao:'Leitura de erros, limpeza de bicos e ajuste de módulo.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Resolveram um problema que outras duas oficinas não acharam. Gente séria.','Paulo Henrique'),
+                  d('Orçamento justo e entregaram no prazo combinado. Voltarei sempre.','Márcia Gomes') ],
+  },
+
+  autopecas: {
+    rotulo:'Autopeças', paleta:'grafite', fonte:'tech',
+    slogan:'A peça certa pelo melhor preço',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Estoque amplo de peças originais e paralelas para as principais montadoras.\nSe não tiver na loja, conseguimos rápido pra você não ficar com o carro parado.',
+    diferenciais:['Peças originais e paralelas','Pronta entrega em estoque','Preço de atacado e varejo','Atendimento técnico especializado'],
+    rotuloServicos:'O que temos', servicosSub:'Consulte a disponibilidade pelo WhatsApp',
+    servicos:[
+      { titulo:'Peças de motor', descricao:'Correias, bombas, juntas, velas e componentes de motor em geral.', preco:'' },
+      { titulo:'Freios e suspensão', descricao:'Pastilhas, discos, amortecedores, molas e kits completos.', preco:'' },
+      { titulo:'Elétrica e acessórios', descricao:'Baterias, lâmpadas, alternadores e acessórios automotivos.', preco:'' },
+    ],
+    depoimentos:[ d('Sempre tem a peça que preciso e o preço é melhor que da concessionária.','Anderson Silva'),
+                  d('Atendimento rápido e ainda me orientaram sobre a instalação.','Cleber Moraes') ],
+  },
+
+  clinica: {
+    rotulo:'Clínica / Consultório', paleta:'oceano', fonte:'moderna',
+    slogan:'Cuidando da sua saúde com atenção e respeito',
+    sobreTitulo:'Sobre a clínica',
+    sobreTexto:'Atendimento humanizado, com tempo de consulta adequado e escuta de verdade.\nEstrutura moderna e equipe preparada para cuidar de você e da sua família.',
+    diferenciais:['Atendimento humanizado','Agendamento sem filas','Equipamentos modernos','Convênios e particular'],
+    rotuloServicos:'Especialidades', servicosSub:'Agende sua consulta pelo WhatsApp',
+    servicos:[
+      { titulo:'Consultas', descricao:'Atendimento clínico com avaliação completa e orientação personalizada.', preco:'Consulte valores' },
+      { titulo:'Exames', descricao:'Exames realizados na própria clínica, com resultado rápido.', preco:'Consulte valores' },
+      { titulo:'Acompanhamento', descricao:'Retornos e acompanhamento contínuo do seu tratamento.', preco:'' },
+    ],
+    depoimentos:[ d('Fui muito bem atendida, sem pressa e com explicações claras.','Vera Lúcia'),
+                  d('Consegui marcar rápido e o atendimento foi pontual. Excelente.','Rodrigo Teixeira') ],
+  },
+
+  veterinaria: {
+    rotulo:'Pet Shop / Veterinária', paleta:'esmeralda', fonte:'friendly',
+    slogan:'Carinho e cuidado para quem é da família',
+    sobreTitulo:'Sobre nós',
+    sobreTexto:'Sabemos que seu pet não é só um animal, é parte da família. Por isso tratamos cada um com paciência e afeto.\nEstrutura completa para saúde, higiene e bem-estar do seu companheiro.',
+    diferenciais:['Veterinário responsável presente','Banho e tosa com hidratação','Produtos e rações selecionadas','Atendimento com hora marcada'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Tudo o que seu pet precisa em um só lugar',
+    servicos:[
+      { titulo:'Banho e tosa', descricao:'Higiene completa com produtos adequados para cada tipo de pelagem.', preco:'A partir de R$ 45' },
+      { titulo:'Consulta veterinária', descricao:'Avaliação clínica, vacinação e orientação de cuidados.', preco:'A partir de R$ 90' },
+      { titulo:'Rações e acessórios', descricao:'Alimentos, brinquedos, camas e acessórios das melhores marcas.', preco:'' },
+    ],
+    depoimentos:[ d('Cuidam do meu cachorro com um carinho enorme. Confio de olhos fechados.','Larissa Campos'),
+                  d('Atendimento veterinário atencioso e preço honesto. Recomendo!','Eduardo Pinto') ],
+  },
+
+  farmacia: {
+    rotulo:'Farmácia / Drogaria', paleta:'esmeralda', fonte:'moderna',
+    slogan:'Sua saúde bem cuidada, pertinho de casa',
+    sobreTitulo:'Sobre a farmácia',
+    sobreTexto:'Medicamentos, dermocosméticos e produtos de saúde com atendimento farmacêutico de verdade.\nEntregamos em casa para você não precisar sair quando não estiver bem.',
+    diferenciais:['Farmacêutico sempre presente','Entrega rápida em domicílio','Aplicação de injetáveis','Descontos em medicamentos de uso contínuo'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Peça pelo WhatsApp e receba em casa',
+    servicos:[
+      { titulo:'Medicamentos', descricao:'Genéricos, similares e de marca, com os melhores preços da região.', preco:'' },
+      { titulo:'Serviços farmacêuticos', descricao:'Aferição de pressão, glicemia e aplicação de injetáveis.', preco:'A partir de R$ 10' },
+      { titulo:'Higiene e beleza', descricao:'Dermocosméticos, higiene pessoal e produtos infantis.', preco:'' },
+    ],
+    depoimentos:[ d('Entregaram o remédio em 20 minutos. Salvou meu dia!','Isabel Fonseca'),
+                  d('O farmacêutico sempre tira minhas dúvidas com paciência.','Antônio Ramos') ],
+  },
+
+  roupas: {
+    rotulo:'Loja de Roupas / Calçados', paleta:'violeta', fonte:'moderna',
+    slogan:'Moda que combina com o seu estilo',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Selecionamos peças que unem tendência, qualidade e preço que cabe no bolso.\nColeções novas toda estação e atendimento que ajuda você a montar o look certo.',
+    diferenciais:['Novidades toda semana','Parcelamos em até 6x sem juros','Provador confortável','Troca facilitada em até 30 dias'],
+    rotuloServicos:'O que você encontra', servicosSub:'Veja as novidades no nosso WhatsApp',
+    servicos:[
+      { titulo:'Moda feminina', descricao:'Vestidos, blusas, calças e peças para o dia a dia ou ocasiões especiais.', preco:'A partir de R$ 59' },
+      { titulo:'Moda masculina', descricao:'Camisas, camisetas, bermudas e calças com caimento perfeito.', preco:'A partir de R$ 69' },
+      { titulo:'Calçados e acessórios', descricao:'Tênis, sandálias, bolsas e acessórios para completar o visual.', preco:'A partir de R$ 89' },
+    ],
+    depoimentos:[ d('Sempre acho peça bonita e o preço é bem melhor que no shopping.','Tatiane Moreira'),
+                  d('As meninas ajudam a escolher sem empurrar nada. Adoro comprar aqui.','Carla Menezes') ],
+  },
+
+  construcao: {
+    rotulo:'Material de Construção', paleta:'ambar', fonte:'moderna',
+    slogan:'Do alicerce ao acabamento, tem aqui',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Atendemos desde o pedreiro que precisa de um saco de cimento até a obra completa.\nEstoque amplo, entrega na obra e equipe que entende do assunto para te orientar.',
+    diferenciais:['Entrega na obra','Preço especial para construtores','Estoque completo','Orçamento rápido pelo WhatsApp'],
+    rotuloServicos:'Nossos produtos', servicosSub:'Mande sua lista pelo WhatsApp e receba o orçamento',
+    servicos:[
+      { titulo:'Material básico', descricao:'Cimento, areia, brita, tijolos, blocos e argamassa.', preco:'' },
+      { titulo:'Acabamento', descricao:'Pisos, azulejos, tintas, louças e metais sanitários.', preco:'' },
+      { titulo:'Elétrica e hidráulica', descricao:'Fios, conduítes, tubos, conexões e caixas d\u2019água.', preco:'' },
+    ],
+    depoimentos:[ d('Entregaram tudo na obra no mesmo dia. Preço bom e sem enrolação.','Sebastião Farias'),
+                  d('Me orientaram na escolha do piso e economizei bastante. Ótimo atendimento.','Gilberto Nascimento') ],
+  },
+
+  moveis: {
+    rotulo:'Móveis e Decoração', paleta:'ambar', fonte:'classica',
+    slogan:'Sua casa do jeito que você sempre quis',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Móveis que unem conforto, durabilidade e bom gosto, com preço que cabe no seu planejamento.\nAjudamos você a escolher o que combina com o seu espaço e seu estilo.',
+    diferenciais:['Montagem inclusa','Parcelamento facilitado','Entrega em toda a região','Garantia de fábrica'],
+    rotuloServicos:'Nossos produtos', servicosSub:'Veja o catálogo completo pelo WhatsApp',
+    servicos:[
+      { titulo:'Sala e quarto', descricao:'Sofás, racks, guarda-roupas, camas e colchões.', preco:'A partir de R$ 599' },
+      { titulo:'Cozinha e área de serviço', descricao:'Armários planejados, mesas, cadeiras e organizadores.', preco:'A partir de R$ 799' },
+      { titulo:'Decoração', descricao:'Tapetes, luminárias, quadros e itens para dar personalidade ao ambiente.', preco:'A partir de R$ 49' },
+    ],
+    depoimentos:[ d('Entregaram e montaram no dia marcado. Móvel de ótima qualidade.','Simone Barros'),
+                  d('Consegui mobiliar o apartamento todo dentro do meu orçamento.','Wesley Andrade') ],
+  },
+
+  eletronicos: {
+    rotulo:'Eletrônicos / Celulares', paleta:'oceano', fonte:'tech',
+    slogan:'Tecnologia com garantia e preço justo',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Produtos originais com nota fiscal e garantia, além de assistência técnica para quando algo dá errado.\nAqui você compra com segurança e tem a quem recorrer depois.',
+    diferenciais:['Produtos originais com garantia','Assistência técnica própria','Parcelamento em até 12x','Aceitamos seu aparelho usado na troca'],
+    rotuloServicos:'Produtos e serviços', servicosSub:'Consulte disponibilidade e preços pelo WhatsApp',
+    servicos:[
+      { titulo:'Celulares e tablets', descricao:'Aparelhos novos e seminovos das principais marcas, com garantia.', preco:'A partir de R$ 699' },
+      { titulo:'Assistência técnica', descricao:'Troca de tela, bateria e reparo de placa com orçamento prévio.', preco:'A partir de R$ 90' },
+      { titulo:'Acessórios', descricao:'Capas, películas, carregadores, fones e caixas de som.', preco:'A partir de R$ 25' },
+    ],
+    depoimentos:[ d('Trocaram a tela do meu celular em uma hora e ficou perfeita.','Vinícius Lopes'),
+                  d('Comprei com nota e garantia. Muito mais seguro que comprar na internet.','Daniela Prado') ],
+  },
+
+  hotel: {
+    rotulo:'Hotel / Pousada', paleta:'oceano', fonte:'classica',
+    slogan:'Seu descanso merece esse cuidado',
+    sobreTitulo:'Sobre nós',
+    sobreTexto:'Quartos confortáveis, limpeza impecável e um atendimento que faz você se sentir em casa.\nLocalização privilegiada para quem vem a trabalho ou a passeio.',
+    diferenciais:['Café da manhã incluso','Wi-fi de alta velocidade','Estacionamento gratuito','Ar-condicionado em todos os quartos'],
+    rotuloServicos:'Acomodações', servicosSub:'Consulte disponibilidade pelo WhatsApp',
+    servicos:[
+      { titulo:'Quarto individual', descricao:'Ideal para quem viaja a trabalho, com escrivaninha e wi-fi rápido.', preco:'A partir de R$ 130/noite' },
+      { titulo:'Quarto casal', descricao:'Cama box queen, ar-condicionado, TV e frigobar.', preco:'A partir de R$ 180/noite' },
+      { titulo:'Quarto família', descricao:'Espaço amplo, acomoda até 4 pessoas com conforto.', preco:'A partir de R$ 250/noite' },
+    ],
+    depoimentos:[ d('Quarto limpíssimo e café da manhã muito bom. Voltarei com certeza.','Ricardo Almeida'),
+                  d('Atendimento excelente e localização ótima. Recomendo!','Priscila Tavares') ],
+  },
+
+  escola: {
+    rotulo:'Escola / Curso', paleta:'violeta', fonte:'classica',
+    slogan:'Educação que transforma o futuro',
+    sobreTitulo:'Sobre a escola',
+    sobreTexto:'Ensino de qualidade com acompanhamento próximo de cada aluno e diálogo constante com as famílias.\nUma equipe pedagógica preparada e uma estrutura pensada para o aprendizado.',
+    diferenciais:['Turmas reduzidas','Acompanhamento individualizado','Material didático incluso','Professores qualificados'],
+    rotuloServicos:'Nossos cursos', servicosSub:'Matrículas abertas — fale conosco',
+    servicos:[
+      { titulo:'Turmas regulares', descricao:'Aulas em grupos pequenos, com acompanhamento contínuo do progresso.', preco:'A partir de R$ 180/mês' },
+      { titulo:'Aulas particulares', descricao:'Atendimento individual focado nas dificuldades específicas do aluno.', preco:'A partir de R$ 60/hora' },
+      { titulo:'Cursos intensivos', descricao:'Programas de curta duração para resultados rápidos.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Meu filho melhorou muito as notas depois que entrou aqui.','Elaine Cardoso'),
+                  d('Professores atenciosos e método que realmente funciona.','Fábio Duarte') ],
+  },
+
+  advocacia: {
+    rotulo:'Escritório (Advocacia/Contabilidade)', paleta:'grafite', fonte:'classica',
+    slogan:'Assessoria séria para decisões importantes',
+    sobreTitulo:'Sobre o escritório',
+    sobreTexto:'Atendimento técnico e transparente, com linguagem clara para você entender cada etapa do processo.\nExperiência consolidada e compromisso com o resultado de cada cliente.',
+    diferenciais:['Primeira consulta sem compromisso','Atendimento presencial e online','Acompanhamento transparente do caso','Honorários combinados previamente'],
+    rotuloServicos:'Áreas de atuação', servicosSub:'Agende uma conversa inicial',
+    servicos:[
+      { titulo:'Consultoria', descricao:'Orientação preventiva para evitar problemas antes que aconteçam.', preco:'Sob consulta' },
+      { titulo:'Acompanhamento de processos', descricao:'Condução completa do seu caso, com atualizações periódicas.', preco:'Sob consulta' },
+      { titulo:'Regularização', descricao:'Resolução de pendências e adequação à legislação vigente.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Explicaram tudo com clareza e resolveram meu caso mais rápido do que eu esperava.','Marcelo Vieira'),
+                  d('Profissionais competentes e muito éticos. Confio plenamente.','Adriana Bastos') ],
+  },
+
+  imobiliaria: {
+    rotulo:'Imobiliária', paleta:'oceano', fonte:'moderna',
+    slogan:'O imóvel certo para o seu momento',
+    sobreTitulo:'Sobre a imobiliária',
+    sobreTexto:'Conhecemos cada bairro da cidade e ajudamos você a encontrar o imóvel que faz sentido para a sua vida.\nDocumentação conferida, negociação transparente e acompanhamento até a entrega das chaves.',
+    diferenciais:['Documentação verificada','Visitas agendadas com flexibilidade','Assessoria em financiamento','Contratos claros e seguros'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Conte o que procura pelo WhatsApp',
+    servicos:[
+      { titulo:'Venda de imóveis', descricao:'Casas, apartamentos e terrenos com documentação em dia.', preco:'' },
+      { titulo:'Locação', descricao:'Imóveis para alugar com contrato seguro e suporte durante toda a locação.', preco:'' },
+      { titulo:'Administração de imóveis', descricao:'Cuidamos do seu imóvel alugado: cobrança, vistoria e manutenção.', preco:'Sob consulta' },
+    ],
+    depoimentos:[ d('Acharam exatamente o que eu procurava e cuidaram de toda a papelada.','Gustavo Siqueira'),
+                  d('Processo de aluguel rápido e sem burocracia desnecessária.','Natália Braga') ],
+  },
+
+  papelaria: {
+    rotulo:'Papelaria / Gráfica', paleta:'coral', fonte:'friendly',
+    slogan:'Tudo para escola, escritório e sua impressão',
+    sobreTitulo:'Sobre a loja',
+    sobreTexto:'Da lista de material escolar ao cartão de visita da sua empresa, resolvemos tudo aqui.\nImpressão rápida, material de qualidade e atendimento que ajuda a economizar.',
+    diferenciais:['Impressão na hora','Lista escolar completa','Preço especial no atacado','Orçamento rápido pelo WhatsApp'],
+    rotuloServicos:'Produtos e serviços', servicosSub:'Envie seu arquivo pelo WhatsApp',
+    servicos:[
+      { titulo:'Impressão e cópias', descricao:'Impressão colorida e P&B, cópias, digitalização e encadernação.', preco:'A partir de R$ 0,50' },
+      { titulo:'Material escolar e escritório', descricao:'Cadernos, canetas, mochilas e suprimentos em geral.', preco:'' },
+      { titulo:'Gráfica rápida', descricao:'Cartões de visita, panfletos, banners e adesivos personalizados.', preco:'Sob orçamento' },
+    ],
+    depoimentos:[ d('Imprimiram meu TCC na hora e a encadernação ficou linda.','Bianca Ferraz'),
+                  d('Fizeram os cartões da minha empresa em dois dias. Ficou ótimo!','Everton Sales') ],
+  },
+
+  floricultura: {
+    rotulo:'Floricultura', paleta:'floresta', fonte:'classica',
+    slogan:'Flores que dizem o que você sente',
+    sobreTitulo:'Sobre a floricultura',
+    sobreTexto:'Trabalhamos com flores frescas selecionadas e arranjos montados com cuidado artesanal.\nEntregamos em toda a cidade para que sua mensagem chegue no momento certo.',
+    diferenciais:['Flores frescas selecionadas','Entrega no mesmo dia','Arranjos personalizados','Cartão com mensagem incluso'],
+    rotuloServicos:'Nossos produtos', servicosSub:'Encomende pelo WhatsApp com entrega no mesmo dia',
+    servicos:[
+      { titulo:'Buquês e arranjos', descricao:'Montados na hora com as flores da sua preferência.', preco:'A partir de R$ 70' },
+      { titulo:'Cestas e presentes', descricao:'Cestas de café da manhã, chocolates e presentes combinados com flores.', preco:'A partir de R$ 120' },
+      { titulo:'Eventos e cerimônias', descricao:'Decoração floral para casamentos, formaturas e homenagens.', preco:'Sob orçamento' },
+    ],
+    depoimentos:[ d('Buquê lindíssimo e entregaram no horário combinado. Minha mãe amou.','Rafael Guimarães'),
+                  d('As flores duraram mais de duas semanas. Qualidade excelente.','Luciana Peixoto') ],
+  },
+
+  lavanderia: {
+    rotulo:'Lavanderia', paleta:'oceano', fonte:'moderna',
+    slogan:'Sua roupa limpa, cheirosa e no prazo',
+    sobreTitulo:'Sobre a lavanderia',
+    sobreTexto:'Cuidamos das suas peças com o processo adequado para cada tecido, sem estragar cor ou caimento.\nPrazo cumprido e roupa entregue pronta para usar.',
+    diferenciais:['Coleta e entrega em domicílio','Prazo garantido','Produtos que preservam o tecido','Cuidado especial com peças delicadas'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Agende a coleta pelo WhatsApp',
+    servicos:[
+      { titulo:'Lavagem comum', descricao:'Roupas do dia a dia lavadas, secas e dobradas.', preco:'A partir de R$ 15/kg' },
+      { titulo:'Lavagem a seco', descricao:'Ternos, vestidos e peças delicadas com tratamento especializado.', preco:'A partir de R$ 35/peça' },
+      { titulo:'Edredons e tapetes', descricao:'Peças grandes higienizadas com secagem completa.', preco:'A partir de R$ 60' },
+    ],
+    depoimentos:[ d('Pegam e entregam em casa. Praticidade que vale cada centavo.','Cristiane Lemos'),
+                  d('Salvaram um terno que eu achei que tinha perdido. Profissionais!','Otávio Machado') ],
+  },
+
+  otica: {
+    rotulo:'Ótica', paleta:'violeta', fonte:'moderna',
+    slogan:'Enxergue bem, com o estilo que combina com você',
+    sobreTitulo:'Sobre a ótica',
+    sobreTexto:'Lentes de qualidade, armações para todos os gostos e um atendimento que ajuda a escolher o modelo certo para o seu rosto.\nExame de vista no local e ajustes gratuitos sempre que precisar.',
+    diferenciais:['Exame de vista no local','Ajustes e manutenção gratuitos','Lentes com garantia','Parcelamento em até 10x'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Agende seu exame pelo WhatsApp',
+    servicos:[
+      { titulo:'Óculos de grau', descricao:'Armação + lentes com tratamento antirreflexo e proteção UV.', preco:'A partir de R$ 199' },
+      { titulo:'Óculos de sol', descricao:'Modelos das principais marcas, com proteção UV certificada.', preco:'A partir de R$ 149' },
+      { titulo:'Exame de vista', descricao:'Avaliação completa da sua visão com equipamento moderno.', preco:'Gratuito na compra' },
+    ],
+    depoimentos:[ d('Me ajudaram a escolher a armação perfeita e ficou ótimo no meu rosto.','Sônia Aparecida'),
+                  d('Exame gratuito e óculos pronto em três dias. Muito bom!','Jaime Correia') ],
+  },
+
+  generico: {
+    rotulo:'Outro segmento', paleta:'esmeralda', fonte:'moderna',
+    slogan:'Qualidade e confiança em cada atendimento',
+    sobreTitulo:'Quem somos',
+    sobreTexto:'Somos uma empresa local comprometida em oferecer o melhor atendimento e produtos de qualidade.\nTrabalhamos para que cada cliente saia satisfeito e volte sempre.',
+    diferenciais:['Anos de experiência no mercado','Atendimento personalizado','Preço justo e transparente','Garantia em todos os serviços'],
+    rotuloServicos:'Nossos serviços', servicosSub:'Soluções completas para você',
+    servicos:[
+      { titulo:'Serviço principal', descricao:'Descreva aqui o principal serviço oferecido pela empresa.', preco:'' },
+      { titulo:'Segundo serviço', descricao:'Outro serviço importante que vocês oferecem aos clientes.', preco:'' },
+      { titulo:'Terceiro serviço', descricao:'Complete com mais um diferencial do seu negócio.', preco:'' },
+    ],
+    depoimentos:[ d('Atendimento excelente e profissionais muito atenciosos. Recomendo!','Maria Silva'),
+                  d('Melhor da região, sem dúvidas. Já sou cliente há anos.','Carlos Souza') ],
+  },
+};
+
+
+/* ─── números e dúvidas frequentes por segmento ─── */
+const NUM_PADRAO = [
+  { valor:'+10', rotulo:'anos de experiência' },
+  { valor:'+500', rotulo:'clientes atendidos' },
+  { valor:'100%', rotulo:'satisfação garantida' },
+];
+const NUMEROS = {
+  padaria:[{valor:'+15',rotulo:'variedades de pães'},{valor:'3x',rotulo:'fornadas por dia'},{valor:'+2 mil',rotulo:'clientes por mês'}],
+  restaurante:[{valor:'+30',rotulo:'pratos no cardápio'},{valor:'+10',rotulo:'anos servindo bem'},{valor:'+300',rotulo:'refeições por dia'}],
+  academia:[{valor:'+50',rotulo:'equipamentos'},{valor:'+20',rotulo:'aulas por semana'},{valor:'+800',rotulo:'alunos ativos'}],
+  oficina:[{valor:'+20',rotulo:'anos de oficina'},{valor:'+5 mil',rotulo:'veículos atendidos'},{valor:'90 dias',rotulo:'de garantia'}],
+  salao:[{valor:'+10',rotulo:'profissionais'},{valor:'+15',rotulo:'serviços diferentes'},{valor:'+1500',rotulo:'clientes fiéis'}],
+  clinica:[{valor:'+10',rotulo:'anos cuidando de você'},{valor:'+5 mil',rotulo:'pacientes atendidos'},{valor:'24h',rotulo:'para agendar online'}],
+  construcao:[{valor:'+5 mil',rotulo:'itens em estoque'},{valor:'24h',rotulo:'para entrega na obra'},{valor:'+20',rotulo:'anos no mercado'}],
+  veterinaria:[{valor:'+3 mil',rotulo:'pets atendidos'},{valor:'+10',rotulo:'anos de carinho'},{valor:'100%',rotulo:'amor pelos animais'}],
+  hotel:[{valor:'+25',rotulo:'acomodações'},{valor:'4.8',rotulo:'nota dos hóspedes'},{valor:'24h',rotulo:'recepção'}],
+  escola:[{valor:'+500',rotulo:'alunos formados'},{valor:'+15',rotulo:'professores'},{valor:'+12',rotulo:'anos de ensino'}],
+};
+
+const FAQ_EXTRA = {
+  padaria:[{p:'Vocês fazem bolos sob encomenda?',r:'Sim! Aceitamos encomendas de bolos e doces para festas. Recomendamos pedir com pelo menos 48 horas de antecedência.'},
+           {p:'Qual o horário das fornadas?',r:'Temos pão quentinho saindo do forno várias vezes ao dia, começando bem cedo pela manhã.'}],
+  restaurante:[{p:'Vocês têm delivery?',r:'Sim, entregamos na região. É só chamar no WhatsApp e fazer seu pedido.'},
+               {p:'Aceitam reserva para grupos?',r:'Sim, aceitamos reservas para grupos e confraternizações. Fale conosco para combinar.'}],
+  lanchonete:[{p:'Quanto tempo demora a entrega?',r:'Em média de 30 a 45 minutos, dependendo da região e do movimento.'},
+              {p:'Vocês têm opções vegetarianas?',r:'Sim! Consulte nosso cardápio pelo WhatsApp que mostramos as opções disponíveis.'}],
+  salao:[{p:'Preciso agendar horário?',r:'Recomendamos sim, para você não precisar esperar. É só chamar no WhatsApp e escolher o melhor horário.'},
+         {p:'Quais marcas de produtos vocês usam?',r:'Trabalhamos apenas com produtos profissionais de marcas reconhecidas, que preservam a saúde do fio.'}],
+  academia:[{p:'Tem taxa de matrícula?',r:'Não cobramos taxa de matrícula. Você paga apenas a mensalidade do plano escolhido.'},
+            {p:'Posso fazer uma aula experimental?',r:'Pode sim! Chame no WhatsApp e agende sua avaliação física gratuita.'}],
+  oficina:[{p:'O orçamento é cobrado?',r:'Não. Fazemos o diagnóstico e passamos o orçamento sem compromisso — você só autoriza se concordar.'},
+           {p:'Vocês dão garantia?',r:'Sim, damos garantia nas peças e na mão de obra de todos os serviços realizados.'}],
+  clinica:[{p:'Vocês atendem convênio?',r:'Atendemos particular e alguns convênios. Consulte pelo WhatsApp qual é o seu caso.'},
+           {p:'Como faço para agendar?',r:'É só chamar no WhatsApp que verificamos os horários disponíveis na hora.'}],
+  veterinaria:[{p:'Precisa agendar o banho e tosa?',r:'Sim, recomendamos agendar para garantir o horário e o atendimento tranquilo do seu pet.'},
+               {p:'Atendem emergências?',r:'Entre em contato pelo WhatsApp para verificarmos a disponibilidade do veterinário.'}],
+  construcao:[{p:'Vocês entregam na obra?',r:'Sim, entregamos direto na sua obra. Consulte as condições para a sua região.'},
+              {p:'Fazem preço especial para construtores?',r:'Sim, temos condições diferenciadas para profissionais e compras em volume.'}],
+  roupas:[{p:'Posso trocar se não servir?',r:'Sim, aceitamos trocas em até 30 dias com a etiqueta e o comprovante.'},
+          {p:'Em quantas vezes posso parcelar?',r:'Parcelamos em até 6x sem juros no cartão de crédito.'}],
+  eletronicos:[{p:'Os produtos têm garantia?',r:'Sim, todos os produtos são originais, com nota fiscal e garantia.'},
+               {p:'Vocês consertam meu aparelho?',r:'Sim, temos assistência técnica própria. Traga o aparelho para avaliação sem compromisso.'}],
+  hotel:[{p:'O café da manhã está incluso?',r:'Sim, o café da manhã está incluso em todas as diárias.'},
+         {p:'Tem estacionamento?',r:'Sim, oferecemos estacionamento gratuito para os hóspedes.'}],
+  imobiliaria:[{p:'Quais documentos preciso para alugar?',r:'Geralmente RG, CPF, comprovante de renda e de residência. Confirmamos os detalhes no atendimento.'},
+               {p:'Vocês ajudam com financiamento?',r:'Sim, damos toda a assessoria no processo de financiamento junto aos bancos.'}],
+  farmacia:[{p:'Vocês entregam em casa?',r:'Sim! Faça seu pedido pelo WhatsApp que entregamos rapidinho.'},
+            {p:'Tem farmacêutico no local?',r:'Sim, contamos com farmacêutico responsável presente para orientar você.'}],
+};
+
+function faqPara(chave, p) {
+  const rot = (p && p.rotulo ? p.rotulo : 'nosso serviço').toLowerCase();
+  const base = [
+    { p:'Quais formas de pagamento vocês aceitam?',
+      r:'Aceitamos dinheiro, Pix e cartões de débito e crédito. Consulte as condições de parcelamento.' },
+    { p:'Como faço para falar com vocês?',
+      r:'O jeito mais rápido é pelo WhatsApp — o botão verde no canto da tela. Respondemos no horário de atendimento.' },
+  ];
+  return [...(FAQ_EXTRA[chave] || []), ...base].slice(0, 4);
+}
+
+/* categoria crua do OpenStreetMap -> perfil */
+const MAPA = {
+  bakery:'padaria', pastry:'padaria', confectionery:'padaria',
+  restaurant:'restaurante',
+  fast_food:'lanchonete', ice_cream:'lanchonete',
+  cafe:'bar_cafe', bar:'bar_cafe', pub:'bar_cafe',
+  supermarket:'mercado', convenience:'mercado', greengrocer:'mercado', butcher:'mercado', grocery:'mercado',
+  hairdresser:'salao', beauty:'salao', massage:'salao', tattoo:'salao',
+  fitness_centre:'academia', sports_centre:'academia', gym:'academia',
+  car_repair:'oficina', tyres:'oficina', motorcycle_repair:'oficina',
+  car_parts:'autopecas', car:'autopecas', motorcycle:'autopecas',
+  clinic:'clinica', doctors:'clinica', dentist:'clinica',
+  veterinary:'veterinaria', pet:'veterinaria', pet_grooming:'veterinaria',
+  pharmacy:'farmacia', chemist:'farmacia',
+  clothes:'roupas', shoes:'roupas', boutique:'roupas', fashion_accessories:'roupas', jewelry:'roupas',
+  hardware:'construcao', doityourself:'construcao', paint:'construcao', trade:'construcao',
+  building_materials:'construcao', electrical:'construcao',
+  furniture:'moveis', interior_decoration:'moveis', houseware:'moveis', bed:'moveis',
+  electronics:'eletronicos', computer:'eletronicos', mobile_phone:'eletronicos', hifi:'eletronicos',
+  hotel:'hotel', guest_house:'hotel', motel:'hotel', hostel:'hotel', apartment:'hotel',
+  school:'escola', language_school:'escola', driving_school:'escola', college:'escola', kindergarten:'escola',
+  lawyer:'advocacia', accountant:'advocacia', insurance:'advocacia', financial:'advocacia', company:'advocacia',
+  estate_agent:'imobiliaria',
+  stationery:'papelaria', copyshop:'papelaria', books:'papelaria', printing:'papelaria',
+  florist:'floricultura', garden_centre:'floricultura',
+  laundry:'lavanderia', dry_cleaning:'lavanderia',
+  optician:'otica', hearing_aids:'otica',
+};
+
+const paraCategoria = cat => MAPA[cat] || 'generico';
+
+/* aplica um perfil sobre a config, preservando dados do cliente (nome, contatos) */
+function aplicar(cfg, chave) {
+  const p = PERFIS[chave] || PERFIS.generico;
+  const copia = o => JSON.parse(JSON.stringify(o));
+  Object.assign(cfg, {
+    slogan: p.slogan, paleta: p.paleta, fonte: p.fonte,
+    sobreTitulo: p.sobreTitulo, sobreTexto: p.sobreTexto,
+    diferenciais: copia(p.diferenciais),
+    rotuloServicos: p.rotuloServicos, servicosSub: p.servicosSub,
+    servicos: copia(p.servicos), depoimentos: copia(p.depoimentos),
+    numeros: copia(NUMEROS[chave] || NUM_PADRAO),
+    faq: faqPara(chave, p),
+    perfil: chave,
+  });
+  return cfg;
+}
+
+return { PERFIS, MAPA, NUMEROS, faqPara, paraCategoria, aplicar };
+});
+
+</script>
+<script>
+/* Esquema do questionário do cliente + conversão automática para o site — v2.
+   Fluxo curto (9 perguntas essenciais) + extras opcionais. Fotos entram no próprio
+   formulário (upload com compressão ou banco ilustrativo do ramo).
+   Funciona no navegador e no Node. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./public/perfis.js'));
+  else root.Brief = factory(root.Perfis);
+})(typeof self !== 'undefined' ? self : this, function (Perfis) {
+
+/* ─────────────── ETAPAS (fluxo essencial) ─────────────── */
+const ETAPAS = [
+  { id:'inicio', icone:'🤝', titulo:'Vamos começar', desc:'9 respostas e seu site fica pronto.',
+    perguntas:[
+      { id:'fechar', tipo:'radio', obrig:true, label:'Você quer fechar a criação do seu site?',
+        ajuda:'Investimento único de R$ 97, sem mensalidade.',
+        opcoes:[
+          { v:'sim',    t:'Sim, quero fechar!',        d:'Vamos colocar seu site no ar' },
+          { v:'talvez', t:'Quero ver como fica antes', d:'Preencho e decido depois' },
+          { v:'duvida', t:'Tenho dúvidas',             d:'Prefiro conversar primeiro' },
+        ] },
+      { id:'nome', tipo:'texto', obrig:true, label:'Nome da loja / empresa',
+        ajuda:'Exatamente como vai aparecer no topo do site.', ph:'Ex.: Padaria Pão Dourado' },
+      { id:'whatsapp', tipo:'tel', obrig:true, label:'WhatsApp da empresa',
+        ajuda:'Vira o botão verde do site — é por ele que os clientes falam com você.', ph:'(66) 99999-9999' },
+    ] },
+  { id:'negocio', icone:'📍', titulo:'Seu negócio', desc:'Ramo, onde fica e quando abre.',
+    perguntas:[
+      { id:'segmento', tipo:'segmento', obrig:true, label:'Qual o seu ramo?',
+        ajuda:'A gente já monta serviços, textos e fotos do seu ramo — é só ajustar.' },
+      { id:'endereco', tipo:'texto', obrig:true, label:'Endereço completo',
+        ajuda:'Aparece no site e no mapa.', ph:'Ex.: Av. Bandeirantes, 1250 - Centro, Rondonópolis - MT' },
+      { id:'h_semana', tipo:'texto', obrig:true, label:'Horário (segunda a sexta)', ph:'Ex.: 08:00 - 18:00' },
+      { id:'h_fds', tipo:'texto', label:'Sábado e domingo', ph:'Ex.: Sáb 08:00 - 12:00 · Dom fechado' },
+    ] },
+  { id:'servicos', icone:'🛠️', titulo:'Serviços e preços', desc:'Os 3 principais. Já sugerimos do seu ramo.',
+    perguntas:[
+      { id:'lista_servicos', tipo:'lista', obrig:true, label:'Seus 3 principais serviços ou produtos',
+        max:6, campos:[ {k:'titulo',p:'Nome'}, {k:'preco',p:'Preço (opcional)'} ] },
+      { id:'cor', tipo:'cor', obrig:true, label:'Qual cor combina com a sua marca?' },
+    ] },
+  { id:'fotos', icone:'📷', titulo:'Fotos', desc:'Fotos reais vendem mais que qualquer texto. Pode mandar agora ou escolher as nossas.',
+    perguntas:[
+      { id:'fotos', tipo:'fotos', label:'Fotos da sua loja (capa + até 4)',
+        ajuda:'Fotografe o balcão, a fachada, os produtos. Quem vê foto real confia mais.' },
+      { id:'slogan', tipo:'texto', label:'Frase de efeito (opcional)',
+        ajuda:'Se deixar em branco, criamos uma para o seu ramo.', ph:'Ex.: O melhor pão da cidade' },
+    ] },
+  { id:'final', icone:'🚀', titulo:'Revisar e publicar', desc:'Veja como ficou e ajuste o que quiser.',
+    perguntas:[] },
+];
+
+/* extras opcionais — o cliente preenche DEPOIS, se quiser */
+const EXTRAS = [
+  { id:'prova', icone:'⭐', titulo:'Sua reputação', desc:'Só dados reais — nada é inventado no site.',
+    perguntas:[
+      { id:'nota_google', tipo:'texto', label:'Nota no Google (se tiver)', ph:'Ex.: 4,8' },
+      { id:'qtd_avaliacoes', tipo:'texto', label:'Quantas avaliações no Google?', ph:'Ex.: 187' },
+      { id:'fundacao', tipo:'texto', label:'Há quanto tempo funciona?', ph:'Ex.: 12 anos' },
+      { id:'lista_depoimentos', tipo:'lista', label:'Depoimentos REAIS de clientes',
+        ajuda:'Só frases que clientes realmente falaram. Sem depoimento, mostramos só a nota do Google.',
+        max:3, campos:[ {k:'texto',p:'O que o cliente falou',multi:1}, {k:'autor',p:'Nome do cliente'} ] },
+    ] },
+  { id:'marketing', icone:'📣', titulo:'Promoção e redes', desc:'Aparecem no topo e no rodapé.',
+    perguntas:[
+      { id:'promocao', tipo:'texto', label:'Promoção para destacar', ph:'Ex.: 10% OFF na primeira compra' },
+      { id:'instagram', tipo:'texto', label:'Instagram', ph:'@suaempresa' },
+      { id:'facebook', tipo:'texto', label:'Facebook', ph:'suaempresa' },
+      { id:'cnpj', tipo:'texto', label:'CNPJ', ph:'00.000.000/0000-00' },
+    ] },
+  { id:'clinica', icone:'🏥', titulo:'Convênios atendidos', desc:'Só aparece para clínica e farmácia.',
+    perguntas:[
+      { id:'convenios', tipo:'texto', label:'Convênios (separados por vírgula)',
+        ph:'Ex.: Unimed, Amil, Particular' },
+    ] },
+];
+
+const TOTAL_PERGUNTAS = ETAPAS.reduce((n, e) => n + e.perguntas.length, 0);
+
+/* ─────────────── conversão: respostas → configuração do site ─────────────── */
+const CORES = {
+  verde:'esmeralda', azul:'oceano', vermelho:'vinho', laranja:'coral',
+  amarelo:'ambar', roxo:'violeta', cinza:'grafite', oliva:'floresta',
+};
+
+function briefParaConfig(r, perfisMod) {
+  const P = perfisMod || Perfis;
+  const cfg = {};
+  const chave = r.segmento && P.PERFIS[r.segmento] ? r.segmento : 'generico';
+  P.aplicar(cfg, chave);                       // base do segmento (textos, serviços, paleta)
+
+  const lim = (s, n) => String(s || '').trim().slice(0, n);
+  const num = (s) => String(s || '').replace(/\D/g, '');
+
+  cfg.nome = lim(r.nome, 60) || cfg.nome || 'Minha Empresa';
+  if (lim(r.slogan, 120)) cfg.slogan = lim(r.slogan, 120);
+  cfg.titulo = '';
+
+  /* visual */
+  if (r.cor && CORES[r.cor]) cfg.paleta = CORES[r.cor];
+  cfg.estilo = 'moderno';
+  cfg.fonte = 'moderna';
+  cfg.escuro = '';
+  cfg.perfil = chave;
+
+  /* localização e prova real */
+  cfg.endereco = lim(r.endereco, 140);
+  const bairroMatch = String(r.endereco || '').match(/(?:-|,)\s*([^,-]+?)\s*$/);
+  cfg.bairro = lim(r.bairro, 40) || (bairroMatch ? lim(bairroMatch[1], 40) : '');
+  if (cfg.bairro) cfg.badge = 'Atendimento em ' + cfg.bairro;
+
+  const anos = num(r.fundacao);
+  if (anos && anos.length <= 2) cfg.anosAtendimento = anos;          // "12" = anos direto
+  else if (anos && anos.length === 4) {
+    const y = Math.min(Math.max(parseInt(anos, 10), 1950), new Date().getFullYear());
+    const dif = new Date().getFullYear() - y;
+    if (dif >= 0) cfg.anosAtendimento = String(dif);
+  }
+
+  cfg.notaMedia = lim(String(r.nota_google || '').replace(/estrelas?/i, '').trim(), 5);
+  cfg.qtdAvaliacoes = num(r.qtd_avaliacoes).slice(0, 8);
+  if (cfg.notaMedia) cfg.linkAvaliacoes = 'https://www.google.com/search?q=' + encodeURIComponent(cfg.nome + ' ' + (cfg.bairro || ''));
+
+  /* serviços */
+  const servs = (Array.isArray(r.lista_servicos) ? r.lista_servicos : [])
+    .filter(s => s && lim(s.titulo, 60))
+    .map(s => ({ titulo: lim(s.titulo, 60), descricao: lim(s.descricao, 200),
+                 preco: r.mostrar_precos === 'nao' ? '' : lim(s.preco, 40) }));
+  if (servs.length) cfg.servicos = servs.slice(0, 6);
+  if (r.mostrar_precos === 'nao') cfg.mostrarPrecos = false;
+
+  /* depoimentos — SÓ reais */
+  const deps = (Array.isArray(r.lista_depoimentos) ? r.lista_depoimentos : [])
+    .filter(x => x && lim(x.texto, 400))
+    .map(x => ({ texto: lim(x.texto, 400), autor: lim(x.autor, 50) || 'Cliente', papel: 'Cliente' }));
+  if (deps.length) cfg.depoimentos = deps.slice(0, 3);
+
+  /* marketing / extras */
+  cfg.promoTexto = lim(r.promocao, 90);
+  cfg.instagram = lim(r.instagram, 90);
+  cfg.facebook = lim(r.facebook, 90);
+  cfg.cnpj = lim(r.cnpj, 22);
+  cfg.convenios = String(r.convenios || '').split(/[,;]/).map(s => lim(s, 40)).filter(Boolean).slice(0, 10);
+
+  /* fotos: data URIs viram URLs no servidor; banco fica como veio */
+  const fotos = (Array.isArray(r.fotos) ? r.fotos : [])
+    .map(f => typeof f === 'string' ? { data: f } : f)
+    .filter(f => f && (f.data || f.url || f.banco))
+    .slice(0, 5);
+  if (fotos.length) cfg.fotos = fotos;
+
+  /* horários */
+  const hs = [];
+  if (lim(r.h_semana, 40)) hs.push({ dia: 'Segunda a Sexta', hora: lim(r.h_semana, 40) });
+  const fds = lim(r.h_fds, 60);
+  if (fds) {
+    const sab = fds.match(/s[aá]b[^:]*[:h]?\s*([\d:hs\s–-]*?)(?:\s*[,.;]|\s*dom|\s*$)/i);
+    if (sab && lim(sab[1], 30)) hs.push({ dia: 'Sábado', hora: lim(sab[1], 30) });
+    const dom = fds.match(/dom[^:]*[:h]?\s*([\d:hs\s–-]*?)\s*$/i);
+    if (dom && lim(dom[1], 30)) hs.push({ dia: 'Domingo', hora: lim(dom[1], 30) });
+  }
+  if (hs.length) cfg.horarios = hs;
+
+  /* contato */
+  cfg.whatsapp = lim(r.whatsapp, 25);
+  cfg.telefone = lim(r.telefone, 25);
+  cfg.email = lim(r.email, 90);
+  cfg.textoCta = lim(r.cta, 30);
+  cfg.mapa = !!cfg.endereco;
+  cfg.botaoFlutuante = !!cfg.whatsapp;
+
+  /* mensagens por seção (botão de WhatsApp contextual) */
+  cfg.msgs = {
+    geral: 'Olá! Vim pelo site da ' + cfg.nome + ' e gostaria de mais informações.',
+    hero: 'Olá! Vim pelo site da ' + cfg.nome + ' e gostaria de mais informações.',
+    servicos: 'Olá! Quero saber mais sobre os serviços da ' + cfg.nome + '.',
+    contato: 'Olá! Tenho uma dúvida sobre a ' + cfg.nome + '.',
+  };
+
+  cfg.descricao = lim(r.slogan || cfg.slogan, 158);
+  cfg.palavras = [lim(P.PERFIS[chave] && P.PERFIS[chave].rotulo, 40), lim(cfg.bairro, 40), lim(cfg.nome, 40)]
+    .filter(Boolean).join(', ').toLowerCase();
+  cfg.animacoes = true;
+  cfg.lgpd = true;
+  cfg.creditos = true;
+  cfg.secoes = { sobre: true, servicos: true, galeria: false, equipe: false,
+    depoimentos: true, faq: false, horario: true, contato: true, numeros: false };
+  return cfg;
+}
+
+/* resumo legível das respostas, para aparecer na ficha do CRM */
+function resumo(r) {
+  const it = [];
+  const add = (k, v) => { if (v && String(v).trim()) it.push([k, Array.isArray(v) ? v.join(', ') : String(v)]); };
+  add('Quer fechar?', { sim:'SIM — quer fechar', talvez:'Quer ver antes', duvida:'Tem dúvidas' }[r.fechar] || r.fechar);
+  add('Empresa', r.nome);
+  add('WhatsApp', r.whatsapp);
+  add('Endereço', r.endereco);
+  add('Slogan', r.slogan);
+  add('Instagram', r.instagram); add('Facebook', r.facebook);
+  add('Promoção', r.promocao); add('Nota Google', r.nota_google);
+  add('Desde', r.fundacao); add('CNPJ', r.cnpj);
+  add('Convênios', r.convenios);
+  add('Fotos', (r.fotos || []).length ? (r.fotos || []).length + ' foto(s)' : '');
+  return it;
+}
+
+return { ETAPAS, EXTRAS, TOTAL_PERGUNTAS, CORES, briefParaConfig, resumo };
+});
+
+</script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LEAD = 'demo';
+const ETAPAS = Brief.ETAPAS;
+
+/* ── estado ── */
+const R = {};
+R.lista_servicos = [{titulo:'',preco:''},{titulo:'',preco:''},{titulo:'',preco:''}];
+R.fotos = [];
+R.mostrar_precos = 'sim';
+let etapa = 0;
+
+/* ── emojis por segmento ── */
+const EMOJI = { padaria:'🥖', restaurante:'🍽️', lanchonete:'🍔', bar_cafe:'☕', mercado:'🛒',
+  salao:'💇', academia:'🏋️', oficina:'🔧', autopecas:'⚙️', clinica:'🩺', farmacia:'💊',
+  petshop:'🐾', veterinaria:'🐶', roupas:'👗', construcao:'🧱', moveis:'🛋️', eletronicos:'📱', hotel:'🛏️',
+  escola:'🎓', advocacia:'⚖️', imobiliaria:'🏠', papelaria:'✏️', floricultura:'💐',
+  lavanderia:'🧺', otica:'👓', outros:'🏪' };
+const CORES_NOME = { verde:'Verde', azul:'Azul', vermelho:'Vermelho', laranja:'Laranja',
+  amarelo:'Amarelo', roxo:'Roxo', cinza:'Cinza', oliva:'Oliva' };
+
+/* pré-preenche com o que já sabemos do lead */
+if (LEAD) fetch('/api/lead-publico/' + encodeURIComponent(LEAD)).then(r => r.json()).then(l => {
+  R.nome = l.nome || ''; R.whatsapp = l.telefone || '';
+  R.endereco = [l.bairro ? '' : '', l.bairro, l.cidade].filter(Boolean).join(' - ');
+  if (l.segmento) { R.segmento = l.segmento; semearServicos(l.segmento); }
+  $('#tTitulo').textContent = 'Briefing — ' + l.nome;
+}).catch(()=>{});
+
+function semearServicos(seg) {
+  const p = Perfis.PERFIS[seg];
+  if (!p) return;
+  R.lista_servicos = (p.servicos || []).slice(0, 3).map(s => ({ titulo: s.titulo, preco: s.preco || '' }));
+}
+
+/* ── compressão de imagem no próprio celular ── */
+async function comprimir(file, maxLado = 1200, q = 0.72) {
+  const dataUrl = await new Promise((ok, err) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = err; r.readAsDataURL(file); });
+  const img = await new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = dataUrl; });
+  const f = Math.min(1, maxLado / Math.max(img.width, img.height));
+  const w = Math.round(img.width * f), h = Math.round(img.height * f);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  cv.getContext('2d').drawImage(img, 0, 0, w, h);
+  return cv.toDataURL('image/jpeg', q);
+}
+
+/* ── render ── */
+function desenhar() {
+  const E = ETAPAS[etapa];
+  const ultima = etapa === ETAPAS.length - 1;
+  $('#tSub').textContent = ultima ? 'Revise e publique' : E.desc;
+  $('#legEtapa').textContent = ultima ? 'Tudo pronto!' : `Etapa ${etapa + 1} de ${ETAPAS.length - 1}`;
+  $('#preenche').style.width = Math.round((etapa / (ETAPAS.length - 1)) * 100) + '%';
+  $('#legPct').textContent = Math.round((etapa / (ETAPAS.length - 1)) * 100) + '%';
+
+  let html = `<div class="cartao"><h1>${E.icone} ${E.titulo}</h1><div class="desc">${E.desc}</div>`;
+
+  if (E.id === 'inicio') {
+    html += radio('fechar', E.perguntas[0]);
+    html += texto('nome', E.perguntas[1]);
+    html += texto('whatsapp', E.perguntas[2]);
+  } else if (E.id === 'negocio') {
+    html += segmento();
+    html += texto('endereco', E.perguntas[1]);
+    html += texto('h_semana', E.perguntas[2]);
+    html += texto('h_fds', E.perguntas[3]);
+  } else if (E.id === 'servicos') {
+    html += servicos();
+    html += cores();
+  } else if (E.id === 'fotos') {
+    html += fotos();
+    html += texto('slogan', E.perguntas[1]);
+  } else if (E.id === 'final') {
+    html += final();
+  }
+  html += `</div>`;
+
+  if (!ultima) {
+    html += `<div class="botoes" style="margin-top:16px">
+      ${etapa > 0 ? `<button class="bt sec" id="voltar">← Voltar</button>` : ''}
+      <button class="bt pri" id="seguir">${etapa === ETAPAS.length - 2 ? 'Ver como ficou →' : 'Continuar →'}</button>
+    </div>`;
+  } else {
+    html += extrasOpcionais();
+  }
+  $('#palco').innerHTML = html;
+  ligar(ultima);
+}
+
+function texto(id, q) {
+  return `<div class="q"><label>${esc(q.label)}${q.obrig ? ' *' : ''}</label>
+    ${q.ajuda ? `<div class="ajuda">${esc(q.ajuda)}</div>` : ''}
+    <input id="f_${id}" placeholder="${esc(q.ph || '')}" value="${esc(R[id] || '')}">
+  </div>`;
+}
+function radio(id, q) {
+  return `<div class="q"><label>${esc(q.label)}${q.obrig ? ' *' : ''}</label>
+    ${q.ajuda ? `<div class="ajuda">${esc(q.ajuda)}</div>` : ''}
+    <div class="opcoes">${q.opcoes.map(o => `<label class="opcao ${R[id] === o.v ? 'on' : ''}" data-r="${id}" data-v="${esc(o.v)}">
+      <input type="radio" name="${id}" value="${esc(o.v)}" ${R[id] === o.v ? 'checked' : ''}>
+      <span><b>${esc(o.t)}</b><small>${esc(o.d || '')}</small></span></label>`).join('')}</div></div>`;
+}
+function segmento() {
+  return `<div class="q"><label>Qual o seu ramo? *</label>
+    <div class="ajuda">A gente já monta serviços, textos e fotos do seu ramo — é só ajustar.</div>
+    <div class="seg-grid">${Object.keys(Perfis.PERFIS).map(k => `<div class="seg ${R.segmento === k ? 'on' : ''}" data-seg="${k}">
+      <em>${EMOJI[k] || '🏪'}</em>${esc(Perfis.PERFIS[k].rotulo || k)}</div>`).join('')}</div></div>`;
+}
+function servicos() {
+  return `<div class="q"><label>Seus 3 principais serviços ou produtos *</label>
+    <div class="ajuda">Já sugerimos do seu ramo — é só ajustar nome e preço.</div>
+    <div class="lista">${R.lista_servicos.map((s, i) => `<div class="item">
+      <div class="lin"><input class="sv-t" data-i="${i}" placeholder="Serviço ${i + 1}" value="${esc(s.titulo || '')}">
+      <input class="sv-p preco" data-i="${i}" placeholder="Preço" value="${esc(s.preco || '')}"></div>
+    </div>`).join('')}</div></div>`;
+}
+function cores() {
+  return `<div class="q"><label>Qual cor combina com a sua marca? *</label>
+    <div class="cor-grid">${Object.keys(CORES_NOME).map(k => `<div class="cor ${R.cor === k ? 'on' : ''}" data-cor="${k}"
+      title="${CORES_NOME[k]}" style="background:linear-gradient(135deg,${SiteGen.PALETAS[Brief.CORES[k]].p},${SiteGen.PALETAS[Brief.CORES[k]].a})"></div>`).join('')}</div></div>`;
+}
+function fotos() {
+  const fotosHtml = R.fotos.map((f, i) => `<div class="foto ${i === 0 ? 'on' : ''}">
+    ${i === 0 ? '<span class="capa">CAPA</span>' : ''}
+    <img src="${f.data || f.url}" alt="Foto ${i + 1}">
+    <button data-rm="${i}" title="Remover">×</button></div>`).join('');
+  const banco = bancoDoRamo();
+  return `<div class="q"><label>Fotos da sua loja (a primeira vira a capa) *</label>
+    <div class="ajuda">Fotografe o balcão, a fachada, os produtos. Site com foto real vende muito mais.</div>
+    <div class="fotos-grid" id="fg">${fotosHtml}
+      <label class="up"><input type="file" id="upFotos" accept="image/*" multiple hidden>
+        <b>📷 Enviar fotos</b>toque para escolher da galeria</label>
+    </div>
+    ${banco ? `<div class="banco-note" style="margin-top:10px">Sem foto agora? Use as nossas (ilustrativas, trocamos depois pelas suas):</div>
+    <div class="fotos-grid" style="margin-top:8px">
+      ${banco.map(b => `<div class="foto banco ${R.fotos.some(f => f.url === b.url) ? 'on' : ''}" data-banco="${esc(b.url)}">
+        <img src="${esc(b.url)}" alt="${esc(b.nome)}"><span class="capa">BANCO</span></div>`).join('')}
+    </div>` : ''}</div>`;
+}
+function bancoDoRamo() {
+  const mapa = { padaria:'padaria', restaurante:'restaurante', lanchonete:'restaurante', cafe_bar:'restaurante',
+    oficina:'oficina', autopecas:'oficina', salao_beleza:'salao', clinica:'clinica', farmacia:'mercado',
+    hotel:'hotel', academia:'academia', petshop:'petshop', mercado:'mercado', floricultura:'floricultura' };
+  const k = mapa[R.segmento];
+  if (!k) return [];
+  return [{ url: '/fotos/banco/' + k + '.jpg', nome: k }];
+}
+
+function configAgora() {
+  return Brief.briefParaConfig(R, Perfis);
+}
+function final() {
+  const cfg = configAgora();
+  const html = SiteGen.gerar(cfg);
+  return `<div class="final">
+    <div class="preview">
+      <div class="molde"><div class="cbeco"><s></s><s></s><s></s><em>Seu site — prévia ao vivo</em></div>
+      <iframe id="pv" srcdoc="${esc(html)}" title="Prévia do site"></iframe></div>
+    </div>
+    <div class="ajustes">
+      <div class="aj"><b>✏️ Trocar slogan</b>
+        <input id="ajSlogan" placeholder="${esc(cfg.slogan || 'Frase de efeito')}" value="${esc(R.slogan || '')}">
+      </div>
+      <div class="aj"><b>🎨 Outra cor</b>
+        <div class="mini">${Object.keys(CORES_NOME).map(k => `<div class="chip cor ${R.cor === k ? 'on' : ''}" data-cor="${k}">${CORES_NOME[k]}</div>`).join('')}</div>
+      </div>
+      <div class="aj"><b>👁️ Preços</b>
+        <div class="tog ${R.mostrar_precos === 'sim' ? 'on' : ''}" id="togPrecos"><span>Mostrar preços no site</span><div class="sw"></div></div>
+      </div>
+      <div class="aj"><b>📷 Foto da capa</b>
+        <div class="mini">
+          ${R.fotos.length ? R.fotos.map((f, i) => `<div class="chip capa ${i === 0 ? 'on' : ''}" data-capa="${i}">Foto ${i + 1}</div>`).join('') : '<span class="banco-note">Envie fotos na etapa anterior</span>'}
+        </div>
+      </div>
+      <div class="aj"><b>📣 Promoção</b>
+        <div class="tog ${R.promocao ? 'on' : ''}" id="togPromo"><span>Faixa de promoção no topo</span><div class="sw"></div></div>
+        <input id="ajPromo" placeholder="Ex.: 10% OFF na primeira compra" value="${esc(R.promocao || '')}" style="margin-top:10px;${R.promocao ? '' : 'display:none'}">
+      </div>
+      <div class="botoes" style="margin-top:6px">
+        <button class="bt pri" id="publicar" style="min-height:54px">🚀 Publicar meu site</button>
+      </div>
+    </div>
+  </div>`;
+}
+function extrasOpcionais() {
+  return `<div class="extras">
+    <details><summary>⭐ Quero deixar o site ainda melhor (opcional)</summary><div class="corpo" id="extrasCorpo"></div></details>
+    <div class="aviso" style="margin-top:12px">🔒 Nada é inventado no site: sem depoimento seu, mostramos só a nota real do Google (se você tiver).</div>
+  </div>`;
+}
+
+function montarExtras() {
+  const corpo = $('#extrasCorpo');
+  if (!corpo) return;
+  const lista = Brief.EXTRAS.filter(e => !(e.id === 'clinica' && !['clinica', 'farmacia'].includes(R.segmento)));
+  corpo.innerHTML = lista.map(e => {
+    let qs = '';
+    for (const q of e.perguntas) {
+      if (q.tipo === 'lista') {
+        qs += `<div class="q"><label>${esc(q.label)}</label><div class="ajuda">${esc(q.ajuda || '')}</div>
+          <div class="lista" data-lista="${q.id}">${(R[q.id] || [{ texto: '', autor: '' }]).map((x, i) => `<div class="item">
+            <input class="x-t" data-i="${i}" placeholder="${esc(q.campos[0].p)}" value="${esc(x[q.campos[0].k] || '')}">
+            <input class="x-a" data-i="${i}" placeholder="${esc(q.campos[1].p)}" value="${esc(x[q.campos[1].k] || '')}">
+          </div>`).join('')}</div></div>`;
+      } else {
+        qs += `<div class="q"><label>${esc(q.label)}</label><input id="x_${q.id}" placeholder="${esc(q.ph || '')}" value="${esc(R[q.id] || '')}"></div>`;
+      }
+    }
+    return `<div style="border-left:3px solid var(--p);padding-left:14px"><b>${e.icone} ${esc(e.titulo)}</b><div style="color:var(--mute);font-size:.85rem;margin-bottom:12px">${esc(e.desc)}</div>${qs}</div>`;
+  }).join('');
+  /* liga inputs dos extras */
+  corpo.querySelectorAll('[data-lista]').forEach(d => {
+    const id = d.dataset.lista;
+    d.querySelectorAll('.x-t').forEach(inp => inp.oninput = () => { const i = +inp.dataset.i; R[id] = R[id] || [{ texto:'', autor:'' }]; R[id][i] = { texto: inp.value, autor: d.querySelectorAll('.x-a')[i].value }; });
+    d.querySelectorAll('.x-a').forEach(inp => inp.oninput = () => { const i = +inp.dataset.i; R[id] = R[id] || [{ texto:'', autor:'' }]; R[id][i] = { texto: d.querySelectorAll('.x-t')[i].value, autor: inp.value }; });
+  });
+  corpo.querySelectorAll('input[id^=x_]').forEach(inp => inp.oninput = () => { R[inp.id.slice(2)] = inp.value; });
+}
+
+/* ── eventos ── */
+function ligar(ultima) {
+  /* texto */
+  $$('input[id^=f_]').forEach(inp => {
+    inp.oninput = () => { R[inp.id.slice(2)] = inp.value;
+      if (inp.id === 'f_segmento') semearServicos(inp.value); };
+  });
+  /* radio (opcao inteira clicável) */
+  $$('[data-r]').forEach(op => op.onclick = () => { R[op.dataset.r] = op.dataset.v; desenhar(); });
+  /* segmento */
+  $$('.seg').forEach(s => s.onclick = () => {
+    R.segmento = s.dataset.seg;
+    if (!R._tocouServicos) semearServicos(R.segmento);
+    desenhar();
+  });
+  /* serviços */
+  $$('.sv-t').forEach(inp => inp.oninput = () => { R._tocouServicos = true; R.lista_servicos[+inp.dataset.i].titulo = inp.value; });
+  $$('.sv-p').forEach(inp => inp.oninput = () => { R.lista_servicos[+inp.dataset.i].preco = inp.value; });
+  /* cor */
+  $$('[data-cor]').forEach(c => c.onclick = () => { R.cor = c.dataset.cor; desenhar(); });
+  /* fotos: upload */
+  const up = $('#upFotos');
+  if (up) up.onchange = async () => {
+    if (!R.segmento) { alert('Escolha o ramo primeiro (etapa anterior).'); return; }
+    const arqs = [...up.files];
+    for (const a of arqs) {
+      if (R.fotos.length >= 5) break;
+      try { R.fotos.push({ data: await comprimir(a) }); } catch (e) {}
+    }
+    desenhar();
+  };
+  /* fotos: remover */
+  $$('[data-rm]').forEach(b => b.onclick = () => { R.fotos.splice(+b.dataset.rm, 1); desenhar(); });
+  /* fotos: banco */
+  $$('[data-banco]').forEach(b => b.onclick = () => {
+    const url = b.dataset.banco;
+    const i = R.fotos.findIndex(f => f.url === url);
+    if (i >= 0) R.fotos.splice(i, 1); else { R.fotos = R.fotos.filter(f => !f.banco || f.url === url); R.fotos.unshift({ url, banco: true }); }
+    desenhar();
+  });
+
+  const vb = $('#voltar'); if (vb) vb.onclick = () => { etapa--; desenhar(); };
+  const sg = $('#seguir'); if (sg) sg.onclick = () => {
+    const E = ETAPAS[etapa];
+    const obrig = E.perguntas.filter(q => q.obrig).map(q => q.id);
+    if (obrig.includes('fechar') && !R.fechar) return alert('Responda se quer fechar para continuar.');
+    if (obrig.includes('nome') && !R.nome.trim()) return alert('Escreva o nome da empresa.');
+    if (obrig.includes('whatsapp') && String(R.whatsapp).replace(/\D/g, '').length < 10) return alert('Informe um WhatsApp válido (com DDD).');
+    if (obrig.includes('segmento') && !R.segmento) return alert('Escolha o ramo.');
+    if (obrig.includes('endereco') && !R.endereco.trim()) return alert('Informe o endereço.');
+    if (obrig.includes('h_semana') && !R.h_semana.trim()) return alert('Informe o horário de funcionamento.');
+    if (obrig.includes('lista_servicos')) {
+      R.lista_servicos = R.lista_servicos.filter(s => s.titulo.trim());
+      if (!R.lista_servicos.length) return alert('Adicione pelo menos 1 serviço.');
+    }
+    if (obrig.includes('cor') && !R.cor) return alert('Escolha uma cor.');
+    if (obrig.includes('fotos') && !R.fotos.length && !confirm('Sem nenhuma foto? O site fica com uma foto ilustrativa do seu ramo.\n\nToque em OK para continuar assim — você pode mandar as suas depois pelo WhatsApp.')) return;
+    etapa++; desenhar();
+  };
+
+  if (ultima) {
+    ligarFinal();
+    montarExtras();
+  }
+}
+
+function ligarFinal() {
+  /* ajustes rápidos — cada mudança re-renderiza a prévia */
+  const pv = $('#pv');
+  const atualizar = () => { const cfg = configAgora(); pv.srcdoc = SiteGen.gerar(cfg); };
+
+  const ajS = $('#ajSlogan');
+  if (ajS) ajS.oninput = () => { R.slogan = ajS.value; atualizar(); };
+  const ajP = $('#ajPromo');
+  if (ajP) ajP.oninput = () => { R.promocao = ajP.value; atualizar(); };
+
+  const togP = $('#togPrecos');
+  if (togP) togP.onclick = () => {
+    R.mostrar_precos = R.mostrar_precos === 'sim' ? 'nao' : 'sim';
+    togP.classList.toggle('on', R.mostrar_precos === 'sim');
+    atualizar();
+  };
+  const togPr = $('#togPromo');
+  if (togPr) togPr.onclick = () => {
+    R.promocao = R.promocao ? '' : (ajP.value || '10% OFF na primeira compra');
+    togPr.classList.toggle('on', !!R.promocao);
+    if (ajP) { ajP.style.display = R.promocao ? '' : 'none'; ajP.value = R.promocao; }
+    atualizar();
+  };
+  $$('.capa').forEach(c => c.onclick = () => {
+    const i = +c.dataset.capa;
+    const f = R.fotos.splice(i, 1)[0];
+    R.fotos.unshift(f);
+    desenhar();
+  });
+
+  const pub = $('#publicar');
+  if (pub) pub.onclick = async () => {
+    pub.disabled = true; pub.textContent = 'Publicando…';
+    try {
+      const cfg = Brief.briefParaConfig(R, Perfis);
+      const j = { html: SiteGen.gerar(cfg), url: '#', slug: '' };
+      concluir(j);
+    } catch (e) {
+      pub.disabled = false; pub.textContent = '🚀 Publicar meu site';
+      alert(e.message);
+    }
+  };
+}
+
+function concluir(j) {
+  $('#barra').style.display = 'none';
+  const dom = String(R.dominio||'').trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const url = 'https://' + (dom || String(R.nome||'seusite').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'') + '.com.br');
+  const zap = R.whatsapp ? String(R.whatsapp).replace(/\D/g, '') : '';
+  $('#palco').innerHTML = `<div class="cartao fim">
+    <div class="selo">✓</div>
+    <h2>Pronto${esc(String(R.nome || '').split(' ')[0] ? ', ' + R.nome.split(' ')[0] : '')}! Seu site está no ar 🎉</h2>
+    <p>Mande o link para alguém agora — dá para ver e aprovar pelo celular:</p>
+    <div class="link">${esc(url)}</div>
+    <div class="molde"><div class="cbeco"><s></s><s></s><s></s><em>${esc(url)}</em></div>
+      <iframe srcdoc="${esc(j.html)}" title="Seu site"></iframe></div>
+    <div class="botoes">
+      <button class="bt pri" onclick="try{const w=window.open();w.document.write(decodeURIComponent(this.dataset.h));w.document.close();}catch(e){alert('Abra o arquivo baixado para ver em tela cheia.')}" data-h="${encodeURIComponent(j.html)}">↗ Abrir meu site em tela cheia</button>
+      
+      ${zap ? `<a class="bt" href="https://wa.me/${zap.length <= 11 ? '55' + zap : zap}?text=${encodeURIComponent('Olha o site da ' + (R.nome || 'nossa empresa') + ': ' + url)}" target="_blank" rel="noopener">💬 Mandar no WhatsApp</a>` : ''}
+    </div>
+    <p style="margin-top:20px;font-size:.9rem">${R.fechar === 'sim'
+      ? 'Recebemos seu pedido de fechamento — o Nataniel entra em contato para os ajustes finais e a publicação no seu domínio.'
+      : 'Ficou com alguma dúvida? É só chamar o Nataniel no WhatsApp que ajustamos o que precisar.'}</p>
+  </div>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+desenhar();
+</script>
+</body>
+</html>
