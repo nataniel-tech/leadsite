@@ -6819,6 +6819,12 @@ function lerFormulario() {
    e escolhe QUALQUER cor, não só as paletas prontas. */
 var CIRC = { fora: 122, dentro: 74, meio: 98 };
 
+/* paleta pronta pelo nome (a mesma usada pelo gerador do site) */
+function paletaDe(nome) {
+  if (!nome) return null;
+  return (typeof SiteGen !== 'undefined' && SiteGen.PALETAS) ? (SiteGen.PALETAS[nome] || null) : null;
+}
+
 function hslParaHex(h, s, l) {
   h = ((h % 360) + 360) % 360 / 360; s /= 100; l /= 100;
   var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h * 6) % 2 - 1)), m = l - c / 2, r, g, b;
