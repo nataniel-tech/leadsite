@@ -229,3 +229,5 @@ select.st-sel{padding:6px 10px;font-size:.8rem;width:auto;font-weight:600}
 #rodaCor svg{width:100%;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4));touch-action:none}
 .roda-legenda{text-align:center;font-size:.82rem;color:var(--mute);margin-top:8px;display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap}
 .roda-legenda .pastilha{width:14px;height:14px;border-radius:4px;border:1px solid var(--line);display:inline-block}
+
+.versao { font-size: 10.5px; font-weight: 800; color: #0b1220; background: linear-gradient(90deg,#ff0000,#ff8800,#ffdd00,#00cc00,#0088ff,#8800ff); border-radius: 999px; padding: 3px 9px; letter-spacing: .4px; white-space: nowrap; }
