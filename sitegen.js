@@ -133,7 +133,7 @@
   function gerar(cfg) {
     const c = cfg || {};
     const nome = (c.nome || 'Minha Empresa').trim();
-    const pal = PALETAS[c.paleta] || PALETAS.esmeralda;
+    const pal = c.paletaCustom ? c.paletaCustom : (PALETAS[c.paleta] || PALETAS.esmeralda);
     const fnt = FONTES[c.fonte] || FONTES.moderna;
     const est = ESTILOS[c.estilo] || ESTILOS.moderno;
     const sec = c.secoes || {};

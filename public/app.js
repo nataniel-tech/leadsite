@@ -618,11 +618,12 @@ const SECOES = { numeros:'Números', sobre:'Sobre', servicos:'Serviços', galeri
 
 // paletas
 $('#paletas').innerHTML = Object.entries(SiteGen.PALETAS).map(([k, v]) =>
-  `<div class="pal ${k === cfg.paleta ? 'on' : ''}" data-p="${k}" title="${k}" style="background:linear-gradient(135deg,${v.p},${v.a})"></div>`).join('');
+  `<div class="pal ${!cfg.paletaCustom && k === cfg.paleta ? 'on' : ''}" data-p="${k}" title="${k}" style="background:linear-gradient(135deg,${v.p},${v.a})"></div>`).join('');
 $$('.pal').forEach(p => p.onclick = () => {
   $$('.pal').forEach(x => x.classList.remove('on')); p.classList.add('on');
-  cfg.paleta = p.dataset.p; render();
+  cfg.paleta = p.dataset.p; cfg.paletaCustom = null; cfg.hue = null; render();
 });
+desenharRoda();
 
 // seções
 $('#secoes').innerHTML = Object.entries(SECOES).map(([k, n]) =>
@@ -858,4 +859,103 @@ sincronizarUI(); atualizarBadge();
 function abrirLink(u, t) {
   try { const w = window.open(u, t || '_blank'); if (!w) throw 0; return w; }
   catch (e) { toast('Link bloqueado no preview — abra o app completo'); return { document:{ write(){}, close(){} } }; }
+}
+
+/* ═══════════ arco-íris de cores (roda de matiz contínua) ═══════════ */
+function rodaHsl(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360; s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h * 6) % 2 - 1)), m = l - c / 2;
+  let r, g, b;
+  if (h < 1 / 6) { r = c; g = x; b = 0; } else if (h < 2 / 6) { r = x; g = c; b = 0; }
+  else if (h < 3 / 6) { r = 0; g = c; b = x; } else if (h < 4 / 6) { r = 0; g = x; b = c; }
+  else if (h < 5 / 6) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
+  const hex = v => ('0' + Math.round((v + m) * 255).toString(16)).slice(-2);
+  return '#' + hex(r) + hex(g) + hex(b);
+}
+function rodaHueDeCor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return 0;
+  const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; }
+  return ((h % 360) + 360) % 360;
+}
+function desenharRoda() {
+  const mold = $('#rodaCor');
+  if (!mold) return;
+  const R = { fora: 108, dentro: 66, meio: 87, c: 110 };
+  const custom = !!cfg.paletaCustom;
+  const hueAtual = custom ? (cfg.hue || 0) : rodaHueDeCor(cfg.paletaCustom ? cfg.paletaCustom.p : (SiteGen.PALETAS[cfg.paleta] || {}).p);
+  const cor = custom ? cfg.paletaCustom.p : ((SiteGen.PALETAS[cfg.paleta] || {}).p || '#64748b');
+  const ang2p = (a, r) => { const rad = a * Math.PI / 180; return [R.c + r * Math.sin(rad), R.c - r * Math.cos(rad)]; };
+  const fatia = (a, b) => {
+    const p0 = ang2p(a, R.fora), p1 = ang2p(b, R.fora), p2 = ang2p(b, R.dentro), p3 = ang2p(a, R.dentro);
+    return 'M' + p0[0].toFixed(2) + ',' + p0[1].toFixed(2) + ' A' + R.fora + ',' + R.fora + ' 0 0 1 ' + p1[0].toFixed(2) + ',' + p1[1].toFixed(2) +
+      ' L' + p2[0].toFixed(2) + ',' + p2[1].toFixed(2) + ' A' + R.dentro + ',' + R.dentro + ' 0 0 0 ' + p3[0].toFixed(2) + ',' + p3[1].toFixed(2) + ' Z';
+  };
+  let s = '<svg viewBox="0 0 220 220" role="group" aria-label="Arco-íris de cores">';
+  s += '<circle cx="110" cy="110" r="108" fill="#0b1220" stroke="#334155" stroke-width="2"/>';
+  for (let i = 0; i < 360; i++) s += '<path d="' + fatia(i, i + 1.001) + '" fill="' + rodaHsl(i, 100, 50) + '" style="pointer-events:none"/>';
+  s += '<circle cx="110" cy="110" r="112" fill="rgba(0,0,0,0)" data-captura="1" style="cursor:crosshair"/>';
+  s += '<circle cx="110" cy="110" r="' + (R.dentro - 7) + '" fill="#0b1220"/>';
+  s += '<circle id="rodaCentro" cx="110" cy="110" r="' + (R.dentro - 14) + '" fill="' + cor + '"/>';
+  s += '<text id="rodaNome" x="110" y="107" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.45)" stroke-width="2" style="paint-order:stroke;pointer-events:none">' +
+    (custom ? 'SUA COR' : esc(cfg.paleta || 'escolha')) + '</text>';
+  s += '<text id="rodaHex" x="110" y="121" text-anchor="middle" font-size="7.5" font-weight="700" fill="rgba(255,255,255,.82)" style="pointer-events:none">' + cor.toUpperCase() + '</text>';
+  const p = ang2p(hueAtual, R.meio);
+  s += '<g id="rodaBolha" transform="translate(' + p[0].toFixed(2) + ',' + p[1].toFixed(2) + ')" style="pointer-events:none">' +
+    '<circle r="15" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/><circle r="11.5" fill="' + rodaHsl(hueAtual, 100, 50) + '" stroke="#fff" stroke-width="2.5"/></g>';
+  s += '</svg>';
+  mold.innerHTML = s;
+
+  const cap = mold.querySelector('[data-captura]');
+  const corDoToque = ev => {
+    const r = mold.getBoundingClientRect();
+    if (!r.width) return null;
+    const x = (ev.clientX - r.left) / r.width * 220 - 110;
+    const y = 110 - (ev.clientY - r.top) / r.height * 220;
+    const dist = Math.sqrt(x * x + y * y);
+    if (dist < R.dentro - 6 || dist > R.fora + 8) return null;
+    const ang = Math.atan2(x, y) * 180 / Math.PI;
+    return ((ang % 360) + 360) % 360;
+  };
+  const mover = ev => { const h = corDoToque(ev); if (h === null) return; escolherMatizRoda(Math.round(h), true); };
+  const largar = () => { cap.onpointermove = null; };
+  cap.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    try { cap.setPointerCapture(ev.pointerId); } catch (e) {}
+    cap.onpointermove = mover; mover(ev);
+  });
+  cap.addEventListener('pointerup', largar);
+  cap.addEventListener('pointercancel', largar);
+  cap.addEventListener('click', ev => { const h = corDoToque(ev); if (h !== null) escolherMatizRoda(Math.round(h)); });
+  rodarLegenda(hueAtual);
+}
+function escolherMatizRoda(hue, vivo) {
+  cfg.paletaCustom = { p: rodaHsl(hue, 62, 40), a: rodaHsl(hue, 70, 56), d: rodaHsl(hue, 64, 19), l: rodaHsl(hue, 78, 96) };
+  cfg.hue = hue;
+  $$('.pal').forEach(x => x.classList.remove('on'));
+  if (vivo) {
+    const mold = $('#rodaCor');
+    const p = (a => { const rad = a * Math.PI / 180; return [110 + 87 * Math.sin(rad), 110 - 87 * Math.cos(rad)]; })(hue);
+    const bolha = mold && mold.querySelector('#rodaBolha'), centro = mold && mold.querySelector('#rodaCentro'),
+      hex = mold && mold.querySelector('#rodaHex'), nome = mold && mold.querySelector('#rodaNome');
+    if (bolha) { bolha.setAttribute('transform', 'translate(' + p[0].toFixed(2) + ',' + p[1].toFixed(2) + ')'); bolha.querySelector('circle:last-child').setAttribute('fill', rodaHsl(hue, 100, 50)); }
+    if (centro) centro.setAttribute('fill', cfg.paletaCustom.p);
+    if (hex) hex.textContent = cfg.paletaCustom.p.toUpperCase();
+    if (nome) nome.textContent = 'SUA COR';
+    rodarLegenda(hue);
+    return;
+  }
+  render();
+  toast('🌈 Cor personalizada: ' + cfg.paletaCustom.p.toUpperCase());
+}
+function rodarLegenda(hue) {
+  const el = $('#rodaLegenda');
+  if (!el) return;
+  const pal = cfg.paletaCustom || SiteGen.PALETAS[cfg.paleta] || {};
+  const trio = ['p', 'a', 'd'].map(k => pal[k] ? '<span class="pastilha" style="background:' + pal[k] + '"></span>' : '').join('');
+  const nome = cfg.paletaCustom ? 'sua cor · ' + Math.round(hue != null ? hue : (cfg.hue || 0)) + '°' : esc(cfg.paleta || '—');
+  el.innerHTML = '<b>' + nome + '</b>' + trio + '<span>· arraste a bolinha</span>';
 }
