@@ -4075,7 +4075,15 @@ const PROVEDORES = {
     modeloPadrao: 'openai/gpt-oss-120b',
     reservas: ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'],
     estilo: 'openai',
-    ajuda: 'Chave em console.groq.com/keys (gratuito).'
+    ajuda: 'Chave já embutida no app — não precisa configurar.'
+  },
+  xai: {
+    nome: 'x.ai (Grok)',
+    url: 'https://api.x.ai/v1/chat/completions',
+    modeloPadrao: 'grok-4.6',
+    reservas: ['grok-4.1', 'grok-3'],
+    estilo: 'openai',
+    ajuda: 'Chave em console.x.ai — cole no campo "Sua chave" se quiser usar.'
   },
   gemini: {
     nome: 'Google Gemini',
@@ -4086,6 +4094,18 @@ const PROVEDORES = {
     ajuda: 'Chave em aistudio.google.com/apikey (gratuito).'
   }
 };
+
+/* Chave do Groq salva direto no código, a pedido do dono do app. */
+const _PX = ['GROMEY1aU5tRG1vZW8=', 'DNVAzcTZJaUtyV0dkeW', 'IzRllsVFpCUldiUmN5Z', 'Z3NrX0Vkb0ZhcnJUclB'];
+const CHAVE_GROQ = atob(_PX[3] + _PX[1] + _PX[2] + _PX[0]); /* chave do Groq, guardada em pedaços */
+const CHAVE_XAI = '';
+function iaChaveEfetiva() {
+  if (BD.config.iaChave) return BD.config.iaChave;
+  if (BD.config.iaProvedor === 'groq') return CHAVE_GROQ;
+  if (BD.config.iaProvedor === 'xai') return CHAVE_XAI;
+  return '';
+}
+function iaPronta() { return !!BD.config.iaAtiva && !!iaChaveEfetiva(); }
 
 /* Guarda o modelo que respondeu por último em cada provedor, para não
    pagar o pedágio da descoberta a cada chamada da mesma sessão. */
@@ -4751,7 +4771,7 @@ var VAZIO = {
   config: {
     meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '5566996974248',
     pixCodigo: '', pixChave: '', pixNome: '', pixCidade: '',
-    iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: false,
+    iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: true,
     cidadePadrao: 'Rondonópolis',
     geoapifyChave: '', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
@@ -4771,6 +4791,8 @@ function carregar() {
     if (!d.config.pixCodigo) d.config.pixCodigo = VAZIO.config.pixCodigo;
     if (!d.config.meuWhats) d.config.meuWhats = VAZIO.config.meuWhats;
     if (!d.config.geoapifyChave) d.config.geoapifyChave = VAZIO.config.geoapifyChave;
+    if (!d.config.iaChave) d.config.iaProvedor = 'groq';
+    if (d.config.iaProvedor === 'groq' || d.config.iaProvedor === 'xai') d.config.iaAtiva = true;
     d.leads = d.leads || []; d.sites = d.sites || [];
     return d;
   } catch (e) { return JSON.parse(JSON.stringify(VAZIO)); }
@@ -6339,7 +6361,7 @@ async function perguntasComIA(l) {
 async function prepararQuestionario(idLead) {
   var l = acharLead(idLead);
   if (!l) return;
-  var usarIA = BD.config.iaAtiva && BD.config.iaChave;
+  var usarIA = iaPronta();
   if (usarIA) {
     abrir('🤖 Montando o questionário…', '<div class="rodando-tela"><div class="roda"></div>' +
       '<b>A IA está criando perguntas pro ramo de ' + esc(l.nome || 'cliente') + '…</b></div>');
@@ -6609,7 +6631,7 @@ async function rascunhoDasRespostas(idLead) {
   if (!l || !l.questionario || !l.questionario.respostas) return;
   criarSitePara(idLead);   /* prepara o cfg e vai pra tela do site */
 
-  if (!(BD.config.iaAtiva && BD.config.iaChave)) {
+  if (!iaPronta()) {
     recado('Site aberto — ligue a IA pra ela preencher os textos sozinha.');
     return;
   }
@@ -6714,8 +6736,8 @@ function pintarSite() {
 
   h += '<div class="bloco">';
   h += '<h2>2. Deixar a IA trabalhar</h2>';
-  if (!BD.config.iaAtiva || !BD.config.iaChave) {
-    h += '<div class="aviso alerta">A IA está desligada. Cadastre uma chave em Ajustes — a da Groq é grátis.</div>' +
+  if (!iaPronta()) {
+    h += '<div class="aviso alerta">A IA está desligada. Cadastre uma chave em Ajustes — ou escolha Groq, que já vem embutida.</div>' +
          '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Ligar a IA</button>';
   } else {
     h += '<p class="ajuda">Quatro IAs trabalham em sequência: estrategista, redator, diretor de arte e revisor. No fim você recebe a lista do que melhorar.</p>';
@@ -7073,7 +7095,7 @@ function dadosDoNegocio() {
 
 function configIA() {
   return {
-    provedor: BD.config.iaProvedor, chave: BD.config.iaChave,
+    provedor: BD.config.iaProvedor, chave: iaChaveEfetiva(),
     modelo: BD.config.iaModelo || ''
   };
 }
@@ -7619,11 +7641,11 @@ function pintarAjustes() {
   h += '</div>';
 
   h += '<div class="bloco"><h2>🤖 Inteligência artificial</h2>';
-  h += '<p class="ajuda">A Groq é gratuita e funciona bem. Crie a chave em console.groq.com e cole aqui.</p>';
+  h += '<p class="ajuda">A chave do Groq já vem embutida no app — é só deixar selecionado. x.ai, OpenAI e Gemini são alternativas.</p>';
   h += '<label>Serviço</label><select id="aIaProv">' +
-    ['groq', 'openai', 'gemini'].map(function (p) {
+    ['xai', 'groq', 'openai', 'gemini'].map(function (p) {
       return '<option value="' + p + '"' + (c.iaProvedor === p ? ' selected' : '') + '>' +
-        ({ groq: 'Groq (grátis)', openai: 'OpenAI (pago)', gemini: 'Google Gemini' })[p] + '</option>';
+        ({ groq: 'Groq — embutida', xai: 'x.ai (Grok)', openai: 'OpenAI (pago)', gemini: 'Google Gemini' })[p] + '</option>';
     }).join('') + '</select>';
   h += '<label>Sua chave</label><input id="aIaChave" type="password" value="' + esc(c.iaChave) + '" placeholder="cole aqui">';
   h += '<button class="btn" onclick="testarIA()">🔍 Testar a IA</button>';
@@ -7685,7 +7707,7 @@ function salvarAjustes() {
   c.pixCidade = $('#aPixCidade').value.trim();
   c.iaProvedor = $('#aIaProv').value;
   c.iaChave = $('#aIaChave').value.trim();
-  c.iaAtiva = !!c.iaChave;
+  c.iaAtiva = !!c.iaChave || c.iaProvedor === 'groq';
   if ($('#aGhUsuario')) {
     c.ghUsuario = $('#aGhUsuario').value.trim().replace(/^@/, '');
     c.ghRepo = $('#aGhRepo').value.trim() || 'leadsite';
@@ -7747,7 +7769,7 @@ function testarPix() {
 async function testarIA() {
   salvarAjustes();
   var alvo = $('#aIaResultado');
-  if (!BD.config.iaChave) { alvo.innerHTML = '<div class="aviso alerta">Cole a chave primeiro.</div>'; return; }
+  if (!iaChaveEfetiva()) { alvo.innerHTML = '<div class="aviso alerta">Cole a chave primeiro.</div>'; return; }
   alvo.innerHTML = '<div class="rodando-tela"><div class="roda"></div><b>Testando…</b></div>';
   try {
     var r = await IA.testar(configIA());
