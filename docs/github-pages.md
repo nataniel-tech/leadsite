@@ -21,4 +21,4 @@ git add -A && git commit -m "LeadSite v3" && git push
 - `padaria-pao-dourado.html` e `oficina-mecanica-confianca.html` → demos de sites gerados
 - `public/`, `server.js`, `sitegen.js`... → projeto completo com servidor (rode localmente com `node server.js`)
 
-⚠️ O GitHub Pages é estático: o CRM com servidor (public/) só roda local ou num host com Node (Render/Railway — veja COMO-HOSPEDAR.md).
+⚠️ O GitHub Pages é estático: o CRM com servidor (public/) só roda local ou num host com Node (Render/Railway — veja docs/hospedar.md).

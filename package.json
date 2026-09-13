@@ -8,10 +8,10 @@
     "build": "node build.js",
     "previa": "node build-previa.js",
     "check": "node build.js --check",
-    "test": "node verificar.js && node testar-navegador.js",
-    "test:rapido": "node verificar.js --rapido",
-    "test:servidor": "node verificar.js",
-    "test:navegador": "node testar-navegador.js"
+    "test": "node tests/verificar.js && node tests/testar-navegador.js",
+    "test:rapido": "node tests/verificar.js --rapido",
+    "test:servidor": "node tests/verificar.js",
+    "test:navegador": "node tests/testar-navegador.js"
   },
   "engines": {
     "node": ">=18"

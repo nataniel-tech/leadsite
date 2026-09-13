@@ -27,7 +27,7 @@ const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const R = __dirname;
+const R = path.join(__dirname, "..");
 const FILTRO = (process.argv[2] || '').toLowerCase();
 
 let passou = 0, falhou = 0;

@@ -1,9 +1,15 @@
 # dados de runtime (leads, fotos enviadas)
 data/db.json
 data/fotos/
+data/backups/
 
-# dependências usadas só pelos testes (npm i --save-dev)
+# dependências
 node_modules/
+
+# ambiente e segredos — nunca versionar token ou senha
+.env
+.env.*
+*.pem
 
 # backups e temporários
 *.tmp

@@ -24,7 +24,7 @@ const path = require('path');
 const http = require('http');
 const { spawn, spawnSync } = require('child_process');
 
-const R = __dirname;
+const R = path.join(__dirname, "..");
 const RAPIDO = process.argv.includes('--rapido');
 
 let passou = 0, falhou = 0;
