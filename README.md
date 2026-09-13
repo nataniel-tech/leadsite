@@ -160,34 +160,60 @@ leadsite/
 ├── index.html      ⭐ App celular — FONTE ÚNICA. É o que o GitHub Pages publica
 ├── server.js       API + Overpass + Nominatim + servidor de sites publicados
 ├── sitegen.js      Gerador de HTML (roda no Node e no navegador)
+├── brief-schema.js 11 perguntas em 5 etapas (+3 extras) → config do site
 ├── build.js        Gera public/celular.html a partir de index.html
-├── build-previa.js Gera previa.html (versão standalone, sem servidor)
-├── verificar.js    Testes: sintaxe, rotas, cache, build atualizado
+├── build-previa.js Gera previa.html e previa-formulario.html
+├── verificar.js    Testes: sintaxe, builds atualizados, caminhos, rotas, cache
 ├── testar-navegador.js  Testes num DOM real: clica nas abas e nos botões
-├── brief-schema.js 46 perguntas + conversão respostas → site
-├── previa.html     Prévia interativa com 230 empresas reais (GERADO)
-├── previa-formulario.html  Prévia do questionário (GERADO)
+├── questionario.html    Página do questionário que o cliente recebe
+├── previa.html          ⚠️ GERADO — prévia com 230 empresas reais
+├── previa-formulario.html  ⚠️ GERADO — prévia do questionário
+├── padaria-pao-dourado.html         Demo de site gerado (mostra pro cliente)
+├── oficina-mecanica-confianca.html  Demo de site gerado
+├── data/prospeccao-demo.json  As 230 empresas — entrada do build-previa.js
 ├── data/db.json    Banco (leads + sites publicados) — não vai pro GitHub
 └── public/
     ├── index.html    As 3 abas (app de computador, precisa do servidor)
     ├── celular.html  ⚠️ GERADO por build.js — NÃO EDITE
     ├── style.css     Tema escuro
+    ├── app.js        Lógica + modelos de mensagem
     ├── perfis.js     24 perfis de segmento (textos, serviços, cores)
-    ├── brief.html    Questionário em 10 etapas (página do cliente)
-    └── app.js        Lógica + modelos de mensagem
+    ├── brief.html    Questionário em etapas (página do cliente)
+    ├── qrcode.js     Biblioteca de QR Code (terceiro, MIT) — não é código nosso
+    └── fotos/banco/  10 fotos ilustrativas, uma por ramo — CÓPIA ÚNICA
 ```
+
+As fotos do banco moram **só** em `public/fotos/banco/`. Já existiram em dobro
+(uma pasta `fotos/` na raiz, idêntica, 1,2 MB a mais no clone) e a raiz foi
+embora: os demos apontam para `./public/fotos/banco/...`, que é o caminho que
+funciona ao mesmo tempo no GitHub Pages (onde o projeto fica numa subpasta) e
+no `node server.js`.
 
 ### ⚠️ Antes de editar: qual arquivo é a fonte?
 
 | Você quer mudar… | Edite | E depois rode |
 |---|---|---|
 | O app de **celular** | `index.html` | `node build.js` |
-| O app de **computador** (3 abas) | `public/index.html` + `public/app.js` | nada |
-| O **gerador** de sites | `sitegen.js` | `node build.js` |
+| O app de **computador** (3 abas) | `public/index.html` + `public/app.js` | `node build-previa.js` |
+| O **gerador** de sites | `sitegen.js` | `node build-previa.js` |
+| Os **perfis** de segmento | `public/perfis.js` | `node build-previa.js` |
+| O **questionário** | `brief-schema.js` + `public/brief.html` | `node build-previa.js` |
+| As **prévias** publicadas | nada — elas são geradas | `node build-previa.js` |
 | O **servidor** / API | `server.js` | nada |
 
 `public/celular.html`, `previa.html` e `previa-formulario.html` são **arquivos
-gerados**: o que você editar neles some no próximo build.
+gerados**: o que você editar neles some no próximo build. O `node verificar.js`
+confere os três e devolve erro se algum estiver velho — é o que impede o
+GitHub Pages de publicar uma versão atrasada.
+
+> ⚠️ **Divergência conhecida (ainda não resolvida):** o `index.html` carrega o
+> gerador embutido no bloco `<script>/* sitegen */`, e essa cópia está
+> **atrasada** em relação ao `sitegen.js`: são 6 funções contra 28 da fonte —
+> faltam as seções por ramo (`secMenu`, `secOficina`, `secAgenda`,
+> `secQuartos`, `secProva`…). Ou seja, o app de celular ainda gera site no
+> esquema v2, enquanto o servidor e o app de 3 abas geram v3. Nenhum build
+> sincroniza os dois e nenhum teste compara. As cópias de `perfis` e `qrcode`
+> embutidas no mesmo `index.html`, essas sim, estão idênticas às fontes.
 
 Antigamente o app de celular vivia copiado em `index.html` **e**
 `public/celular.html` — dois arquivos de 340 KB idênticos. Cada correção tinha

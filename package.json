@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "node build.js",
     "previa": "node build-previa.js",
-    "check": "node build.js --check",
+    "check": "node build.js --check && node build-previa.js --check",
     "test": "node verificar.js && node testar-navegador.js",
     "test:rapido": "node verificar.js --rapido",
     "test:servidor": "node verificar.js",

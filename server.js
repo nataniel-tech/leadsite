@@ -852,7 +852,13 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    const full = path.join(ROOT, 'public', path.normalize(arq).replace(/^(\.\.[/\\])+/, ''));
+    /* Os demos e as prévias publicados no GitHub Pages apontam para
+       "public/fotos/banco/..." — caminho relativo, porque lá o projeto mora
+       numa subpasta (/leadsite/) e um "/fotos/..." absoluto escaparia dela e
+       daria 404. Aqui no servidor esse /public/ do começo é redundante: sem
+       retirá-lo o caminho vira public/public/fotos/... e a imagem some. */
+    const semPublic = arq.replace(/^\/public\//, '/');
+    const full = path.join(ROOT, 'public', path.normalize(semPublic).replace(/^(\.\.[/\\])+/, ''));
     if (fs.existsSync(full) && fs.statSync(full).isFile()) {
       const ext = path.extname(full);
       /* .js/.css do app sem cache: depois de uma correção, o celular pega a

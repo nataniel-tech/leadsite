@@ -158,14 +158,14 @@ input:focus,textarea:focus{outline:0;border-color:var(--p);background:#fff;box-s
 
   /* fotos de banco por ramo (ilustrativas, com crédito no rodapé) */
   const BANCO = {
-    padaria:'/fotos/banco/padaria.jpg', restaurante:'/fotos/banco/restaurante.jpg',
-    lanchonete:'/fotos/banco/restaurante.jpg', bar_cafe:'/fotos/banco/restaurante.jpg',
-    oficina:'/fotos/banco/oficina.jpg', autopecas:'/fotos/banco/oficina.jpg',
-    salao:'/fotos/banco/salao.jpg', clinica:'/fotos/banco/clinica.jpg',
-    farmacia:'/fotos/banco/mercado.jpg', hotel:'/fotos/banco/hotel.jpg',
-    academia:'/fotos/banco/academia.jpg', petshop:'/fotos/banco/petshop.jpg',
-    mercado:'/fotos/banco/mercado.jpg', floricultura:'/fotos/banco/floricultura.jpg',
-    veterinaria:'/fotos/banco/petshop.jpg',
+    padaria:'public/fotos/banco/padaria.jpg', restaurante:'public/fotos/banco/restaurante.jpg',
+    lanchonete:'public/fotos/banco/restaurante.jpg', bar_cafe:'public/fotos/banco/restaurante.jpg',
+    oficina:'public/fotos/banco/oficina.jpg', autopecas:'public/fotos/banco/oficina.jpg',
+    salao:'public/fotos/banco/salao.jpg', clinica:'public/fotos/banco/clinica.jpg',
+    farmacia:'public/fotos/banco/mercado.jpg', hotel:'public/fotos/banco/hotel.jpg',
+    academia:'public/fotos/banco/academia.jpg', petshop:'public/fotos/banco/petshop.jpg',
+    mercado:'public/fotos/banco/mercado.jpg', floricultura:'public/fotos/banco/floricultura.jpg',
+    veterinaria:'public/fotos/banco/petshop.jpg',
   };
 
   /* comportamento por ramo: bloco exclusivo, rótulo e CTA */
@@ -2036,7 +2036,7 @@ function bancoDoRamo() {
     hotel:'hotel', academia:'academia', petshop:'petshop', mercado:'mercado', floricultura:'floricultura' };
   const k = mapa[R.segmento];
   if (!k) return [];
-  return [{ url: '/fotos/banco/' + k + '.jpg', nome: k }];
+  return [{ url: 'public/fotos/banco/' + k + '.jpg', nome: k }];
 }
 
 function configAgora() {

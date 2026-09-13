@@ -1,7 +1,44 @@
-/* Gera previa.html — versão standalone da app, sem servidor, com dados reais embutidos */
+/* Gera previa.html e previa-formulario.html — versões standalone do app,
+   sem servidor, com os dados reais embutidos.
+
+       node build-previa.js           gera os dois
+       node build-previa.js --check   só confere se os do repositório estão
+                                      atualizados (exit 1 se não estiverem)   */
 const fs = require('fs');
 const path = require('path');
 const R = __dirname;
+
+const SO_CHECANDO = process.argv.includes('--check');
+let desatualizados = 0;
+
+/* Escreve o arquivo — ou, no --check, compara com o que já está no disco.
+   É a mesma ideia do build.js: arquivo gerado que ninguém confere apodrece
+   em silêncio, e o GitHub Pages publica a versão velha. */
+function publicar(nome, conteudo) {
+  const alvo = path.join(R, nome);
+  const kb = (Buffer.byteLength(conteudo) / 1024).toFixed(0) + ' KB';
+
+  if (SO_CHECANDO) {
+    const atual = fs.existsSync(alvo) ? fs.readFileSync(alvo, 'utf8') : null;
+    if (atual === conteudo) { console.log('  ✔ ' + nome + ' — atualizado (' + kb + ')'); return; }
+    desatualizados++;
+    console.error('  ✘ ' + nome + (atual === null ? ' — NÃO EXISTE' : ' — está DESATUALIZADO'));
+    console.error('    A fonte mudou (public/, sitegen.js, brief-schema.js ou o dataset)');
+    console.error('    e a prévia não foi regenerada. Rode:  node build-previa.js');
+    return;
+  }
+
+  fs.writeFileSync(alvo, conteudo);
+  console.log(nome + ' gerado:', kb);
+}
+
+/* As prévias e os demos são publicados pelo GitHub Pages DENTRO de uma
+   subpasta (/leadsite/), onde caminho absoluto não funciona: "/fotos/banco/x.jpg"
+   vira https://usuario.github.io/fotos/banco/x.jpg e dá 404. Caminho relativo
+   resolve nos dois mundos — no Pages e no `node server.js`. */
+function caminhosRelativos(texto) {
+  return texto.replace(/(['"(])\/fotos\/banco\//g, '$1public/fotos/banco/');
+}
 
 const css = fs.readFileSync(path.join(R, 'public/style.css'), 'utf8');
 const sitegen = fs.readFileSync(path.join(R, 'sitegen.js'), 'utf8');
@@ -50,15 +87,35 @@ const empresas = dados.empresas.map(e => {
   return { ...e, grupos: g.length ? g : ['outros'] };
 });
 
-/* ---- leads pré-carregados para o CRM não abrir vazio ---- */
+/* ---- leads pré-carregados para o CRM não abrir vazio ----
+
+   DATA FIXA, DE PROPÓSITO.
+   --------------------------
+   Aqui se usava Date.now(). Resultado: cada build mudava as datas dos 8 leads
+   e o previa.html saía diferente mesmo sem NENHUMA mudança de código. Com um
+   arquivo de 300 KB sempre "sujo" no git diff, não havia como distinguir
+   alteração real de relógio — e foi assim que o previa.html commitado ficou
+   velho em silêncio, sem a correção que já estava em public/app.js.
+
+   Com a data travada o build é reprodutível byte a byte, e dá para conferir
+   se o arquivo do repositório está atualizado:
+
+       node build-previa.js           gera
+       node build-previa.js --check   só confere (senão, erro — igual ao build.js)
+
+   O app DENTRO da prévia continua usando a data real do aparelho: aquilo é
+   código que roda no navegador (o shim mais abaixo), não dado deste build. */
+const AGORA = Date.parse('2026-09-13T12:00:00Z');
+const diasAtras = n => new Date(AGORA - n * 864e5).toISOString();
+
 const sts = ['contatado','negociando','novo','fechado','novo','contatado','negociando','perdido'];
 const seed = empresas.filter(e => !e.temSite).slice(0, 8).map((e, i) => ({
   ...e, id: 'seed' + i, status: sts[i], notas: i === 1 ? 'Pediu para retornar na quinta de manhã.' : '',
-  criadoEm: new Date(Date.now() - (9 - i) * 864e5).toISOString(),
-  atualizadoEm: new Date().toISOString(),
+  criadoEm: diasAtras(9 - i),
+  atualizadoEm: diasAtras(0),
   historico: [
-    { data: new Date(Date.now() - (9 - i) * 864e5).toISOString(), texto: 'Lead capturado na prospecção' },
-    ...(sts[i] !== 'novo' ? [{ data: new Date(Date.now() - 2 * 864e5).toISOString(), texto: 'Mensagem enviada' }] : []),
+    { data: diasAtras(9 - i), texto: 'Lead capturado na prospecção' },
+    ...(sts[i] !== 'novo' ? [{ data: diasAtras(2), texto: 'Mensagem enviada' }] : []),
   ],
 }));
 
@@ -187,8 +244,7 @@ html = html
   .replace('<title>LeadSite — Prospecção, CRM e Criação de Sites</title>',
            '<title>LeadSite — Prévia Interativa</title>');
 
-fs.writeFileSync(path.join(R, 'previa.html'), html);
-console.log('previa.html gerado:', (fs.statSync(path.join(R, 'previa.html')).size / 1024).toFixed(0) + ' KB');
+publicar('previa.html', caminhosRelativos(html));
 console.log('empresas embutidas:', empresas.length, '| leads no CRM:', seed.length);
 
 /* ═══════ previa-formulario.html — questionário standalone, sem servidor ═══════ */
@@ -243,5 +299,13 @@ briefHtml = briefHtml.replace('<div class="topo">', `<div style="background:line
 </div>
 <div class="topo">`);
 
-fs.writeFileSync(path.join(R, 'previa-formulario.html'), briefHtml);
-console.log('previa-formulario.html gerado:', (fs.statSync(path.join(R,'previa-formulario.html')).size/1024).toFixed(0)+' KB');
+publicar('previa-formulario.html', caminhosRelativos(briefHtml));
+
+if (SO_CHECANDO) {
+  if (desatualizados) {
+    console.error('\n✘ ' + desatualizados + ' prévia(s) desatualizada(s) — o que está publicado é velho.');
+    process.exit(1);
+  }
+  console.log('\n✔ previa.html e previa-formulario.html batem com a fonte.');
+  process.exit(0);
+}

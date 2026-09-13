@@ -2,12 +2,16 @@
 /* ══════════════════════════════════════════════════════════════════════
    verificar.js — confere o projeto antes de enviar pro GitHub
 
-   Faz três coisas, e qualquer uma falhando devolve código de saída 1:
+   Faz quatro coisas, e qualquer uma falhando devolve código de saída 1:
 
      1. sintaxe     node --check em todos os .js, e nos blocos <script>
                     embutidos no index.html (que é onde mora o app)
-     2. build       public/celular.html está igual ao index.html?
-     3. integração  sobe o servidor numa porta livre e testa as duas
+     2. build       os arquivos GERADOS estão iguais ao que a fonte produz?
+                    public/celular.html (← index.html), previa.html e
+                    previa-formulario.html (← public/ + sitegen + dataset)
+     3. caminhos    nenhum HTML publicado aponta para arquivo que não existe,
+                    nem usa caminho absoluto que quebra no GitHub Pages
+     4. integração  sobe o servidor numa porta livre e testa as duas
                     interfaces num DOM de verdade: cada aba abre? o site
                     é gerado? os botões funcionam com pop-up bloqueado?
 
@@ -65,13 +69,60 @@ function checarSintaxe() {
 
 /* ─────────────────────────── 2. build ─────────────────────────── */
 function checarBuild() {
-  console.log('\n── 2. Build (cópia única) ──');
+  console.log('\n── 2. Build (arquivos gerados) ──');
+
   const r = spawnSync(process.execPath, [path.join(R, 'build.js'), '--check'], { encoding: 'utf8' });
   const saida = ((r.stdout || '') + (r.stderr || '')).trim();
   r.status === 0 ? ok('public/celular.html', 'igual ao index.html') : erro('public/celular.html', saida.split('\n').pop());
+
+  /* As prévias são o que o GitHub Pages publica. Elas reempacotam public/,
+     sitegen.js, brief-schema.js e o dataset — ou seja, mudam toda vez que a
+     fonte muda. Sem esta checagem elas envelhecem em silêncio (já aconteceu:
+     o previa.html ficou sem a correção do rascunho que estava no app.js). */
+  const rp = spawnSync(process.execPath, [path.join(R, 'build-previa.js'), '--check'], { encoding: 'utf8' });
+  const sp = ((rp.stdout || '') + (rp.stderr || '')).trim().split('\n');
+  if (rp.status === 0) {
+    ok('previa.html', 'igual ao que o build gera');
+    ok('previa-formulario.html', 'igual ao que o build gera');
+  } else {
+    sp.filter(l => l.includes('✘')).forEach(l => erro('prévia desatualizada', l.replace(/^\s*✘\s*/, '')));
+    if (!sp.some(l => l.includes('✘'))) erro('prévias', sp[sp.length - 1]);
+  }
 }
 
-/* ─────────────────────── 3. integração ─────────────────────── */
+/* ─────────────────────── 3. caminhos dos arquivos ─────────────────────── */
+function checarCaminhos() {
+  console.log('\n── 3. Caminhos nos HTML publicados ──');
+
+  const htmls = fs.readdirSync(R).filter(f => f.endsWith('.html'));
+  let ruins = 0;
+
+  for (const f of htmls) {
+    const txt = fs.readFileSync(path.join(R, f), 'utf8');
+
+    /* (a) caminho relativo tem que existir no disco — senão a imagem some */
+    const relativos = new Set([...txt.matchAll(/["'(]\.?\/((?:public\/)?fotos\/[^"')\s]+)/g)].map(m => m[1]));
+    for (const ref of relativos) {
+      if (!fs.existsSync(path.join(R, ref))) {
+        ruins++;
+        erro(f, `aponta para "${ref}" e esse arquivo não existe`);
+      }
+    }
+
+    /* (b) caminho absoluto só funciona com o node server.js na raiz do domínio.
+       No GitHub Pages o projeto mora em /leadsite/, então "/fotos/..." escapa
+       da pasta e dá 404. Por isso as prévias usam caminho relativo. */
+    const absolutos = new Set([...txt.matchAll(/["'(]\/(fotos\/[^"')\s]+)/g)].map(m => '/' + m[1]));
+    for (const ref of absolutos) {
+      ruins++;
+      erro(f, `usa caminho absoluto "${ref}" — quebra no GitHub Pages (use public/fotos/...)`);
+    }
+  }
+
+  if (!ruins) ok(`${htmls.length} HTML da raiz`, 'todas as fotos que eles citam existem, e nada de caminho absoluto');
+}
+
+/* ─────────────────────── 4. integração ─────────────────────── */
 function subirServidor(porta) {
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, [path.join(R, 'server.js')], {
@@ -105,7 +156,7 @@ function get(url) {
 }
 
 async function testarIntegracao(porta) {
-  console.log('\n── 3. Integração (servidor de verdade) ──');
+  console.log('\n── 4. Integração (servidor de verdade) ──');
   const base = `http://127.0.0.1:${porta}`;
   let srv;
   try {
@@ -128,6 +179,11 @@ async function testarIntegracao(porta) {
       ['/previa.html', 200, 'prévia do CRM (era 404)'],
       ['/previa-formulario.html', 200, 'prévia do formulário (era 404)'],
       ['/padaria-pao-dourado.html', 200, 'demo de site (era 404)'],
+      /* Os demos apontam para "public/fotos/banco/..." (caminho relativo, que
+         é o que funciona no GitHub Pages). O servidor precisa achar a imagem
+         pelos dois endereços, senão o demo abre sem foto num mundo ou no outro. */
+      ['/public/fotos/banco/padaria.jpg', 200, 'foto do demo pelo caminho relativo'],
+      ['/fotos/banco/padaria.jpg', 200, 'foto do banco pelo caminho do servidor'],
       ['/nao-existe-mesmo.html', 404, '404 continua funcionando'],
     ];
     for (const [rota, espera, rotulo] of rotas) {
@@ -172,6 +228,7 @@ async function testarIntegracao(porta) {
   console.log('Verificando o LeadSite…');
   checarSintaxe();
   checarBuild();
+  checarCaminhos();
   if (!RAPIDO) {
     const porta = 3100 + Math.floor(Math.random() * 400);
     await testarIntegracao(porta);

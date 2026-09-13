@@ -2,7 +2,8 @@
 
 ## A) Upload pelo navegador (sem token, ~3 min)
 1. github.com → abra seu repositório → botão **Add file → Upload files**
-2. Arraste TODOS os arquivos e pastas deste projeto (index.html, fotos/, public/, server.js, etc.)
+2. Arraste TODOS os arquivos e pastas deste projeto (index.html, public/, server.js, sitegen.js, etc.)
+   As fotos do banco ficam em `public/fotos/banco/` — não existe mais pasta `fotos/` na raiz.
 3. **Commit changes**
 4. Para o site no ar: **Settings → Pages → Source: Deploy from a branch → main → / (root) → Save**
 5. Espere ~1 minuto. Link: `https://SEU-USUARIO.github.io/NOME-DO-REPO/`
