@@ -14,13 +14,15 @@
     3b. cópias      os blocos sitegen / perfis / qrcode embutidos no index.html
                     são idênticos às fontes? (o gerador já divergiu: o celular
                     ficou no v2 enquanto o sitegen.js ia no v3)
+    3c. segredos    nenhuma chave de API escrita no que o Pages publica
+    3d. IA          a caixa de descrição, as duas IAs e o sanitizador estão lá
      4. integração  sobe o servidor numa porta livre e testa as duas
                     interfaces num DOM de verdade: cada aba abre? o site
                     é gerado? os botões funcionam com pop-up bloqueado?
 
    Uso:
-       node verificar.js            tudo
-       node verificar.js --rapido   só sintaxe e build (não sobe servidor)
+       npm test                     tudo
+       npm run test:rapido          só sintaxe e build (não sobe servidor)
 
    Sem dependências externas: usa só o que já vem no Node 18+.
    ══════════════════════════════════════════════════════════════════════ */
@@ -31,7 +33,7 @@ const path = require('path');
 const http = require('http');
 const { spawn, spawnSync } = require('child_process');
 
-const R = __dirname;
+const R = path.join(__dirname, '..');   // o projeto mora um nível acima de scripts/
 const RAPIDO = process.argv.includes('--rapido');
 
 let passou = 0, falhou = 0;
@@ -42,8 +44,10 @@ const erro = (rotulo, detalhe) => { console.log(`  ✘ ${rotulo}${detalhe ? ' �
 function checarSintaxe() {
   console.log('\n── 1. Sintaxe ──');
 
-  const js = ['server.js', 'sitegen.js', 'build-previa.js', 'build.js', 'verificar.js',
-              'brief-schema.js', 'public/app.js', 'public/perfis.js', 'public/qrcode.js'];
+  const js = ['server.js', 'sitegen.js', 'brief-schema.js',
+              'scripts/build.js', 'scripts/build-previa.js', 'scripts/verificar.js',
+              'scripts/testar-navegador.js',
+              'public/app.js', 'public/perfis.js', 'public/qrcode.js'];
   for (const f of js) {
     const p = path.join(R, f);
     if (!fs.existsSync(p)) { erro(f, 'arquivo não existe'); continue; }
@@ -74,7 +78,7 @@ function checarSintaxe() {
 function checarBuild() {
   console.log('\n── 2. Build (arquivos gerados) ──');
 
-  const r = spawnSync(process.execPath, [path.join(R, 'build.js'), '--check'], { encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [path.join(R, 'scripts', 'build.js'), '--check'], { encoding: 'utf8' });
   const saida = ((r.stdout || '') + (r.stderr || '')).trim();
   r.status === 0 ? ok('public/celular.html', 'igual ao index.html') : erro('public/celular.html', saida.split('\n').pop());
 
@@ -82,7 +86,7 @@ function checarBuild() {
      sitegen.js, brief-schema.js e o dataset — ou seja, mudam toda vez que a
      fonte muda. Sem esta checagem elas envelhecem em silêncio (já aconteceu:
      o previa.html ficou sem a correção do rascunho que estava no app.js). */
-  const rp = spawnSync(process.execPath, [path.join(R, 'build-previa.js'), '--check'], { encoding: 'utf8' });
+  const rp = spawnSync(process.execPath, [path.join(R, 'scripts', 'build-previa.js'), '--check'], { encoding: 'utf8' });
   const sp = ((rp.stdout || '') + (rp.stderr || '')).trim().split('\n');
   if (rp.status === 0) {
     ok('previa.html', 'igual ao que o build gera');
@@ -134,9 +138,20 @@ function checarCaminhos() {
         erro(f, `usa caminho absoluto "${ref}" — quebra no GitHub Pages (use public/fotos/...)`);
       }
     }
+    /* (c) redirect tem que apontar para um arquivo que existe — um redirect
+       para o nada é pior que um 404, porque o navegador fica girando. */
+    const alvos = [...txt.matchAll(/http-equiv="refresh"\s+content="[^"]*url=([^">]+)/gi)].map(m => m[1].trim());
+    for (const alvo of alvos) {
+      if (/^https?:/i.test(alvo)) continue;
+      const rel = alvo.replace(/^\.\//, '').replace(/^\//, '').split('#')[0].split('?')[0];
+      if (!fs.existsSync(path.join(R, rel))) {
+        ruins++;
+        erro(f, `redireciona para "${alvo}" e esse arquivo não existe`);
+      }
+    }
   }
 
-  if (!ruins) ok(`${htmls.length} HTML da raiz`, 'as fotos que eles citam existem, e as páginas publicadas não usam caminho absoluto');
+  if (!ruins) ok(`${htmls.length} HTML da raiz`, 'fotos existem, redirects apontam para algo real, e as páginas publicadas não usam caminho absoluto');
 }
 
 /* ─────────── 3b. cópias embutidas no index.html = a fonte ───────────
@@ -170,7 +185,76 @@ function checarCopiasEmbutidas() {
       ? ok(`${nome} embutido no index.html`, `idêntico a ${path.relative(R, arquivo)}`)
       : erro(`${nome} embutido no index.html`,
              `DIVERGE de ${path.relative(R, arquivo)} (${copia.length} vs ${fonte.length} chars) — ` +
-             'copie o conteúdo da fonte para dentro do bloco <script>/* ' + nome + ' */ e rode node build.js');
+             'copie o conteúdo da fonte para dentro do bloco <script>/* ' + nome + ' */ e rode npm run build');
+  }
+}
+
+
+/* ─────────── 3c. segredo nenhum dentro do que é publicado ───────────
+   index.html e public/ vão para o GitHub Pages: qualquer chave ali é pública
+   para quem abrir o site. A IA é configurada pelo usuário em Ajustes e fica no
+   localStorage do aparelho dele — nunca no código. */
+function checarSegredos() {
+  console.log('\n── 3c. Chaves de API no código publicado ──');
+
+  const PADROES = [
+    [/sk-or-v1-[A-Za-z0-9-]{20,}/g, 'OpenRouter'],
+    [/AIza[A-Za-z0-9_-]{30,}/g, 'Google/Gemini'],
+    [/AQ\.[A-Za-z0-9_-]{20,}/g, 'Google (formato novo)'],
+    [/gsk_[A-Za-z0-9]{30,}/g, 'Groq'],
+    [/xai-[A-Za-z0-9]{20,}/g, 'x.ai'],
+    [/sk-[A-Za-z0-9_-]{30,}/g, 'OpenAI'],
+    [/github_pat_[A-Za-z0-9_]{20,}/g, 'GitHub'],
+  ];
+  const alvos = ['index.html', 'public/celular.html', 'public/index.html', 'public/app.js',
+                 'public/perfis.js', 'public/brief.html', 'questionario.html',
+                 'previa.html', 'previa-formulario.html', 'demo/padaria-pao-dourado.html',
+                 'demo/oficina-mecanica-confianca.html'];
+  let vazios = 0, achados = 0;
+
+  for (const f of alvos) {
+    const caminho = path.join(R, f);
+    if (!fs.existsSync(caminho)) { vazios++; continue; }
+    const txt = fs.readFileSync(caminho, 'utf8');
+    for (const [re, rotulo] of PADROES) {
+      const m = txt.match(re);
+      if (m) { achados++; erro(f, `chave ${rotulo} à vista no código publicado (${m[0].slice(0, 8)}…) — revogue agora`); }
+    }
+  }
+  if (!achados) ok(`${alvos.length - vazios} arquivos publicados`, 'nenhuma chave de API escrita no código');
+
+  /* O app tem uma chave do Groq montada em pedaços base64 (_PX + atob), posta
+     lá a pedido do dono. Não é detectada pelos padrões acima justamente por
+     estar picada — então fica o aviso visível em toda execução, sem reprovar:
+     quem decide se ela continua lá é o dono, não o teste. */
+  const idx = fs.readFileSync(path.join(R, 'index.html'), 'utf8');
+  if (/const _PX = \[/.test(idx) && /atob\(_PX/.test(idx)) {
+    console.log('  ⚠ aviso (não reprova): index.html ainda carrega a chave do Groq montada em');
+    console.log('    pedaços base64 (_PX + atob). Está pública para quem abrir o site —');
+    console.log('    qualquer um decodifica em segundos. Se um dia ela aparecer na sua');
+    console.log('    fatura com uso estranho, é por aí. Trocar por "chave só em Ajustes"');
+    console.log('    resolve; eu removo se você pedir.');
+  }
+}
+
+/* ─────────── 3d. a IA da descrição está montada como deveria ─────────── */
+function checarIaDaDescricao() {
+  console.log('\n── 3d. IA da caixa de descrição ──');
+  const idx = fs.readFileSync(path.join(R, 'index.html'), 'utf8');
+  const itens = [
+    [/openrouter:\s*\{[\s\S]{0,200}?openrouter\.ai\/api\/v1\/chat\/completions/, 'provedor OpenRouter cadastrado no módulo IA'],
+    [/id="iaDescricao"/, 'caixa de descrição na tela de criar site'],
+    [/async function montarSitePelaDescricao/, 'função que monta o site pela descrição'],
+    [/function configIA2\(/, 'segunda IA configurável (é com ela que a primeira conversa)'],
+    [/promptCritica\(/, 'rodada de crítica entre as duas IAs'],
+    [/function sanitizarDaIA\(/, 'sanitizador do que a IA devolve'],
+    [/PROIBIDO inventar: depoimento/, 'prompt proíbe inventar prova social'],
+    [/iaChave2/, 'campo para a chave da segunda IA'],
+  ];
+  let faltou = 0;
+  for (const [re, rotulo] of itens) {
+    if (re.test(idx)) ok(rotulo);
+    else { faltou++; erro('index.html', 'faltou: ' + rotulo); }
   }
 }
 
@@ -230,7 +314,11 @@ async function testarIntegracao(porta) {
       ['/perfis.js', 200, 'perfis de segmento'],
       ['/previa.html', 200, 'prévia do CRM (era 404)'],
       ['/previa-formulario.html', 200, 'prévia do formulário (era 404)'],
-      ['/padaria-pao-dourado.html', 200, 'demo de site (era 404)'],
+      /* As demos moram em demo/. No endereço antigo ficou um redirect — quem
+         já tinha o link antigo (WhatsApp, mensagem pro cliente) não pode dar
+         com a cara num 404. */
+      ['/demo/padaria-pao-dourado.html', 200, 'demo de site no endereço novo'],
+      ['/padaria-pao-dourado.html', 200, 'endereço antigo da demo continua de pé (redirect)'],
       /* Os demos apontam para "public/fotos/banco/..." (caminho relativo, que
          é o que funciona no GitHub Pages). O servidor precisa achar a imagem
          pelos dois endereços, senão o demo abre sem foto num mundo ou no outro. */
@@ -282,6 +370,8 @@ async function testarIntegracao(porta) {
   checarBuild();
   checarCaminhos();
   checarCopiasEmbutidas();
+  checarSegredos();
+  checarIaDaDescricao();
   if (!RAPIDO) {
     const porta = 3100 + Math.floor(Math.random() * 400);
     await testarIntegracao(porta);

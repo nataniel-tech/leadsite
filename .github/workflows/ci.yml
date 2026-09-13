@@ -13,11 +13,14 @@
 # Aqui ele roda em todo push, sem depender de ninguém lembrar.
 #
 # Os três passos que importam:
-#   npm run check        os gerados batem com a fonte? (build.js e build-previa.js)
-#   node verificar.js    sintaxe, rotas, cache, caminhos de foto no Pages,
-#                        cópias embutidas no index.html (sobe o servidor de verdade)
-#   node testar-navegador.js  DOM real: clica nas abas, gera site, testa
-#                        pop-up bloqueado e rascunho velho de outra versão
+#   npm run check          os gerados batem com a fonte? (scripts/build*.js)
+#   npm run test:servidor  sintaxe, rotas, cache, caminhos de foto no Pages,
+#                          redirects e cópias embutidas no index.html
+#   npm run test:navegador DOM real: clica nas abas, gera site, testa
+#                          pop-up bloqueado e rascunho velho de outra versão
+#
+# Os comandos vão pelo npm (e não "node scripts/...") de propósito: se as
+# ferramentas mudarem de pasta de novo, só o package.json precisa mudar.
 
 name: CI
 
@@ -57,7 +60,7 @@ jobs:
         run: npm run check
 
       - name: Sintaxe, rotas, cache e caminhos
-        run: node verificar.js
+        run: npm run test:servidor
 
       # O jsdom 29 exige Node ^20.19 || ^22.13 || >=24, então os testes de DOM
       # não rodam no Node 18. Não é pulado em silêncio: o passo abaixo escreve
@@ -65,7 +68,7 @@ jobs:
       # o app e o verificar.js precisam mesmo funcionar no mínimo declarado.
       - name: Navegador de verdade (DOM)
         if: matrix.node >= 20
-        run: node testar-navegador.js
+        run: npm run test:navegador
 
       - name: Por que os testes de DOM não rodam aqui
         if: matrix.node < 20
@@ -80,6 +83,7 @@ jobs:
         run: |
           faltando=0
           for f in index.html questionario.html previa.html previa-formulario.html \
+                   demo/padaria-pao-dourado.html demo/oficina-mecanica-confianca.html \
                    padaria-pao-dourado.html oficina-mecanica-confianca.html \
                    public/celular.html public/fotos/banco/padaria.jpg; do
             if [ ! -f "$f" ]; then echo "✘ falta $f"; faltando=1; fi

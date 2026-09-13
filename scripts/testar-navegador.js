@@ -15,11 +15,11 @@
        recuperado sem perder nada
 
    Instala uma vez (só para rodar os testes, o app não depende disto):
-       npm i --no-save jsdom
+       npm ci
    Roda:
-       node testar-navegador.js                 tudo
-       node testar-navegador.js celular         só o app celular
-       node testar-navegador.js desktop         só o app de 3 abas
+       npm run test:navegador                 tudo
+       npm run test:navegador celular         só o app celular
+       npm run test:navegador desktop         só o app de 3 abas
    ══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -27,7 +27,7 @@ const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const R = __dirname;
+const R = path.join(__dirname, '..');   // o projeto mora um nível acima de scripts/
 const FILTRO = (process.argv[2] || '').toLowerCase();
 
 let passou = 0, falhou = 0;
@@ -164,6 +164,164 @@ async function testarCelular(JSDOM, VirtualConsole, base) {
   window.open = () => ({ document: { open() {}, write(h) { escrito = h.length; }, close() {} } });
   window.fechar(); window.verSite();
   chk(escrito > 5000, 'pop-up liberado: site abre em outra aba', escrito + ' chars');
+
+  /* ─────────── descrição livre → duas IAs conversando ───────────
+     Sem gastar crédito de API: a chamada de rede é substituída por respostas
+     prontas. O que interessa aqui é o encadeamento (uma propõe, a outra
+     critica, a primeira fecha) e o sanitizador, que é a parte que impede a IA
+     de inventar depoimento ou de mandar campo que o gerador não conhece. */
+  secao('descrever o site e deixar as duas IAs conversarem');
+
+  window.BD.config.iaAtiva = true;
+  window.BD.config.iaProvedor = 'gemini';
+  window.BD.config.iaChave = 'chave-falsa-1';
+  window.BD.config.iaProvedor2 = 'openrouter';
+  window.BD.config.iaChave2 = 'chave-falsa-2';
+  window.criarSitePara('ld_teste');
+  await new Promise(r => setTimeout(r, 200));
+
+  const caixa = doc.querySelector('#iaDescricao');
+  chk(!!caixa, 'a caixa de descrição existe na tela de criar site');
+  const botaoMontar = doc.querySelector('[onclick="montarSitePelaDescricao()"]');
+  chk(!!botaoMontar, 'o botão "Montar o site com a IA" existe');
+
+  /* vocabulário real do gerador — o teste não chuta nome de paleta/perfil.
+     (Perfis é um módulo: Object.keys(Perfis) devolve PERFIS, MAPA, faqPara…
+     e não serve de gabarito. Quem sabe os nomes é vocabularioDoSite.) */
+  const vocab = window.vocabularioDoSite();
+  const paletaOk = vocab.paletas[0];
+  const perfilOk = vocab.perfis[0];
+  chk(vocab.perfis.length > 5 && vocab.perfis.indexOf('PERFIS') < 0,
+      'o vocabulário de perfis traz perfis de verdade, não nome de função',
+      vocab.perfis.length + ' perfis, ex.: ' + vocab.perfis.slice(0, 3).join('/'));
+
+  /* --- sanitizador isolado: prova social inventada tem que cair --- */
+  const v = window.vocabularioDoSite ? window.vocabularioDoSite() : null;
+  if (v) {
+    const s1 = window.sanitizarDaIA({
+      titulo: 'Barbearia do Zé',
+      paleta: 'dourado-real-que-nao-existe',
+      perfil: perfilOk,
+      secoes: ['servicos', 'sobre', 'depoimentos', 'secao-que-nao-existe', 'faq', 'contato'],
+      depoimentos: [{ autor: 'Fulano', texto: 'Ótimo' }],
+      nota: '4,9', anos: '15',
+    }, v, {});
+    chk(s1.limpo.paleta === undefined, 'paleta inventada não entra no site');
+    chk(s1.limpo.perfil === perfilOk, 'perfil válido entra');
+    chk(!('depoimentos' in s1.limpo) && !('nota' in s1.limpo) && !('anos' in s1.limpo),
+        'depoimento, nota e anos inventados são bloqueados');
+    chk(s1.avisos.some(a => /bloqueado/i.test(a)), 'o usuário é avisado do que foi bloqueado',
+        s1.avisos.length + ' avisos');
+    chk(s1.limpo.secoes && s1.limpo.secoes.indexOf('depoimentos') < 0 &&
+        s1.limpo.secoes.indexOf('secao-que-nao-existe') < 0,
+        'seção desconhecida e seção de prova social vazia são descartadas');
+  } else { chk(false, 'vocabularioDoSite exposto para teste', 'não está no window'); }
+
+  /* --- a conversa inteira, com a rede substituída --- */
+  const provaAntes = {
+    depoimentos: JSON.stringify(window.cfg.depoimentos),
+    nota: JSON.stringify(window.cfg.nota),
+  };
+  const falas = [];
+  window.IA.chamarBruto = async (c, prompt) => {
+    falas.push({ provedor: c.provedor, prompt });
+    const n = falas.length;
+    if (n === 1) return JSON.stringify({
+      resumo: 'Entendi: barbearia séria, preto e dourado, destaque no degradê.',
+      titulo: 'Barbearia do Zé', perfil: perfilOk, paleta: paletaOk,
+      secoes: ['servicos', 'sobre', 'depoimentos', 'faq'],
+      servicos: [{ nome: 'Degradê', descricao: 'Na tesoura e na máquina' }],
+      nota: '5,0', depoimentos: [{ autor: 'Inventado', texto: 'Perfeito' }],
+    });
+    if (n === 2) return JSON.stringify({
+      critica: 'Tirei a nota e o depoimento que ninguém deu, e o título estava genérico.',
+      titulo: 'Barbearia do Zé — corte na régua', perfil: perfilOk, paleta: paletaOk,
+      secoes: ['servicos', 'sobre', 'faq', 'horario'],
+      servicos: [{ nome: 'Degradê', descricao: 'Na tesoura e na máquina', preco: 'R$ 45' }],
+    });
+    return JSON.stringify({
+      acordo: 'Aceitei o título da segunda IA; mantive o degradê em primeiro.',
+      titulo: 'Barbearia do Zé — corte na régua', subtitulo: 'Barba, cabelo e horário cumprido',
+      perfil: perfilOk, paleta: paletaOk, fonte: Object.keys(window.SiteGen.FONTES)[0],
+      secoes: ['servicos', 'sobre', 'faq', 'horario', 'contato'],
+      servicos: [{ nome: 'Degradê', descricao: 'Na tesoura e na máquina', preco: 'R$ 45' },
+                 { nome: 'Barba', descricao: 'Toalha quente', preco: 'R$ 30' }],
+      faq: [{ p: 'Precisa agendar?', r: 'Sim, pelo WhatsApp' }],
+      horario: 'Seg a sáb, 9h às 19h',
+      /* sujeira de propósito na rodada FINAL: é ela que passa pelo sanitizador.
+         Se isto entrar no cfg, o gerador publica nota e depoimento inventados. */
+      paleta: 'dourado-real-que-nao-existe',
+      nota: '5,0', depoimentos: [{ autor: 'Cliente Inventado', texto: 'Perfeito!' }],
+    });
+  };
+
+  caixa.value = 'Site pra minha barbearia, tom sério, preto e dourado, destaque pro degradê e pro horário, sem texto enrolado';
+  window.ULTIMA_DESC_IA = '';
+  let estourouMontar = '';
+  try { await window.montarSitePelaDescricao(); } catch (e) { estourouMontar = e.message; }
+  await new Promise(r => setTimeout(r, 250));
+  chk(!estourouMontar, 'montarSitePelaDescricao não explode', estourouMontar || 'rodou até o fim');
+
+  chk(falas.length === 3, 'as duas IAs conversaram em 3 rodadas', falas.length + ' chamadas');
+  chk(falas[0] && falas[0].provedor === 'gemini', 'rodada 1: a primeira IA propõe');
+  chk(falas[1] && falas[1].provedor === 'openrouter', 'rodada 2: a segunda IA critica');
+  chk(falas[2] && falas[2].provedor === 'gemini', 'rodada 3: a primeira responde e fecha');
+  chk(/Barbearia do Zé"[\s\S]*?corte na régua/.test(falas[2].prompt) || /critic/i.test(falas[2].prompt),
+      'a rodada 3 recebe a crítica da rodada 2 no prompt');
+
+  const painel = (doc.querySelector('#iaConversaPainel') || {}).innerHTML || '';
+  chk(/1ª IA/.test(painel) && /2ª IA/.test(painel), 'a conversa aparece na tela, com quem falou');
+  chk(/Entrou no site/.test(painel), 'o painel lista o que entrou no site');
+  chk(/bloqueado|Barrado/i.test(painel), 'o painel diz o que foi barrado');
+
+  chk(window.cfg.titulo === 'Barbearia do Zé — corte na régua',
+      'valeu a versão FINAL da conversa, não a primeira proposta', String(window.cfg.titulo));
+  chk((window.cfg.servicos || []).length === 2, 'os serviços da rodada final entraram',
+      (window.cfg.servicos || []).length + ' serviços');
+  /* o cfg já vem com depoimentos de exemplo desde antes (problema antigo do app,
+     não desta feature): o que importa aqui é que a IA não tenha ACRESCENTADO nada */
+  chk(JSON.stringify(window.cfg.depoimentos) === provaAntes.depoimentos &&
+      JSON.stringify(window.cfg.nota) === provaAntes.nota,
+      'a IA não acrescentou prova social nenhuma ao cfg');
+  chk(window.cfg.paleta !== 'dourado-real-que-nao-existe',
+      'paleta inventada na rodada final não entrou no cfg', 'paleta=' + window.cfg.paleta);
+
+  /* --- sem segunda IA: funciona, mas avisa que trabalhou sozinha --- */
+  falas.length = 0;
+  window.BD.config.iaProvedor2 = '';
+  window.BD.config.iaChave2 = '';
+  window.criarSitePara('ld_teste');
+  await new Promise(r => setTimeout(r, 150));
+  const caixa2 = doc.querySelector('#iaDescricao');
+  caixa2.value = 'Site simples pra minha barbearia, tom sério e direto';
+  try { await window.montarSitePelaDescricao(); } catch (e) { estourouMontar = e.message; }
+  await new Promise(r => setTimeout(r, 200));
+  chk(falas.length === 1, 'com uma IA só, é uma chamada só (sem conversa fingida)', falas.length + ' chamadas');
+  chk(/sozinha/i.test((doc.querySelector('#iaConversaPainel') || {}).innerHTML || ''),
+      'e o painel diz que ela trabalhou sozinha');
+
+  /* --- IA fora do ar: nada muda no site e o usuário é avisado --- */
+  const tituloAntes = window.cfg.titulo;
+  window.BD.config.iaProvedor2 = 'openrouter';
+  window.BD.config.iaChave2 = 'chave-falsa-2';
+  window.IA.chamarBruto = async () => { throw new Error('401 chave inválida'); };
+  try { await window.montarSitePelaDescricao(); } catch (e) { estourouMontar = e.message; }
+  await new Promise(r => setTimeout(r, 200));
+  chk(!estourouMontar, 'IA falhando não derruba o app', estourouMontar || 'capturou o erro');
+  chk(window.cfg.titulo === tituloAntes, 'com a IA falhando, nada foi alterado no site');
+  chk(/Deu errado|falhou/i.test((doc.querySelector('#iaConversaPainel') || {}).innerHTML || ''),
+      'e o painel mostra o que aconteceu');
+
+  /* --- sem IA nenhuma: a caixa continua lá, o botão não --- */
+  window.BD.config.iaAtiva = false;
+  window.BD.config.iaChave = '';
+  window.BD.config.iaProvedor = 'openai';   /* sem chave embutida */
+  window.criarSitePara('ld_teste');
+  await new Promise(r => setTimeout(r, 200));
+  chk(!!doc.querySelector('#iaDescricao'), 'sem IA a caixa de descrição continua visível');
+  chk(!doc.querySelector('[onclick="montarSitePelaDescricao()"]'),
+      'e o botão de montar some (não adianta prometer o que não roda)');
+  chk(/Ligar a IA/.test(doc.querySelector('#tela-site').innerHTML), 'com o caminho para ligar a IA');
 
   const reais = erros.filter(e => !/Not implemented: Window's (scrollTo|open)/.test(e));
   chk(reais.length === 0, 'nenhum erro de JavaScript durante tudo isso',

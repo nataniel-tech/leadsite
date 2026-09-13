@@ -4454,6 +4454,14 @@ const PROVEDORES = {
     reservas: ['gemini-3.5-flash', 'gemini-2.5-flash'],
     estilo: 'gemini',
     ajuda: 'Chave em aistudio.google.com/apikey (gratuito).'
+  },
+  openrouter: {
+    nome: 'OpenRouter',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    modeloPadrao: 'deepseek/deepseek-v4-pro',
+    reservas: ['google/gemini-3.5-flash', 'meta-llama/llama-3.3-70b-instruct:free'],
+    estilo: 'openai',
+    ajuda: 'Chave em openrouter.ai/keys — um cadastro só dá acesso a vários modelos.'
   }
 };
 
@@ -4684,9 +4692,15 @@ async function chamar(cfg, prompt, maxTokens) {
     let resp;
 
     if (prov.estilo === 'openai') {
+      const cab = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave };
+      /* o OpenRouter usa estes dois só para ranquear apps; sem eles funciona igual */
+      if (id === 'openrouter') {
+        cab['HTTP-Referer'] = 'https://github.com/nataniel-tech/leadsite';
+        cab['X-Title'] = 'LeadSite';
+      }
       resp = await fetchLimitado(prov.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave },
+        headers: cab,
         body: JSON.stringify(corpoDoPedido(prov, id, modelo, prompt, maxTokens))
       });
     } else {
@@ -5139,6 +5153,9 @@ var VAZIO = {
     meuNome: 'Nataniel', meuPreco: 'R$ 97', planoPreco: 'R$ 70', meuWhats: '5566996974248',
     pixCodigo: '', pixChave: '', pixNome: '', pixCidade: '',
     iaProvedor: 'groq', iaChave: '', iaModelo: '', iaAtiva: true,
+    /* segunda IA — é com ela que a primeira conversa na hora de montar o site
+       pela descrição. Sem ela o app funciona, só que com uma opinião só. */
+    iaProvedor2: 'openrouter', iaChave2: '', iaModelo2: '',
     cidadePadrao: 'Rondonópolis',
     geoapifyChave: '', gmapsChave: '',
     ghUsuario: '', ghRepo: 'leadsite', ghToken: ''
@@ -7103,11 +7120,26 @@ function pintarSite() {
 
   h += '<div class="bloco">';
   h += '<h2>2. Deixar a IA trabalhar</h2>';
+
+  /* ── o dono descreve o site que quer; as IAs montam a partir disso ── */
+  h += '<label>Descreva o site que você quer</label>';
+  h += '<textarea id="iaDescricao" rows="6" placeholder="Ex.: site pra minha barbearia, tom sério, preto e dourado, ' +
+       'quero destaque pro degradê e pro horário, sem texto enrolado, e um botão forte pro WhatsApp">' +
+       esc(cfg.iaDescricao || ULTIMA_DESC_IA || '') + '</textarea>';
+  h += '<p class="ajuda">Uma IA lê isso e propõe o site, a segunda critica, a primeira responde e fecha. ' +
+       'Só então o site é montado — e depoimento, nota ou número que ninguém deu não entra.</p>';
+
   if (!iaPronta()) {
     h += '<div class="aviso alerta">A IA está desligada. Cadastre uma chave em Ajustes — ou escolha Groq, que já vem embutida.</div>' +
          '<button class="btn" onclick="ir(\'ajustes\')">⚙️ Ligar a IA</button>';
   } else {
-    h += '<p class="ajuda">Quatro IAs trabalham em sequência: estrategista, redator, diretor de arte e revisor. No fim você recebe a lista do que melhorar.</p>';
+    h += '<button class="btn turbo" onclick="montarSitePelaDescricao()">🧠 Montar o site com a IA</button>';
+    if (!duasIAsProntas()) {
+      h += '<div class="aviso" style="margin-top:8px">Só uma IA configurada: ela vai trabalhar sozinha. ' +
+           'Cadastre a segunda em Ajustes para uma criticar a outra antes de fechar.</div>';
+    }
+    h += '<div id="iaConversaPainel"></div>';
+    h += '<p class="ajuda" style="margin-top:16px">Ou use a equipe completa: estrategista, redator, diretor de arte e revisor, em sequência.</p>';
     h += '<button class="btn turbo" onclick="rodarTurbo()">🚀 Modo turbo</button>';
     h += '<button class="btn pequeno" onclick="soTextos()">✍️ Só reescrever os textos</button>';
   }
@@ -7593,6 +7625,368 @@ function htmlDoSite() {
   return SiteGen.gerar(cfg);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   DESCRIÇÃO LIVRE → SITE PRONTO, com duas IAs conversando
+
+   O dono escreve como quer o site numa caixa de texto. Duas IAs de casas
+   diferentes trabalham em cima disso:
+
+       1ª (a que está em Ajustes)  lê a descrição e propõe o site inteiro
+       2ª (a segunda de Ajustes)   critica a proposta: o que ficou genérico,
+                                   o que não bate com o que foi pedido, o que
+                                   está sobrando
+       1ª de novo                  responde à crítica e fecha a versão final
+
+   Só então o resultado vira configuração do gerador. A IA NUNCA escreve HTML:
+   quem monta o site continua sendo o SiteGen, que é testado e não inventa
+   prova social.
+
+   REGRA DE OURO (a mesma do módulo IA): se qualquer passo falhar — chave
+   errada, sem crédito, serviço fora do ar, JSON maluco — o usuário recebe um
+   recado e o site continua podendo ser feito à mão. Nada quebra.
+
+   Só a 1ª IA configurada? Funciona também, sem a conversa: ela propõe e o
+   sanitizador confere. O painel diz que estava sozinha.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Seções que o gerador conhece de verdade. Nome fora desta lista não renderiza
+   nada, então o sanitizador descarta em vez de confiar no que a IA chutou. */
+var ULTIMA_DESC_IA = '';   /* sobrevive a repaint da tela */
+var SECOES_VALIDAS = ['numeros', 'sobre', 'servicos', 'galeria', 'equipe',
+                      'depoimentos', 'faq', 'horario', 'contato'];
+
+/* A segunda IA: é com ela que a primeira conversa. Devolve null se não houver
+   segunda chave, ou se for a mesma casa da primeira (aí não é conversa, é a
+   mesma opinião duas vezes). */
+function configIA2() {
+  var p = String(BD.config.iaProvedor2 || '').trim();
+  var k = String(BD.config.iaChave2 || '').trim();
+  if (!p || !k) return null;
+  if (p === BD.config.iaProvedor && !BD.config.iaChave) return null;
+  if (p === BD.config.iaProvedor && k === iaChaveEfetiva()) return null;
+  return { provedor: p, chave: k, modelo: BD.config.iaModelo2 || '' };
+}
+function duasIAsProntas() { return iaPronta() && !!configIA2(); }
+
+/* O vocabulário permitido, tirado do gerador — não da imaginação da IA. */
+function vocabularioDoSite() {
+  var S = (typeof SiteGen !== 'undefined') ? SiteGen : {};
+  var P = (typeof Perfis !== 'undefined') ? Perfis : {};
+  return {
+    paletas: Object.keys(S.PALETAS || { oceano: 1 }),
+    fontes: Object.keys(S.FONTES || { moderna: 1 }),
+    estilos: Object.keys(S.ESTILOS || { moderno: 1 }),
+    /* Perfis é um módulo ({PERFIS, MAPA, faqPara, aplicar…}), não o mapa em si:
+       pegar Object.keys(Perfis) devolvia nome de função e nenhuma IA acertava. */
+    perfis: Object.keys(P.PERFIS || (P.lista ? P.lista : {})).length
+      ? Object.keys(P.PERFIS || P.lista)
+      : Object.keys(S.RAMOS || {}),
+    secoes: SECOES_VALIDAS
+  };
+}
+
+/* O contrato que as três rodadas obedecem. As duas IAs recebem o MESMO
+   contrato, senão a crítica fala de campos que a proposta não tem. */
+function contratoDoSite(v) {
+  return 'Responda APENAS JSON válido, sem markdown e sem texto em volta, neste formato:\n' +
+    '{"resumo":"uma frase dizendo o que você entendeu do pedido",' +
+    '"perfil":"um de: ' + v.perfis.slice(0, 40).join(', ') + '",' +
+    '"titulo":"chamada principal, curta e concreta",' +
+    '"subtitulo":"uma frase de apoio",' +
+    '"sobre":"120 a 300 caracteres apresentando o negócio",' +
+    '"servicos":[{"nome":"...","descricao":"uma frase","preco":"se o cliente informou"}],' +
+    '"faq":[{"p":"pergunta real de cliente","r":"resposta"}],' +
+    '"horario":"horário por extenso, só se foi informado",' +
+    '"endereco":"só se foi informado",' +
+    '"diferenciais":["ponto forte que o cliente disse ter"],' +
+    '"secoes":["na ordem de importância, só destas: ' + v.secoes.join(', ') + '"],' +
+    '"paleta":"uma de: ' + v.paletas.join(', ') + '",' +
+    '"fonte":"uma de: ' + v.fontes.join(', ') + '",' +
+    '"estilo":"um de: ' + v.estilos.join(', ') + '"}\n\n' +
+    'PROIBIDO inventar: depoimento, nota, estrela, número de clientes, anos de ' +
+    'mercado, prêmio, cliente famoso, preço que o dono não disse. Se a descrição ' +
+    'não informou, deixe o campo de fora. Texto em português do Brasil, direto, ' +
+    'sem clichê de agência ("somos referência no mercado", "qualidade e compromisso").';
+}
+
+function contextoDoNegocio() {
+  var l = (typeof BD !== 'undefined' && BD.leads && cfg && cfg.leadId) ? acharLead(cfg.leadId) : null;
+  var partes = [];
+  if (cfg && cfg.nome) partes.push('Negócio: ' + cfg.nome);
+  if (l && l.categoria) partes.push('Ramo no mapa: ' + l.categoria);
+  if (l && l.cidade) partes.push('Cidade: ' + l.cidade);
+  if (l && l.bairro) partes.push('Bairro: ' + l.bairro);
+  if (cfg && cfg.whatsapp) partes.push('WhatsApp: ' + cfg.whatsapp);
+  return partes.join('\n');
+}
+
+function promptProposta(desc, v) {
+  return 'Você monta sites para pequenos negócios brasileiros.\n\n' +
+    'O dono descreveu o site que quer:\n"""\n' + desc + '\n"""\n\n' +
+    (contextoDoNegocio() ? contextoDoNegocio() + '\n\n' : '') +
+    'Siga a descrição à risca: o tom, o que ele pediu destaque e o que ele pediu ' +
+    'para não ter. O que ele não mencionou, você decide pelo bom senso do ramo.\n\n' +
+    contratoDoSite(v);
+}
+
+function promptCritica(desc, proposta, v) {
+  return 'Você revisa o trabalho de outra IA que montou um site a partir do pedido ' +
+    'de um dono de negócio. Seja exigente e concreto — elogio não ajuda ninguém.\n\n' +
+    'Pedido do dono:\n"""\n' + desc + '\n"""\n\n' +
+    'Proposta da outra IA:\n' + proposta + '\n\n' +
+    'Verifique, nesta ordem:\n' +
+    '1. Ela atendeu o que foi PEDIDO (tom, destaques, o que não era pra ter)?\n' +
+    '2. Inventou depoimento, nota, número, ano de mercado ou preço que ninguém deu?\n' +
+    '3. Tem texto genérico que serviria para qualquer empresa do ramo?\n' +
+    '4. Serviços, FAQ e seções fazem sentido para esse ramo e estão em ordem útil?\n' +
+    '5. Paleta, fonte e estilo combinam com o que o dono pediu?\n\n' +
+    contratoDoSite(v) + '\n\n' +
+    'Acrescente ao JSON o campo "critica": uma frase curta dizendo o que você mudou ' +
+    'e por quê. Devolva o site CORRIGIDO, não só a lista de problemas.';
+}
+
+function promptAcordo(desc, proposta, critica, v) {
+  return 'Duas IAs trabalharam no mesmo site. Feche a versão final.\n\n' +
+    'Pedido do dono:\n"""\n' + desc + '\n"""\n\n' +
+    'Sua proposta anterior:\n' + proposta + '\n\n' +
+    'Crítica da outra IA (com a versão corrigida dela):\n' + critica + '\n\n' +
+    'Aceite a crítica onde ela tiver razão. Onde ela tiver tirado algo que o dono ' +
+    'pediu, mantenha o que o dono pediu — quem manda é a descrição dele, não a ' +
+    'outra IA. Não invente nada novo nesta rodada.\n\n' +
+    contratoDoSite(v) + '\n\n' +
+    'Acrescente ao JSON o campo "acordo": uma frase dizendo o que você aceitou da ' +
+    'crítica e o que recusou (e por quê).';
+}
+
+/* ── sanitizador: a IA propõe, quem decide o que entra é este código ──────
+   Nada aqui confia no que veio. Campo desconhecido cai, tipo errado cai,
+   prova social inventada cai e ainda é reportada no painel. */
+function sanitizarDaIA(bruto, v, atual) {
+  var j = bruto || {};
+  var avisos = [];
+  var out = {};
+  var A = atual || {};
+
+  function txt(x, max) {
+    if (x === null || x === undefined) return '';
+    var s = String(x).replace(/\s+/g, ' ').trim();
+    if (s.length > max) { s = s.slice(0, max).replace(/\s+\S*$/, '') + '…'; }
+    return s;
+  }
+  function lista(x) { return Array.isArray(x) ? x : []; }
+  function escolha(x, permitidos, rotulo) {
+    var s = txt(x, 40).toLowerCase();
+    if (!s) return '';
+    if (permitidos.indexOf(s) >= 0) return s;
+    /* a IA costuma mandar o nome bonito ("Oceano") em vez da chave ("oceano") */
+    var achou = permitidos.filter(function (p) { return p.indexOf(s) === 0 || s.indexOf(p) === 0; })[0];
+    if (achou) return achou;
+    avisos.push('"' + rotulo + '" veio como "' + s + '", que o gerador não conhece — ficou o que já estava.');
+    return '';
+  }
+
+  /* prova social: o gerador tem regra de nunca inventar. Se a IA mandou, cai. */
+  ['depoimentos', 'nota', 'anos', 'numeros', 'avaliacoes', 'estrelas', 'clientes'].forEach(function (k) {
+    if (j[k] !== undefined && j[k] !== null && j[k] !== '' &&
+        !(Array.isArray(j[k]) && !j[k].length)) {
+      avisos.push('A IA mandou "' + k + '" e foi bloqueado: depoimento, nota e número ' +
+                  'não se inventa. Se o cliente te passou esses dados, preencha você.');
+    }
+  });
+
+  if (j.titulo) out.titulo = txt(j.titulo, 70);
+  if (j.subtitulo) out.subtitulo = txt(j.subtitulo, 110);
+  if (j.sobre) out.sobreTexto = txt(j.sobre, 420);
+  if (j.horario) out.horario = txt(j.horario, 140);
+  if (j.endereco) out.endereco = txt(j.endereco, 140);
+
+  var perfil = escolha(j.perfil, v.perfis, 'perfil');
+  if (perfil) out.perfil = perfil;
+  var paleta = escolha(j.paleta, v.paletas, 'paleta');
+  if (paleta) out.paleta = paleta;
+  var fonte = escolha(j.fonte, v.fontes, 'fonte');
+  if (fonte) out.fonte = fonte;
+  var estilo = escolha(j.estilo, v.estilos, 'estilo');
+  if (estilo) out.estilo = estilo;
+
+  var serv = lista(j.servicos).filter(function (s) { return s && (s.nome || typeof s === 'string'); })
+    .slice(0, 8).map(function (s) {
+      if (typeof s === 'string') return { nome: txt(s, 50), descricao: '' };
+      return { nome: txt(s.nome, 50), descricao: txt(s.descricao, 120), preco: txt(s.preco, 30) };
+    }).filter(function (s) { return s.nome; });
+  if (serv.length) out.servicos = serv;
+
+  var faq = lista(j.faq).filter(function (f) { return f && (f.p || f.pergunta); }).slice(0, 6)
+    .map(function (f) { return { p: txt(f.p || f.pergunta, 90), r: txt(f.r || f.resposta, 220) }; })
+    .filter(function (f) { return f.p && f.r; });
+  if (faq.length) out.faq = faq;
+
+  var difs = lista(j.diferenciais).map(function (d) { return txt(d, 90); }).filter(Boolean).slice(0, 6);
+  if (difs.length) out.diferenciais = difs;
+
+  var sec = lista(j.secoes).map(function (s) { return txt(s, 20).toLowerCase(); })
+    .filter(function (s) { return v.secoes.indexOf(s) >= 0; });
+  var foraDaLista = lista(j.secoes).map(function (s) { return txt(s, 20).toLowerCase(); })
+    .filter(function (s) { return s && v.secoes.indexOf(s) < 0; });
+  if (foraDaLista.length) avisos.push('Seções que o gerador não conhece foram descartadas: ' + foraDaLista.join(', ') + '.');
+  /* sem dado real, a seção de prova social só renderizaria vazia */
+  var temProva = (A.depoimentos && A.depoimentos.length) || A.nota || (A.numeros && A.numeros.length);
+  if (!temProva) {
+    var cortadas = sec.filter(function (s) { return s === 'depoimentos' || s === 'numeros'; });
+    if (cortadas.length) {
+      sec = sec.filter(function (s) { return cortadas.indexOf(s) < 0; });
+      avisos.push('Tirei "' + cortadas.join('" e "') + '" das seções: sem depoimento ou número ' +
+                  'de verdade, ela sairia vazia.');
+    }
+  }
+  /* sem repetição e com um mínimo, senão o site fica de uma seção só */
+  sec = sec.filter(function (s, i) { return sec.indexOf(s) === i; });
+  if (sec.length >= 3) out.secoes = sec;
+  else if (sec.length) avisos.push('A IA sugeriu só ' + sec.length + ' seção(ões); mantive as que o site já tinha.');
+
+  return { limpo: out, avisos: avisos };
+}
+
+/* Aplica no cfg global e devolve a lista do que mudou, em português. */
+function aplicarDaIA(limpo) {
+  var mudancas = [];
+  var nomes = { titulo: 'Chamada', subtitulo: 'Subtítulo', sobreTexto: 'Sobre',
+                horario: 'Horário', endereco: 'Endereço', perfil: 'Tipo de negócio',
+                paleta: 'Paleta', fonte: 'Fonte', estilo: 'Estilo' };
+  Object.keys(limpo).forEach(function (k) {
+    var v = limpo[k];
+    if (v === '' || v === undefined || v === null) return;
+    if (Array.isArray(v) && !v.length) return;
+    if (k === 'servicos') mudancas.push(v.length + ' serviços');
+    else if (k === 'faq') mudancas.push(v.length + ' perguntas frequentes');
+    else if (k === 'secoes') mudancas.push('seções: ' + v.join(', '));
+    else if (k === 'diferenciais') mudancas.push(v.length + ' diferenciais');
+    else mudancas.push((nomes[k] || k) + ': "' + (typeof v === 'string' ? v : v) + '"');
+    cfg[k] = v;
+  });
+  return mudancas;
+}
+
+function rotuloDaIA(c) {
+  var p = (IA.PROVEDORES[c.provedor] || {}).nome || c.provedor;
+  var m = c.modelo || IA.modeloEmUso(c) || '';
+  return p + (m ? ' · ' + m : '');
+}
+
+function pintarConversa(passos, rodape) {
+  var alvo = document.getElementById('iaConversaPainel');
+  if (!alvo) return;
+  var h = '';
+  passos.forEach(function (p) {
+    h += '<div class="aviso" style="margin-top:10px;border-left:3px solid ' +
+         (p.rodada === 'esperando' ? '#64748b' : p.cor || '#38bdf8') + '">' +
+         '<b>' + esc(p.quem) + '</b>' +
+         (p.fala ? '<div style="margin-top:4px;white-space:pre-wrap">' + esc(p.fala) + '</div>' : '') +
+         '</div>';
+  });
+  if (rodape) h += rodape;
+  alvo.innerHTML = h;
+}
+
+/* ── o botão da caixa de descrição ─────────────────────────────────────── */
+async function montarSitePelaDescricao() {
+  var campo = document.getElementById('iaDescricao');
+  var desc = campo ? String(campo.value || '').trim() : '';
+  if (desc.length < 15) { recado('Escreva pelo menos umas duas linhas sobre o site que você quer'); return; }
+  if (!iaPronta()) { recado('Ligue a IA em Ajustes primeiro'); return; }
+  cfg.iaDescricao = desc;
+  ULTIMA_DESC_IA = desc;
+
+  var A = configIA();
+  var B = configIA2();
+  var v = vocabularioDoSite();
+  var passos = [];
+  var aplicado = false;
+  var rodando = '<div class="rodando-tela"><div class="roda"></div><b>As IAs estão conversando…</b></div>';
+
+  pintarConversa([{ quem: rotuloDaIA(A), fala: 'Lendo a descrição e propondo o site…', cor: '#38bdf8' }].concat([]));
+  document.getElementById('iaConversaPainel').insertAdjacentHTML('beforeend', rodando);
+
+  try {
+    /* rodada 1 — a primeira IA propõe */
+    var bruto1 = await IA.chamarBruto(A, promptProposta(desc, v), 2400);
+    var j1 = IA.extrairJSON(bruto1);
+    passos = [{ quem: '1ª IA · ' + rotuloDaIA(A), fala: j1.resumo || 'Proposta feita.', cor: '#38bdf8' }];
+    pintarConversa(passos);
+
+    var final = j1;
+    if (B) {
+      /* rodada 2 — a segunda IA critica e corrige */
+      pintarConversa(passos.concat([{ quem: '2ª IA · ' + rotuloDaIA(B), fala: 'Criticando a proposta…', cor: '#a855f7' }]));
+      var bruto2 = await IA.chamarBruto(B, promptCritica(desc, JSON.stringify(j1), v), 2600);
+      var j2 = IA.extrairJSON(bruto2);
+      passos.push({ quem: '2ª IA · ' + rotuloDaIA(B), fala: j2.critica || j2.resumo || 'Crítica feita.', cor: '#a855f7' });
+      pintarConversa(passos);
+
+      /* rodada 3 — a primeira IA responde à crítica e fecha */
+      pintarConversa(passos.concat([{ quem: '1ª IA · ' + rotuloDaIA(A), fala: 'Respondendo à crítica…', cor: '#38bdf8' }]));
+      var bruto3 = await IA.chamarBruto(A, promptAcordo(desc, JSON.stringify(j1), JSON.stringify(j2), v), 2600);
+      var j3 = IA.extrairJSON(bruto3);
+      passos.push({ quem: '1ª IA · ' + rotuloDaIA(A), fala: j3.acordo || j3.resumo || 'Versão final fechada.', cor: '#38bdf8' });
+      final = j3;
+    } else {
+      passos.push({ quem: 'Aviso', fala: 'Só tem uma IA configurada, então ela trabalhou sozinha. ' +
+                    'Cadastre a segunda em Ajustes para uma criticar a outra antes de fechar.', cor: '#f59e0b' });
+    }
+
+    /* sanitizar → aplicar → mostrar o que entrou e o que foi barrado */
+    var s = sanitizarDaIA(final, v, cfg);
+    if (!Object.keys(s.limpo).length) {
+      pintarConversa(passos, '<div class="aviso alerta" style="margin-top:10px">As IAs conversaram, mas nada ' +
+        'do que devolveram passou na conferência. O site continua como estava — dá para fazer à mão.</div>');
+      recado('A IA não devolveu nada aproveitável');
+      return;
+    }
+    var mudancas = aplicarDaIA(s.limpo);
+    aplicado = true;
+
+    var rodape = '<div class="aviso ok" style="margin-top:12px"><b>Entrou no site:</b><ul style="margin:6px 0 0 18px">' +
+      mudancas.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul></div>';
+    if (s.avisos.length) {
+      rodape += '<div class="aviso alerta" style="margin-top:8px"><b>Barrado na conferência:</b><ul style="margin:6px 0 0 18px">' +
+        s.avisos.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>';
+    }
+    rodape += '<button class="btn" style="margin-top:12px" onclick="verSite()">👀 Ver o site agora</button>';
+
+    /* ORDEM IMPORTA: pintarSite() recria a tela inteira e o painel junto.
+       Pintar a conversa antes fazia o sucesso aparecer com o painel vazio. */
+    if (typeof pintarSite === 'function') pintarSite();
+    pintarConversa(passos, rodape);
+
+    /* WebView velho e DOM de teste não têm scrollIntoView — e rolar a tela não
+       vale um site que acabou de ser montado jogado fora por um erro bobo. */
+    try {
+      var c2 = document.getElementById('iaConversaPainel');
+      if (c2 && typeof c2.scrollIntoView === 'function') c2.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (eRolagem) { /* tanto faz */ }
+    recado('Site montado pela descrição — confira e toque em Ver o site');
+  } catch (e) {
+    /* Dizer "nada foi alterado" quando já tinha sido alterado é pior que o
+       erro: o usuário confia, publica e vai um site pela metade. */
+    var recadoErro = aplicado
+      ? '<div class="aviso" style="margin-top:10px">O site <b>já tinha sido montado</b> quando isto falhou. ' +
+        'Confira os campos antes de publicar.</div>'
+      : '<div class="aviso alerta" style="margin-top:10px">Nada foi alterado no site. Corrija a chave em Ajustes ' +
+        'ou faça o preenchimento à mão — o gerador continua funcionando sem IA.</div>';
+    if (aplicado && typeof pintarSite === 'function') { try { pintarSite(); } catch (e2) {} }
+    pintarConversa(passos.concat([{ quem: 'Deu errado', fala: String(e && e.message || e), cor: '#ef4444' }]), recadoErro);
+    recado('A IA falhou: ' + String(e && e.message || e).slice(0, 90));
+  }
+}
+
+/* os testes de navegador chamam estas duas diretamente */
+if (typeof window !== 'undefined') {
+  window.sanitizarDaIA = sanitizarDaIA;
+  window.vocabularioDoSite = vocabularioDoSite;
+  window.montarSitePelaDescricao = montarSitePelaDescricao;
+  window.configIA2 = configIA2;
+}
+
 function verSite() {
   var html;
   try { html = htmlDoSite(); }
@@ -8024,15 +8418,29 @@ function pintarAjustes() {
   h += '</div>';
 
   h += '<div class="bloco"><h2>🤖 Inteligência artificial</h2>';
-  h += '<p class="ajuda">A chave do Groq já vem embutida no app — é só deixar selecionado. x.ai, OpenAI e Gemini são alternativas.</p>';
-  h += '<label>Serviço</label><select id="aIaProv">' +
-    ['xai', 'groq', 'openai', 'gemini'].map(function (p) {
-      return '<option value="' + p + '"' + (c.iaProvedor === p ? ' selected' : '') + '>' +
-        ({ groq: 'Groq — embutida', xai: 'x.ai (Grok)', openai: 'OpenAI (pago)', gemini: 'Google Gemini' })[p] + '</option>';
-    }).join('') + '</select>';
+  h += '<p class="ajuda">A chave do Groq já vem embutida no app — é só deixar selecionado. Gemini, OpenRouter, x.ai e OpenAI são alternativas.</p>';
+  var NOMES_IA = { groq: 'Groq — embutida', xai: 'x.ai (Grok)', openai: 'OpenAI (pago)',
+                   gemini: 'Google Gemini', openrouter: 'OpenRouter — vários modelos' };
+  var ORDEM_IA = ['xai', 'groq', 'openai', 'gemini', 'openrouter'];
+  function selectIA(idSel, atual, semNenhuma) {
+    var opts = ORDEM_IA.map(function (p) {
+      return '<option value="' + p + '"' + (atual === p ? ' selected' : '') + '>' + NOMES_IA[p] + '</option>';
+    }).join('');
+    return '<select id="' + idSel + '">' +
+      (semNenhuma ? '<option value=""' + (!atual ? ' selected' : '') + '>— nenhuma —</option>' : '') + opts + '</select>';
+  }
+  h += '<label>Serviço</label>' + selectIA('aIaProv', c.iaProvedor, false);
   h += '<label>Sua chave</label><input id="aIaChave" type="password" value="' + esc(c.iaChave) + '" placeholder="cole aqui">';
   h += '<button class="btn" onclick="testarIA()">🔍 Testar a IA</button>';
   h += '<div id="aIaResultado"></div>';
+  h += '<h2 style="margin-top:22px">💬 Segunda IA (para conversar com a primeira)</h2>';
+  h += '<p class="ajuda">Na caixa "Descreva o site que você quer", uma IA propõe o site, a outra ' +
+       'critica e a primeira responde antes de fechar. Duas casas diferentes funcionam melhor: ' +
+       'por exemplo Gemini aqui em cima e OpenRouter aqui embaixo. Sem a segunda, o app faz tudo com uma só.</p>';
+  h += '<label>Serviço</label>' + selectIA('aIaProv2', c.iaProvedor2, true);
+  h += '<label>Chave da segunda IA</label><input id="aIaChave2" type="password" value="' + esc(c.iaChave2 || '') + '" placeholder="cole aqui">';
+  h += '<p class="ajuda">⚠️ Chave de IA nunca vai no código do app: o que você cola aqui fica só no seu ' +
+       'aparelho (localStorage). Se for parar dentro do index.html, ela fica pública para quem abrir o site.</p>';
   h += '</div>';
 
   h += '<div class="bloco"><h2>🌐 Pôr sites no ar (GitHub)</h2>';
@@ -8091,6 +8499,12 @@ function salvarAjustes() {
   c.iaProvedor = $('#aIaProv').value;
   c.iaChave = $('#aIaChave').value.trim();
   c.iaAtiva = !!c.iaChave || c.iaProvedor === 'groq';
+  if ($('#aIaProv2')) {
+    c.iaProvedor2 = $('#aIaProv2').value;
+    c.iaChave2 = $('#aIaChave2').value.trim();
+    /* sem chave não há segunda IA — melhor dizer isso do que fingir conversa */
+    if (!c.iaChave2) c.iaProvedor2 = '';
+  }
   if ($('#aGhUsuario')) {
     c.ghUsuario = $('#aGhUsuario').value.trim().replace(/^@/, '');
     c.ghRepo = $('#aGhRepo').value.trim() || 'leadsite';

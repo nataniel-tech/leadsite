@@ -69,6 +69,53 @@ Tela final com **preview ao vivo + "o que mudar?"** (slogan, cor, esconder preç
 
 ---
 
+## 🧠 Descrever o site e deixar duas IAs conversarem
+
+Na aba **Criar site** do app de celular tem uma caixa **"Descreva o site que
+você quer"**. Você escreve como o cliente pediu — tom, cores, o que destacar, o
+que não pode ter — e toca em **🧠 Montar o site com a IA**. Aí acontece isto:
+
+| Rodada | Quem | O que faz |
+|---|---|---|
+| 1 | 1ª IA | Lê a descrição e propõe o site inteiro (título, serviços, FAQ, seções, paleta, fonte) |
+| 2 | 2ª IA | Critica a proposta: o que ficou genérico, o que não atendeu o pedido, o que foi inventado |
+| 3 | 1ª IA | Responde à crítica e fecha a versão final — quem manda é a descrição do dono |
+
+A conversa aparece na tela, com o nome de cada IA e o que cada uma disse. No fim
+você vê duas listas: **o que entrou no site** e **o que foi barrado na
+conferência**.
+
+**A IA nunca escreve HTML.** Ela devolve JSON, um sanitizador confere campo por
+campo, e quem monta o site continua sendo o `SiteGen`. Nome de paleta, perfil ou
+seção que o gerador não conhece é descartado (e você fica sabendo). Depoimento,
+nota, número de cliente e ano de mercado **são bloqueados sempre** — é a regra de
+ouro do gerador: não se inventa prova social. Se o cliente te passou esses
+números, preencha você.
+
+### Onde ficam as chaves
+
+Em **Ajustes → 🤖 Inteligência artificial** (a 1ª IA) e **💬 Segunda IA** (a que
+vai criticar). As chaves ficam **só no seu aparelho** (localStorage). Sem a
+segunda o app funciona igual, com uma IA só — e avisa que ela trabalhou sozinha.
+
+Provedores disponíveis: Groq, Google Gemini, OpenRouter (um cadastro dá acesso a
+vários modelos), OpenAI e x.ai. Cada um tem fila de modelos reserva: se o
+principal for aposentado, o app desce a fila sozinho.
+
+> 🚨 **Chave de IA nunca vai dentro do código.** `index.html` é publicado no
+> GitHub Pages: qualquer chave escrita nele é pública para quem abrir o site. O
+> `verificar.js` tem uma seção (3c) que varre os 11 arquivos publicados atrás de
+> chave à vista e reprova se achar. Ele também avisa, em toda execução, que ainda
+> existe uma chave do Groq montada em pedaços base64 dentro do `index.html` —
+> essa não reprova o build (foi posta lá de propósito), mas está legível para
+> qualquer visitante e vale trocar.
+
+Se a IA falhar — chave errada, sem crédito, serviço fora do ar, JSON maluco —
+você recebe o motivo na tela, **nada é alterado pela metade** e o preenchimento
+à mão continua funcionando. O gerador não depende de IA nenhuma.
+
+---
+
 ## As 3 partes
 
 ### 1️⃣ Prospectar
@@ -161,20 +208,26 @@ leadsite/
 ├── server.js       API + Overpass + Nominatim + servidor de sites publicados
 ├── sitegen.js      Gerador de HTML (roda no Node e no navegador)
 ├── brief-schema.js 11 perguntas em 5 etapas (+3 extras) → config do site
-├── build.js        Gera public/celular.html a partir de index.html
-├── build-previa.js Gera previa.html e previa-formulario.html
-├── verificar.js    Testes: sintaxe, builds atualizados, caminhos, rotas, cache
-├── testar-navegador.js  Testes num DOM real: clica nas abas e nos botões
 ├── questionario.html    Página do questionário que o cliente recebe
 ├── previa.html          ⚠️ GERADO — prévia com 230 empresas reais
 ├── previa-formulario.html  ⚠️ GERADO — prévia do questionário
-├── padaria-pao-dourado.html         Demo de site gerado (mostra pro cliente)
-├── oficina-mecanica-confianca.html  Demo de site gerado
+├── padaria-pao-dourado.html         → redirect para demo/ (endereço antigo)
+├── oficina-mecanica-confianca.html  → redirect para demo/ (endereço antigo)
 ├── data/prospeccao-demo.json  As 230 empresas — entrada do build-previa.js
 ├── data/db.json    Banco (leads + sites publicados) — não vai pro GitHub
+├── scripts/        Nada aqui é publicado: são as ferramentas
+│   ├── build.js             Gera public/celular.html a partir de index.html
+│   ├── build-previa.js      Gera previa.html e previa-formulario.html
+│   ├── verificar.js         Testes: sintaxe, builds, caminhos, segredos, rotas
+│   └── testar-navegador.js  Testes num DOM real: clica nas abas e nos botões
+├── demo/           Sites gerados, para mostrar pro cliente
+│   ├── padaria-pao-dourado.html
+│   └── oficina-mecanica-confianca.html
+├── docs/           COMO-HOSPEDAR.md e INSTRUCOES-GITHUB.md
+├── .github/workflows/ci.yml  Roda tudo isto em cada push (Node 18 e 22)
 └── public/
     ├── index.html    As 3 abas (app de computador, precisa do servidor)
-    ├── celular.html  ⚠️ GERADO por build.js — NÃO EDITE
+    ├── celular.html  ⚠️ GERADO por scripts/build.js — NÃO EDITE
     ├── style.css     Tema escuro
     ├── app.js        Lógica + modelos de mensagem
     ├── perfis.js     24 perfis de segmento (textos, serviços, cores)
@@ -183,9 +236,19 @@ leadsite/
     └── fotos/banco/  10 fotos ilustrativas, uma por ramo — CÓPIA ÚNICA
 ```
 
+Na raiz fica só o que o GitHub Pages publica (o app, as prévias, o
+questionário) mais os quatro arquivos que o servidor Node lê. Ferramenta foi
+para `scripts/`, demo para `demo/`, documento para `docs/` — nada disso é
+servido como página.
+
+As demos mudaram de endereço, mas os dois arquivos antigos continuam na raiz
+como **redirect**: link velho que você já mandou no WhatsApp não dá 404, cai no
+endereço novo. O `verificar.js` confere se esses redirects apontam para um
+arquivo que existe — redirect para o nada é pior que 404.
+
 As fotos do banco moram **só** em `public/fotos/banco/`. Já existiram em dobro
 (uma pasta `fotos/` na raiz, idêntica, 1,2 MB a mais no clone) e a raiz foi
-embora: os demos apontam para `./public/fotos/banco/...`, que é o caminho que
+embora: os demos apontam para `../public/fotos/banco/...`, que é o caminho que
 funciona ao mesmo tempo no GitHub Pages (onde o projeto fica numa subpasta) e
 no `node server.js`.
 

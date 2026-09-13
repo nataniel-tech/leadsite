@@ -1,12 +1,12 @@
 /* Gera previa.html e previa-formulario.html — versões standalone do app,
    sem servidor, com os dados reais embutidos.
 
-       node build-previa.js           gera os dois
-       node build-previa.js --check   só confere se os do repositório estão
+       npm run previa           gera os dois
+       npm run check            só confere os gerados se os do repositório estão
                                       atualizados (exit 1 se não estiverem)   */
 const fs = require('fs');
 const path = require('path');
-const R = __dirname;
+const R = path.join(__dirname, '..');   // o projeto mora um nível acima de scripts/
 
 const SO_CHECANDO = process.argv.includes('--check');
 let desatualizados = 0;
@@ -24,7 +24,7 @@ function publicar(nome, conteudo) {
     desatualizados++;
     console.error('  ✘ ' + nome + (atual === null ? ' — NÃO EXISTE' : ' — está DESATUALIZADO'));
     console.error('    A fonte mudou (public/, sitegen.js, brief-schema.js ou o dataset)');
-    console.error('    e a prévia não foi regenerada. Rode:  node build-previa.js');
+    console.error('    e a prévia não foi regenerada. Rode:  npm run previa');
     return;
   }
 
@@ -101,7 +101,7 @@ const empresas = dados.empresas.map(e => {
    se o arquivo do repositório está atualizado:
 
        node build-previa.js           gera
-       node build-previa.js --check   só confere (senão, erro — igual ao build.js)
+       npm run check            só confere os gerados (senão, erro — igual ao build.js)
 
    O app DENTRO da prévia continua usando a data real do aparelho: aquilo é
    código que roda no navegador (o shim mais abaixo), não dado deste build. */

@@ -18,18 +18,18 @@
    -----
    index.html é a ÚNICA fonte. public/celular.html é arquivo GERADO.
 
-       node build.js          gera
-       node build.js --check  só confere se está atualizado (senão, erro)
+       npm run build          gera
+       npm run check          só confere os gerados se está atualizado (senão, erro)
 
    NUNCA edite public/celular.html: o próximo build apaga a sua mudança.
-   Edite index.html e rode `node build.js`.
+   Edite index.html e rode `npm run build`.
    ══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const R = __dirname;
+const R = path.join(__dirname, '..');   // o projeto mora um nível acima de scripts/
 const FONTE = path.join(R, 'index.html');
 const ALVO = path.join(R, 'public', 'celular.html');
 
@@ -37,7 +37,7 @@ const ALVO = path.join(R, 'public', 'celular.html');
 const AVISO = '<!-- ═══════════════════════════════════════════════════════════════\n' +
   '     ARQUIVO GERADO — NÃO EDITE.\n' +
   '     É uma cópia de index.html, feita por build.js.\n' +
-  '     Para mudar qualquer coisa, edite index.html e rode:  node build.js\n' +
+  '     Para mudar qualquer coisa, edite index.html e rode:  npm run build\n' +
   '     ═══════════════════════════════════════════════════════════════ -->\n';
 
 function gerar() {
@@ -69,7 +69,7 @@ function principal() {
     }
     console.error('✘ public/celular.html está DESATUALIZADO.');
     console.error('  Você editou index.html e não regenerou a cópia.');
-    console.error('  Rode:  node build.js');
+    console.error('  Rode:  npm run build');
     return 1;
   }
 
