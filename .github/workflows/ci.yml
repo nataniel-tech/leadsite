@@ -1,0 +1,76 @@
+# CI do LeadSite
+#
+# POR QUE ISTO EXISTE
+# -------------------
+# O projeto tem três arquivos GERADOS que o GitHub Pages publica direto do
+# repositório (public/celular.html, previa.html e previa-formulario.html). Toda
+# vez que a fonte muda e alguém esquece de rodar o build, o que vai pro ar é a
+# versão velha — e nada avisa. Já aconteceu duas vezes: a aba "Criar site"
+# quebrou numa cópia e não na outra, e o previa.html ficou sem a correção do
+# rascunho que já estava em public/app.js.
+#
+# O verificar.js foi feito para pegar exatamente isso, mas só adianta se rodar.
+# Aqui ele roda em todo push, sem depender de ninguém lembrar.
+#
+# Os três passos que importam:
+#   npm run check        os gerados batem com a fonte? (build.js e build-previa.js)
+#   node verificar.js    sintaxe, rotas, cache, caminhos de foto no Pages,
+#                        cópias embutidas no index.html (sobe o servidor de verdade)
+#   node testar-navegador.js  DOM real: clica nas abas, gera site, testa
+#                        pop-up bloqueado e rascunho velho de outra versão
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# push novo na mesma branch cancela a execução anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 18 é o mínimo declarado em package.json (engines); 22 é LTS
+        node: [18, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # jsdom é devDependency: só os testes precisam, o app não
+      - name: Dependências
+        run: npm ci
+
+      - name: Arquivos gerados estão em dia?
+        run: npm run check
+
+      - name: Sintaxe, rotas, cache e caminhos
+        run: node verificar.js
+
+      - name: Navegador de verdade (DOM)
+        run: node testar-navegador.js
+
+      # O Pages publica o que está na raiz do repositório. Se um destes sumir,
+      # o link que você manda pro cliente vira 404 — melhor saber aqui.
+      - name: O que o GitHub Pages precisa está no repositório?
+        run: |
+          faltando=0
+          for f in index.html questionario.html previa.html previa-formulario.html \
+                   padaria-pao-dourado.html oficina-mecanica-confianca.html \
+                   public/celular.html public/fotos/banco/padaria.jpg; do
+            if [ ! -f "$f" ]; then echo "✘ falta $f"; faltando=1; fi
+          done
+          [ "$faltando" -eq 0 ] && echo "✔ tudo que o Pages serve está aqui"
+          exit $faltando

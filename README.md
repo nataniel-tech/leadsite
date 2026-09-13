@@ -49,7 +49,7 @@ Cada segmento ganhou um bloco exclusivo: padaria/restaurante = **cardápio com p
 - **Banco ilustrativo por ramo** (`public/fotos/banco/`, 10 segmentos) quando o cliente não tem foto, com aviso no rodapé e troca fácil depois.
 - Construtor do CRM também envia as fotos para o servidor (nada de data URI gigante no HTML).
 
-### Fluxo curto: 9 perguntas em vez de 46
+### Fluxo curto: 11 perguntas em vez de 46
 Nome → WhatsApp → Ramo → Endereço → Horário → 3 serviços → Cor → Foto → Pronto.
 Tela final com **preview ao vivo + "o que mudar?"** (slogan, cor, esconder preços, foto de capa, promoção). Extras (nota Google, depoimentos reais, promoção, redes, convênios) ficam **opcionais depois**.
 
@@ -248,122 +248,22 @@ npm test                   # os dois
 ```
 
 `verificar.js` devolve código de saída 1 se algo falhar — dá para usar antes de
-todo `git push`. Ele também avisa se você esqueceu de rodar `node build.js`.
+todo `git push`. Ele avisa se você esqueceu de rodar `node build.js` ou
+`node build-previa.js`, se algum HTML publicado aponta para foto que não existe
+e se as cópias embutidas no `index.html` divergiram das fontes.
 
-## API nova
-| Método | Rota | Função |
-|---|---|---|
-| POST | `/api/fotos` | Salva foto (data URI) e devolve URL pública |
-| GET | `/ver/:slug` · `/editar/:slug` | Aprovação e edição rápida (públicas) |
-| POST | `/api/aprovar/:slug` | Gostei / lista de ajustes → regenera |
-| POST | `/api/editar/:slug` | Horário, promoção e WhatsApp → regenera |
-
----
-
-## As 3 partes
-
-### 1️⃣ Prospectar
-Busca empresas reais no **OpenStreetMap** via **Overpass API** — grátis, sem chave de API, sem limite prático.
-
-- Geocodificação da cidade pelo **Nominatim** (aceita "Rondonópolis, MT" ou qualquer cidade do mundo)
-- 25 segmentos filtráveis (restaurante, salão, oficina, construção, clínica...)
-- Filtro **"só empresas sem site"** — lê as tags `website` / `contact:website` do OSM
-- Filtro "só com telefone"
-- Raio configurável (2–25 km) ou cidade inteira
-- **Score de 0 a 100** por lead: telefone (+40), sem site (+35), sem rede social (+15), endereço (+10), e-mail (+10), horário (+5)
-- Exportação CSV e salvamento em lote no CRM (deduplicado por ID do OSM)
-- 3 espelhos Overpass com fallback automático
-- **Cache em memória** (cidade: 7 dias, resultados: 6h) e **timeout real** nas chamadas — buscas repetidas ficam instantâneas e uma API fora do ar não trava a tela
-- **Limite de 20 buscas / 10 min por IP**, pra não sobrecarregar as APIs públicas do OSM
-
-### 2️⃣ Gerenciar & Comunicar
-Funil de vendas + gerador de mensagens.
-
-- Status: `novo` → `contatado` → `negociando` → `fechado` / `perdido`
-- Filtro por status, por potencial mínimo (score) e busca por texto
-- **⏰ Aviso de "sem retorno"**: destaca leads em `contatado`/`negociando` parados há 3+ dias, com filtro dedicado
-- Ficha do lead com anotações e histórico automático de interações
-- **6 modelos de mensagem** prontos que se auto-preenchem com os dados do lead (nome da empresa, segmento traduzido e bairro):
-  1. Primeiro contato
-  2. Com preview pronto
-  3. Follow-up gentil
-  4. Proposta e preço
-  5. Última tentativa
-  6. E-mail formal
-- Botão abre direto no **WhatsApp** (`wa.me`, adiciona +55) ou no cliente de **e-mail**
-- Ao enviar, o status vira "contatado" e registra no histórico automaticamente
-
-> ✏️ Nome e preço padrão: **Nataniel** / **R$ 97**. Para mudar, clique no ⚙ no topo da tela (não precisa mais editar código).
-
-### 3️⃣ Criar site
-Formulário de preferências → site pronto, com **preview ao vivo**.
-
-- **⚡ Início rápido:** escolha o segmento (24 perfis prontos: padaria, oficina, salão, academia, clínica...) e o site nasce completo — slogan, texto institucional, 4 diferenciais, 3 serviços com preço, 2 depoimentos, paleta e tipografia adequadas
-- Vindo do CRM, o segmento é **detectado automaticamente** pela categoria do OpenStreetMap
-
-- **8 paletas** de cores, **4 estilos** (moderno/minimalista/elegante/ousado), **4 tipografias**
-- Tema claro ou escuro, alinhamento do topo, imagem de fundo
-- Seções ligáveis/desligáveis: Sobre, Serviços, Galeria, Depoimentos, Horários, Contato
-- Listas dinâmicas de serviços (com preço), depoimentos e horários
-- WhatsApp integrado: botão flutuante, botões no topo e no rodapé
-- Mapa do Google embutido, links de Instagram/Facebook
-- Preview em desktop e mobile
-- **Baixar HTML** (arquivo único, funciona em qualquer hospedagem) ou **Publicar** em `/s/nome-da-empresa` — com **QR code** gerado na hora pra mostrar ao cliente
-- Sites gerados já saem com **favicon, meta description e tags Open Graph** (prévia bonita ao compartilhar o link no WhatsApp)
-- Botão "Criar site" no CRM já preenche nome, telefone, endereço e horário do lead
-
----
-
-### 4️⃣ Questionário do cliente (automático)
-Link exclusivo por lead: `/formulario?lead=<id>`
-
-- **46 perguntas em 10 etapas**, com barra de progresso e validação
-- Já vem pré-preenchido com o que o CRM sabe (nome, telefone, cidade, segmento)
-- Sugere os serviços do ramo para o cliente só ajustar
-- Primeira pergunta é **"Você quer fechar?"** — se responder *sim*, o lead vira `fechado` no CRM com marcador 🎉
-- Ao finalizar, **o site é gerado e publicado na hora** e o cliente já vê o resultado na tela
-- Todos os dados (nome, WhatsApp, endereço, horários, serviços, preços, cores, estilo) entram no site sozinhos
-- Se alguém responder sem link de lead, entra como lead novo no CRM automaticamente
-
-## Fluxo de trabalho
-
-**Caminho curto (você monta):**
-```
-Buscar → salvar leads → "Criar site" (segmento detectado sozinho)
-        ↓ publicar → modelo "Com preview pronto" → WhatsApp
+```bash
+npm run check              # só confere se os 3 arquivos gerados estão em dia
 ```
 
-**Caminho automático (o cliente monta):**
-```
-Buscar → salvar leads → CRM → "📋 Formulário" → WhatsApp
-        ↓ cliente preenche as 46 perguntas
-Site publicado sozinho + lead vira "fechado" + você é avisado no CRM
-```
+Tudo isto também roda sozinho no GitHub Actions a cada push
+(`.github/workflows/ci.yml`, Node 18 e 22) — inclusive uma conferência de que
+os arquivos que o Pages publica continuam no repositório. Então não depende de
+você lembrar: se o build estiver atrasado, o push aparece com ✘ vermelho.
 
-Você não digita nada. Mandar o site **já pronto** converte muito mais que mandar orçamento.
+## API — todas as rotas
 
----
-
-## Estrutura
-
-```
-leadsite/
-├── server.js       API + Overpass + Nominatim + servidor de sites publicados
-├── sitegen.js      Gerador de HTML (roda no Node e no navegador)
-├── build-previa.js Gera previa.html (versão standalone, sem servidor)
-├── brief-schema.js 46 perguntas + conversão respostas → site
-├── previa.html     Prévia interativa com 230 empresas reais embutidas
-├── previa-formulario.html  Prévia do questionário do cliente
-├── data/db.json    Banco (leads + sites publicados)
-└── public/
-    ├── index.html  As 3 abas
-    ├── style.css   Tema escuro
-    ├── perfis.js   24 perfis de segmento (textos, serviços, cores)
-    ├── brief.html  Questionário em 10 etapas (página do cliente)
-    └── app.js      Lógica + modelos de mensagem
-```
-
-## API
+As quatro rotas novas da v3 estão resumidas lá em cima, em **🆕 Versão 3 → API nova**.
 
 | Método | Rota | Função |
 |---|---|---|

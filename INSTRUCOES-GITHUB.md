@@ -18,8 +18,15 @@ git add -A && git commit -m "LeadSite v3" && git push
 ## O que o GitHub Pages serve (raiz do repo)
 - `index.html` → app LeadSite Celular (funciona 100% no navegador)
 - `previa.html` → prévia do CRM com 230 empresas de Rondonópolis
-- `previa-formulario.html` → prévia do questionário de 9 perguntas
+- `previa-formulario.html` → prévia do questionário de 11 perguntas
+- `questionario.html` → a página que o cliente recebe (o app manda este link)
 - `padaria-pao-dourado.html` e `oficina-mecanica-confianca.html` → demos de sites gerados
+- `public/fotos/banco/` → as 10 fotos ilustrativas (os demos e as prévias apontam para cá)
 - `public/`, `server.js`, `sitegen.js`... → projeto completo com servidor (rode localmente com `node server.js`)
+
+⚠️ `previa.html`, `previa-formulario.html` e `public/celular.html` são **gerados** —
+não edite na mão. Rode `npm run previa` e `npm run build`, e confira com `npm run check`
+antes de subir. Se você editar direto no navegador pelo caminho A, sobe o que estiver
+no disco: rode os builds antes de arrastar os arquivos.
 
 ⚠️ O GitHub Pages é estático: o CRM com servidor (public/) só roda local ou num host com Node (Render/Railway — veja COMO-HOSPEDAR.md).
