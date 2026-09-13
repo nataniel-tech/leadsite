@@ -240,24 +240,26 @@ divergiam em silêncio. Foi assim que a aba "Criar site" ficou quebrada. Hoje
 ### Testes
 
 ```bash
-npm i --save-dev jsdom     # uma vez só (o app em si não depende disto)
+npm ci                     # uma vez só — instala o jsdom, que só os testes usam
 
 node verificar.js          # sintaxe + rotas + cache + build (não precisa de jsdom)
 node testar-navegador.js   # abre as páginas num DOM real e clica nas abas
 npm test                   # os dois
+npm run check              # só confere se os 3 arquivos gerados estão em dia
 ```
+
+**Versão do Node:** o aplicativo e o `verificar.js` rodam em **Node 18+** (é o
+que está em `engines`). Já o `testar-navegador.js` precisa de **Node 20.19+**,
+porque o jsdom 29 não carrega em Node mais velho — se você rodar em Node 18 ele
+diz isso claramente em vez de pedir para reinstalar o jsdom.
 
 `verificar.js` devolve código de saída 1 se algo falhar — dá para usar antes de
 todo `git push`. Ele avisa se você esqueceu de rodar `node build.js` ou
 `node build-previa.js`, se algum HTML publicado aponta para foto que não existe
 e se as cópias embutidas no `index.html` divergiram das fontes.
 
-```bash
-npm run check              # só confere se os 3 arquivos gerados estão em dia
-```
-
 Tudo isto também roda sozinho no GitHub Actions a cada push
-(`.github/workflows/ci.yml`, Node 18 e 22) — inclusive uma conferência de que
+(`.github/workflows/ci.yml`, Node 18 e 22 — os testes de DOM só no 22, por causa do jsdom) — inclusive uma conferência de que
 os arquivos que o Pages publica continuam no repositório. Então não depende de
 você lembrar: se o build estiver atrasado, o push aparece com ✘ vermelho.
 

@@ -287,7 +287,23 @@ async function testarDesktop(JSDOM, VirtualConsole, base, leadId) {
   try {
     ({ JSDOM, VirtualConsole } = require('jsdom'));
   } catch (e) {
-    console.error('Estes testes precisam do jsdom. Instale uma vez com:\n\n    npm i --no-save jsdom\n');
+    /* Duas causas possíveis, e a mensagem antiga confundia as duas: ou o jsdom
+       não está instalado, ou está instalado num Node velho demais — o jsdom 29
+       exige Node ^20.19 || ^22.13 || >=24 e no Node 18 ele nem carrega. Dizer
+       "instale o jsdom" para quem já instalou só faz perder tempo. */
+    let engines = null;
+    try { engines = require('jsdom/package.json').engines || null; } catch (e2) {}
+
+    if (engines && engines.node) {
+      console.error('O jsdom está instalado, mas não carrega neste Node.');
+      console.error('  Node atual : ' + process.version);
+      console.error('  jsdom pede : ' + engines.node);
+      console.error('\nEstes testes de DOM precisam de Node 20.19 ou mais novo.');
+      console.error('O aplicativo e o verificar.js continuam rodando em Node 18.\n');
+    } else {
+      console.error('Estes testes precisam do jsdom, que está nos devDependencies:');
+      console.error('\n    npm ci        (ou: npm i --save-dev jsdom)\n');
+    }
     process.exit(2);
   }
 

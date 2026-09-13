@@ -59,8 +59,20 @@ jobs:
       - name: Sintaxe, rotas, cache e caminhos
         run: node verificar.js
 
+      # O jsdom 29 exige Node ^20.19 || ^22.13 || >=24, então os testes de DOM
+      # não rodam no Node 18. Não é pulado em silêncio: o passo abaixo escreve
+      # o aviso no log, e o Node 18 continua valendo para o que importa nele —
+      # o app e o verificar.js precisam mesmo funcionar no mínimo declarado.
       - name: Navegador de verdade (DOM)
+        if: matrix.node >= 20
         run: node testar-navegador.js
+
+      - name: Por que os testes de DOM não rodam aqui
+        if: matrix.node < 20
+        run: |
+          echo "⚠ testar-navegador.js pulado de propósito neste job."
+          echo "  O jsdom exige Node 20.19+; este job é Node ${{ matrix.node }}."
+          echo "  Os testes de DOM rodam no job Node 22 desta mesma execução."
 
       # O Pages publica o que está na raiz do repositório. Se um destes sumir,
       # o link que você manda pro cliente vira 404 — melhor saber aqui.
