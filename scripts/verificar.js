@@ -16,6 +16,9 @@
                     ficou no v2 enquanto o sitegen.js ia no v3)
     3c. segredos    nenhuma chave de API escrita no que o Pages publica
     3d. IA          a caixa de descrição, as duas IAs e o sanitizador estão lá
+    3e. prova social nenhum depoimento de exemplo dos perfis vazou para um site
+                    publicado (demo/ e raiz; os shells do app ficam de fora
+                    porque embutem o perfis.js como matéria-prima)
      4. integração  sobe o servidor numa porta livre e testa as duas
                     interfaces num DOM de verdade: cada aba abre? o site
                     é gerado? os botões funcionam com pop-up bloqueado?
@@ -258,6 +261,54 @@ function checarIaDaDescricao() {
   }
 }
 
+
+/* ─── 3e. depoimento de mentira não pode vazar para site publicado ───
+   Os 25 perfis de public/perfis.js trazem 2 depoimentos cada, com autores
+   inventados (50 no total: "Marcos Pereira", "Juliana Alves"…). Servem de
+   esqueleto para o dono trocar pelos reais — mas se um site for gerado e
+   publicado sem trocar, o cliente fica com elogio falso de pessoa que não
+   existe. Para escritório de advocacia, então, é publicidade vedada pela OAB.
+   Esta checagem pega o vazamento antes do push. */
+function checarProvaSocialInventada() {
+  console.log('\n── 3e. Depoimento inventado nos sites publicados ──');
+
+  let Perfis;
+  try { Perfis = require(path.join(R, 'public', 'perfis.js')); }
+  catch (e) { erro('public/perfis.js', 'não deu para carregar: ' + e.message); return; }
+
+  const falsos = new Set();
+  Object.values((Perfis && Perfis.PERFIS) || {}).forEach(p => {
+    (p.depoimentos || []).forEach(d => { if (d && d.autor) falsos.add(String(d.autor).trim()); });
+  });
+  if (!falsos.size) { erro('perfis', 'nenhum depoimento de exemplo encontrado — a checagem perdeu o sentido'); return; }
+
+  /* O alvo é o site que vai PRO CLIENTE. Os shells do app (index, previa,
+     questionario) embutem public/perfis.js inteiro — e lá os depoimentos de
+     exemplo são matéria-prima legítima para o dono trocar. Checá-los seria
+     falso positivo; checar demo/ e qualquer site publicado na raiz não. */
+  const SHELLS = ['index.html', 'previa.html', 'previa-formulario.html', 'questionario.html'];
+  const alvos = fs.readdirSync(R).filter(f => f.endsWith('.html') && !SHELLS.includes(f))
+    .concat(fs.existsSync(path.join(R, 'demo'))
+      ? fs.readdirSync(path.join(R, 'demo')).filter(f => f.endsWith('.html')).map(f => 'demo/' + f)
+      : []);
+
+  let vazou = 0;
+  for (const f of alvos) {
+    const caminho = path.join(R, f);
+    if (!fs.existsSync(caminho)) continue;
+    const txt = fs.readFileSync(caminho, 'utf8');
+    const achados = [...falsos].filter(nome => txt.includes(nome));
+    if (achados.length) {
+      vazou++;
+      erro(f, 'publica depoimento inventado: ' + achados.slice(0, 3).join(', ') +
+              (achados.length > 3 ? ' (+' + (achados.length - 3) + ')' : '') +
+              ' — troque pelos reais do cliente ou tire a seção');
+    }
+  }
+  if (!vazou) ok(alvos.length + ' páginas publicadas',
+    'nenhum dos ' + falsos.size + ' depoimentos de exemplo dos perfis vazou para site');
+}
+
 /* ─────────────────────── 4. integração ─────────────────────── */
 function subirServidor(porta) {
   return new Promise((resolve, reject) => {
@@ -372,6 +423,7 @@ async function testarIntegracao(porta) {
   checarCopiasEmbutidas();
   checarSegredos();
   checarIaDaDescricao();
+  checarProvaSocialInventada();
   if (!RAPIDO) {
     const porta = 3100 + Math.floor(Math.random() * 400);
     await testarIntegracao(porta);
