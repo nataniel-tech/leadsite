@@ -11,6 +11,9 @@
                     previa-formulario.html (← public/ + sitegen + dataset)
      3. caminhos    nenhum HTML publicado aponta para arquivo que não existe,
                     nem usa caminho absoluto que quebra no GitHub Pages
+    3b. cópias      os blocos sitegen / perfis / qrcode embutidos no index.html
+                    são idênticos às fontes? (o gerador já divergiu: o celular
+                    ficou no v2 enquanto o sitegen.js ia no v3)
      4. integração  sobe o servidor numa porta livre e testa as duas
                     interfaces num DOM de verdade: cada aba abre? o site
                     é gerado? os botões funcionam com pop-up bloqueado?
@@ -91,6 +94,15 @@ function checarBuild() {
 }
 
 /* ─────────────────────── 3. caminhos dos arquivos ─────────────────────── */
+
+/* Páginas estáticas publicadas no GitHub Pages: elas mesmas mostram as fotos,
+   então precisam de caminho relativo (o projeto mora na subpasta /leadsite/).
+   index.html e questionario.html ficam FORA desta regra: as URLs absolutas que
+   aparecem neles estão dentro do gerador de sites e valem para o site do
+   cliente servido pelo node em /s/:slug — lá o caminho absoluto é o certo. */
+const PAGINAS_PUBLICADAS = ['previa.html', 'previa-formulario.html',
+                            'padaria-pao-dourado.html', 'oficina-mecanica-confianca.html'];
+
 function checarCaminhos() {
   console.log('\n── 3. Caminhos nos HTML publicados ──');
 
@@ -100,8 +112,11 @@ function checarCaminhos() {
   for (const f of htmls) {
     const txt = fs.readFileSync(path.join(R, f), 'utf8');
 
-    /* (a) caminho relativo tem que existir no disco — senão a imagem some */
-    const relativos = new Set([...txt.matchAll(/["'(]\.?\/((?:public\/)?fotos\/[^"')\s]+)/g)].map(m => m[1]));
+    /* (a) caminho RELATIVO tem que existir no disco — senão a imagem some.
+       (Os absolutos são regra separada, logo abaixo.) */
+    const relativos = new Set(
+      [...txt.matchAll(/["'(](?!\/)\.?\/?((?:public\/)?fotos\/[^"')\s]+)/g)].map(m => m[1])
+    );
     for (const ref of relativos) {
       if (!fs.existsSync(path.join(R, ref))) {
         ruins++;
@@ -109,17 +124,54 @@ function checarCaminhos() {
       }
     }
 
-    /* (b) caminho absoluto só funciona com o node server.js na raiz do domínio.
-       No GitHub Pages o projeto mora em /leadsite/, então "/fotos/..." escapa
-       da pasta e dá 404. Por isso as prévias usam caminho relativo. */
-    const absolutos = new Set([...txt.matchAll(/["'(]\/(fotos\/[^"')\s]+)/g)].map(m => '/' + m[1]));
-    for (const ref of absolutos) {
-      ruins++;
-      erro(f, `usa caminho absoluto "${ref}" — quebra no GitHub Pages (use public/fotos/...)`);
+    /* (b) nas páginas publicadas, caminho absoluto só funciona com o node
+       server.js na raiz do domínio. No GitHub Pages ele escapa da pasta
+       /leadsite/ e dá 404 — já aconteceu com as duas prévias. */
+    if (PAGINAS_PUBLICADAS.includes(f)) {
+      const absolutos = new Set([...txt.matchAll(/["'(]\/(fotos\/[^"')\s]+)/g)].map(m => '/' + m[1]));
+      for (const ref of absolutos) {
+        ruins++;
+        erro(f, `usa caminho absoluto "${ref}" — quebra no GitHub Pages (use public/fotos/...)`);
+      }
     }
   }
 
-  if (!ruins) ok(`${htmls.length} HTML da raiz`, 'todas as fotos que eles citam existem, e nada de caminho absoluto');
+  if (!ruins) ok(`${htmls.length} HTML da raiz`, 'as fotos que eles citam existem, e as páginas publicadas não usam caminho absoluto');
+}
+
+/* ─────────── 3b. cópias embutidas no index.html = a fonte ───────────
+   O app de celular é um arquivo só (funciona offline e é o que o GitHub Pages
+   publica), então ele carrega qrcode, perfis e o gerador embutidos em blocos
+   <script>/* nome *\/. qrcode e perfis estavam idênticos às fontes; o gerador
+   NÃO estava — o index.html seguia com o "Gerador de sites v2" (6 funções)
+   enquanto o sitegen.js já ia no v3 (28 funções, com as seções por ramo).
+   Nenhum build sincroniza os dois, então esta checagem é o que impede a
+   cópia de envelhecer de novo em silêncio. */
+function checarCopiasEmbutidas() {
+  console.log('\n── 3b. Cópias embutidas no index.html ──');
+  const fontes = [
+    ['sitegen', path.join(R, 'sitegen.js')],
+    ['perfis', path.join(R, 'public', 'perfis.js')],
+    ['qrcode', path.join(R, 'public', 'qrcode.js')],
+  ];
+  const idx = fs.readFileSync(path.join(R, 'index.html'), 'utf8');
+  const norm = s => s.replace(/\r/g, '').trim();
+
+  for (const [nome, arquivo] of fontes) {
+    const marca = `<script>/* ${nome} */`;
+    const i = idx.indexOf(marca);
+    if (i < 0) { erro(`bloco /* ${nome} */ no index.html`, 'não foi encontrado'); continue; }
+    const ini = i + marca.length;
+    const fim = idx.indexOf('</' + 'script>', ini);
+    const copia = norm(idx.slice(ini, fim));
+    const fonte = norm(fs.readFileSync(arquivo, 'utf8'));
+
+    copia === fonte
+      ? ok(`${nome} embutido no index.html`, `idêntico a ${path.relative(R, arquivo)}`)
+      : erro(`${nome} embutido no index.html`,
+             `DIVERGE de ${path.relative(R, arquivo)} (${copia.length} vs ${fonte.length} chars) — ` +
+             'copie o conteúdo da fonte para dentro do bloco <script>/* ' + nome + ' */ e rode node build.js');
+  }
 }
 
 /* ─────────────────────── 4. integração ─────────────────────── */
@@ -229,6 +281,7 @@ async function testarIntegracao(porta) {
   checarSintaxe();
   checarBuild();
   checarCaminhos();
+  checarCopiasEmbutidas();
   if (!RAPIDO) {
     const porta = 3100 + Math.floor(Math.random() * 400);
     await testarIntegracao(porta);

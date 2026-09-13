@@ -195,7 +195,7 @@ no `node server.js`.
 |---|---|---|
 | O app de **celular** | `index.html` | `node build.js` |
 | O app de **computador** (3 abas) | `public/index.html` + `public/app.js` | `node build-previa.js` |
-| O **gerador** de sites | `sitegen.js` | `node build-previa.js` |
+| O **gerador** de sites | `sitegen.js` (+ o bloco no `index.html`) | `node build.js && node build-previa.js` |
 | Os **perfis** de segmento | `public/perfis.js` | `node build-previa.js` |
 | O **questionário** | `brief-schema.js` + `public/brief.html` | `node build-previa.js` |
 | As **prévias** publicadas | nada — elas são geradas | `node build-previa.js` |
@@ -206,14 +206,30 @@ gerados**: o que você editar neles some no próximo build. O `node verificar.js
 confere os três e devolve erro se algum estiver velho — é o que impede o
 GitHub Pages de publicar uma versão atrasada.
 
-> ⚠️ **Divergência conhecida (ainda não resolvida):** o `index.html` carrega o
-> gerador embutido no bloco `<script>/* sitegen */`, e essa cópia está
-> **atrasada** em relação ao `sitegen.js`: são 6 funções contra 28 da fonte —
-> faltam as seções por ramo (`secMenu`, `secOficina`, `secAgenda`,
-> `secQuartos`, `secProva`…). Ou seja, o app de celular ainda gera site no
-> esquema v2, enquanto o servidor e o app de 3 abas geram v3. Nenhum build
-> sincroniza os dois e nenhum teste compara. As cópias de `perfis` e `qrcode`
-> embutidas no mesmo `index.html`, essas sim, estão idênticas às fontes.
+### O app de celular carrega três coisas embutidas
+
+`index.html` é um arquivo só — funciona offline e é o que o GitHub Pages
+publica —, então ele leva `qrcode`, `perfis` e o gerador dentro de blocos
+`<script>/* nome */`. **Esses blocos têm que ser idênticos às fontes**
+(`public/qrcode.js`, `public/perfis.js`, `sitegen.js`). O `verificar.js`
+compara os três e falha se divergir.
+
+Isto foi um bug silencioso durante um bom tempo: o `index.html` seguia com o
+"Gerador de sites **v2**" (6 funções) enquanto o `sitegen.js` já ia no **v3**
+(28 funções, 25 ramos com layout próprio). Na prática o app de celular — justo
+o que você usa na rua — gerava um site menor e sem as seções por ramo. Para a
+mesma padaria de teste: **23.507 chars no v2 contra 30.599 no v3**, sem
+cardápio e sem horário de funcionamento.
+
+Então, ao mexer no gerador: edite `sitegen.js`, **copie o conteúdo dele para
+dentro do bloco `<script>/* sitegen */` no `index.html`** e rode
+`node build.js && node build-previa.js`.
+
+> Limitação que ficou de pé: no GitHub Pages a prévia do site gerada pelo app
+> de celular pede as fotos do banco em `/fotos/banco/...`. Esse é o caminho
+> certo para o site de verdade, que o `node server.js` publica em `/s/:slug` —
+> mas no Pages, onde o projeto mora em `/leadsite/`, a foto não carrega. No
+> servidor e no site do cliente, carrega normalmente.
 
 Antigamente o app de celular vivia copiado em `index.html` **e**
 `public/celular.html` — dois arquivos de 340 KB idênticos. Cada correção tinha
