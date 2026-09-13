@@ -833,9 +833,35 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': MIME['.js'] });
       return res.end(fs.readFileSync(path.join(ROOT, arq.slice(1))));
     }
+
+    /* As páginas HTML que moram na RAIZ do projeto (previa.html,
+       previa-formulario.html e as demos) não eram encontradas: o código só
+       olhava dentro de public/ e devolvia 404. A exceção é /index.html, que
+       continua sendo o app de 3 abas do public/ — o app de celular fica em
+       /celular.html. */
+    if (/\.html?$/i.test(arq) && arq !== '/index.html') {
+      const raiz = path.join(ROOT, path.normalize(arq).replace(/^(\.\.[/\\])+/, ''));
+      if (fs.existsSync(raiz) && fs.statSync(raiz).isFile()) {
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          /* sem cache: o celular guarda a versão antiga e você fica olhando um
+             app quebrado que já foi consertado. */
+          'Cache-Control': 'no-store, must-revalidate',
+        });
+        return res.end(fs.readFileSync(raiz));
+      }
+    }
+
     const full = path.join(ROOT, 'public', path.normalize(arq).replace(/^(\.\.[/\\])+/, ''));
     if (fs.existsSync(full) && fs.statSync(full).isFile()) {
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(full)] || 'application/octet-stream' });
+      const ext = path.extname(full);
+      /* .js/.css do app sem cache: depois de uma correção, o celular pega a
+         versão nova na hora em vez de esperar o cache vencer. */
+      const semCache = ext === '.js' || ext === '.css' || ext === '.html';
+      res.writeHead(200, {
+        'Content-Type': MIME[ext] || 'application/octet-stream',
+        'Cache-Control': semCache ? 'no-store, must-revalidate' : 'public, max-age=86400',
+      });
       return res.end(fs.readFileSync(full));
     }
     res.writeHead(404, { 'Content-Type': 'text/plain' });

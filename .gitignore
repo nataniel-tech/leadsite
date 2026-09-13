@@ -1,7 +1,12 @@
 # dados de runtime (leads, fotos enviadas)
 data/db.json
 data/fotos/
+
+# dependências usadas só pelos testes (npm i --save-dev)
+node_modules/
+
 # backups e temporários
 *.tmp
+.tmp-*
 *.log
 .DS_Store

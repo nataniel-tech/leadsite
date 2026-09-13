@@ -744,15 +744,56 @@ function salvarRascunho() {
   clearTimeout(_tr);
   _tr = setTimeout(() => { try { localStorage.setItem('ls_rascunho', JSON.stringify(cfg)); } catch (e) {} }, 700);
 }
+/* ── rascunho: validar antes de aceitar ──────────────────────────────
+   O rascunho fica no celular de uma versão para a outra. Quando o formato
+   muda (ou o JSON vem pela metade), o `Object.assign(cfg, d)` que havia aqui
+   copiava campos fora do formato para dentro do cfg — e aí TUDO que lia esses
+   campos quebrava: o preview, o seletor de segmento e, no fim, as abas.
+
+   Agora cada campo é comparado com o padrão. Campo com tipo diferente do
+   esperado é descartado (fica o padrão) e o usuário é avisado. Assim um
+   rascunho velho no máximo perde um detalhe — nunca derruba o app. */
+function tipoDe(v) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  return typeof v;
+}
+
 function carregarRascunho() {
+  let d;
   try {
     const v = localStorage.getItem('ls_rascunho');
     if (!v) return false;
-    const d = JSON.parse(v);
-    if (!d || !d.nome) return false;
-    Object.assign(cfg, d);
-    return true;
-  } catch (e) { return false; }
+    d = JSON.parse(v);
+  } catch (e) {
+    /* JSON pela metade: apaga de vez, senão o erro volta a cada abertura */
+    try { localStorage.removeItem('ls_rascunho'); } catch (e2) {}
+    cfg.__rascunhoAviso = 'O rascunho salvo estava corrompido e foi descartado.';
+    return false;
+  }
+
+  if (!d || typeof d !== 'object' || !d.nome) return false;
+
+  const padrao = Object.assign({}, cfg);
+  const recusados = [];
+
+  Object.keys(d).forEach(k => {
+    const v = d[k];
+    if (v === null || v === undefined) return;        // null não substitui o padrão
+    if (!(k in padrao)) { cfg[k] = v; return; }        // campo novo: aceita
+    const tp = tipoDe(v), tpP = tipoDe(padrao[k]);
+    if (tp === tpP || tpP === 'null' || tpP === 'undefined') { cfg[k] = v; return; }
+    recusados.push(k + ' (esperava ' + tpP + ', veio ' + tp + ')');
+  });
+
+  if (recusados.length) {
+    const um = recusados.length === 1;
+    cfg.__rascunhoAviso = 'O rascunho era de outra versão. ' +
+      (um ? '1 campo foi descartado' : recusados.length + ' campos foram descartados') +
+      ': ' + recusados.slice(0, 4).join(', ') +
+      (recusados.length > 4 ? '…' : '') + '. O resto foi aproveitado.';
+  }
+  return true;
 }
 
 /* seletor de segmento — preenche o site inteiro de uma vez */
@@ -771,10 +812,24 @@ function carregarRascunho() {
 })();
 
 function render() {
-  const html = SiteGen.gerar(cfg);
+  /* Um rascunho antigo no celular (ou um campo fora do formato) fazia o
+     SiteGen.gerar() estourar aqui. Sem proteção, o erro parava o resto do
+     app.js no meio e as abas — inclusive "Criar site" — deixavam de responder. */
   const f = $('#preview');
-  f.srcdoc = html;
-  $('#urlFake').textContent = 'www.' + (cfg.nome || 'site').toLowerCase()
+  let html;
+  try {
+    html = SiteGen.gerar(cfg);
+  } catch (e) {
+    if (f) f.srcdoc = '<body style="font:15px system-ui;padding:22px;color:#334155">' +
+      '<b>Não consegui montar a prévia</b><br>' + esc(e.message) +
+      '<br><br>Provavelmente é um rascunho antigo salvo neste navegador. ' +
+      'Limpe o rascunho e recarregue a página.</body>';
+    toast('Prévia falhou: ' + e.message, true);
+    return;
+  }
+  if (f) f.srcdoc = html;
+  const uf = $('#urlFake');
+  if (uf) uf.textContent = 'www.' + (cfg.nome || 'site').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '') + '.com.br';
 }
 
@@ -806,8 +861,29 @@ $('#btnLimpar').onclick = () => {
 };
 
 $('#btnAbrir').onclick = () => {
+  let html;
+  try { html = SiteGen.gerar(cfg); }
+  catch (e) { toast('Não consegui montar o site: ' + e.message, true); return; }
+
   const w = abrirLink('', '_blank');
-  w.document.write(SiteGen.gerar(cfg)); w.document.close();
+  if (w && w !== ABRIR_FALHOU && w.document) {
+    try { w.document.open(); w.document.write(html); w.document.close(); return; }
+    catch (e) { try { w.close(); } catch (e2) {} }
+  }
+  /* pop-up barrado (celular, WebView, prévia): mostra no preview da própria
+     página, que sempre funciona, em vez de não fazer nada. */
+  const f = $('#preview');
+  if (f) {
+    f.srcdoc = html;
+    /* WebView antigo pode não ter scrollIntoView. Sem esta guarda o erro sai
+       sem ser capturado e o aviso abaixo nem chega a aparecer. */
+    if (typeof f.scrollIntoView === 'function') {
+      try { f.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    }
+    toast('Pop-up bloqueado — o site abriu no preview ao lado');
+  } else {
+    toast('Não deu para abrir aqui. Use "⬇ Baixar HTML".', true);
+  }
 };
 
 function irPara(aba) {
@@ -853,12 +929,39 @@ function criarSitePara(l) {
 }
 
 /* init */
-if (carregarRascunho()) setTimeout(() => toast('Rascunho anterior recuperado'), 600);
-sincronizarUI(); atualizarBadge();
+try {
+  const tinhaRascunho = carregarRascunho();
+  sincronizarUI(); atualizarBadge();
+  /* Um rascunho de outra versão perde os campos que não batem — e o usuário
+     precisa saber disso, senão acha que o app esqueceu o que ele digitou. */
+  if (cfg.__rascunhoAviso) {
+    const aviso = cfg.__rascunhoAviso;
+    delete cfg.__rascunhoAviso;
+    setTimeout(() => toast(aviso, true), 600);
+  } else if (tinhaRascunho) {
+    setTimeout(() => toast('Rascunho anterior recuperado'), 600);
+  }
+} catch (e) {
+  /* Se isto estourar, o app fica sem nenhum botão funcionando e a tela parece
+     morta. Melhor dizer o que houve e continuar — as abas seguem clicáveis. */
+  console.error('[LeadSite] init falhou:', e);
+  try { toast('O app iniciou com erro: ' + e.message, true); } catch (e2) {}
+}
+
+/* Marca devolvida quando o navegador barra a janela nova. Quem chama compara
+   com ela para saber que precisa de plano B — antes voltava uma "janela" de
+   mentira e o clique simplesmente não fazia nada. */
+const ABRIR_FALHOU = Symbol('abrir-falhou');
 
 function abrirLink(u, t) {
-  try { const w = window.open(u, t || '_blank'); if (!w) throw 0; return w; }
-  catch (e) { toast('Link bloqueado no preview — abra o app completo'); return { document:{ write(){}, close(){} } }; }
+  try {
+    const w = window.open(u, t || '_blank');
+    if (!w) throw 0;
+    return w;
+  } catch (e) {
+    toast('Este navegador bloqueou abrir em outra aba');
+    return ABRIR_FALHOU;
+  }
 }
 
 /* ═══════════ arco-íris de cores (roda de matiz contínua) ═══════════ */
