@@ -35,8 +35,12 @@ const erro = (rotulo, detalhe) => { console.log(`  ✘ ${rotulo}${detalhe ? ' �
 function checarSintaxe() {
   console.log('\n── 1. Sintaxe ──');
 
-  const js = ['server.js', 'sitegen.js', 'build-previa.js', 'build.js', 'verificar.js',
-              'brief-schema.js', 'public/app.js', 'public/perfis.js', 'public/qrcode.js'];
+  /* Os testes moram em tests/ desde que a pasta foi criada — antes estavam na
+     raiz, e a lista aqui continuou apontando pra raiz. Resultado: o verificar.js
+     procurava a si mesmo no lugar errado e TODO `npm test` nascia falhando. */
+  const js = ['server.js', 'sitegen.js', 'build-previa.js', 'build.js',
+              'brief-schema.js', 'public/app.js', 'public/perfis.js', 'public/qrcode.js',
+              'tests/verificar.js', 'tests/testar-navegador.js', 'tests/testar-busca-ia.js'];
   for (const f of js) {
     const p = path.join(R, f);
     if (!fs.existsSync(p)) { erro(f, 'arquivo não existe'); continue; }

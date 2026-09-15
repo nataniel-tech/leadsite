@@ -101,14 +101,45 @@ let achados = [], selecionados = new Set(), catsAtivas = new Set();
   });
 })();
 
+/* ═══════════════ qual fonte de busca o servidor tem ═══════════════
+   Com GEMINI_API_KEY no servidor a prospecção passa a ser feita pela IA, que
+   consulta o Google Maps e a busca do Google e devolve a empresa já com
+   Instagram, dono, nota e gancho de venda. Sem a chave, tudo continua no
+   OpenStreetMap e os botões de IA ficam escondidos — o app não promete o que
+   o servidor não pode fazer. */
+let iaDisponivel = false;
+
+async function descobrirFonte() {
+  try {
+    const f = await api('/api/fontes');
+    iaDisponivel = !!f.gemini;
+    const el = $('#fonteBusca');
+    if (el) {
+      el.innerHTML = iaDisponivel
+        ? `🤖 Busca com IA ligada: <b>Gemini + Google Maps</b> (${esc(f.modelo || 'gemini')}). ` +
+          `Acha mais empresas e já traz Instagram, dono, nota das avaliações e gancho de venda.`
+        : `🗺 Busca pelo <b>OpenStreetMap</b> — grátis e sem chave. Para buscar com IA, suba o ` +
+          `servidor com <b>GEMINI_API_KEY=AIza…</b> (chave grátis em aistudio.google.com/apikey).`;
+    }
+    if ($('#btnInvestigar')) $('#btnInvestigar').classList.toggle('oculto', !iaDisponivel);
+  } catch (e) {
+    /* servidor antigo sem a rota /api/fontes: segue no OpenStreetMap */
+    const el = $('#fonteBusca');
+    if (el) el.innerHTML = '🗺 Busca pelo <b>OpenStreetMap</b>.';
+  }
+}
+descobrirFonte();
+
 $('#btnBuscar').onclick = async () => {
   const cidade = $('#cidade').value.trim();
   if (!cidade) return toast('Informe a cidade', true);
 
   $('#btnBuscar').disabled = true;
   $('#resultados').classList.add('oculto');
-  $('#statusBusca').innerHTML =
-    `<div class="msg carregando"><div class="spin"></div>Consultando OpenStreetMap… isso pode levar até 30 segundos.</div>`;
+  $('#statusBusca').innerHTML = iaDisponivel
+    ? `<div class="msg carregando"><div class="spin"></div>🤖 A IA está varrendo o Google Maps e a busca do Google… ` +
+      `leva de 20 a 90 segundos, mais que o mapa comum.</div>`
+    : `<div class="msg carregando"><div class="spin"></div>Consultando OpenStreetMap… isso pode levar até 30 segundos.</div>`;
 
   try {
     const r = await api('/api/prospectar', {
@@ -131,10 +162,14 @@ $('#btnBuscar').onclick = async () => {
       <div class="stat v"><b>${r.semSite}</b><span>Sem site</span></div>
       <div class="stat a"><b>${r.comSite}</b><span>Já têm site</span></div>
       <div class="stat r"><b>${achados.filter(e => e.telefone).length}</b><span>Com telefone</span></div>
+      ${r.fonte === 'gemini'
+        ? `<div class="stat"><b>${r.confirmados ?? 0}</b><span>Confirmadas no Maps</span></div>` : ''}
       <div class="stat"><b>${achados.filter(e => e.jaSalvo).length}</b><span>Já no CRM</span></div>`;
     renderAchados();
     $('#resultados').classList.remove('oculto');
     if (!achados.length) toast('Nenhuma empresa com esses filtros', true);
+    else if (r.fonte === 'gemini')
+      toast(`${achados.length} empresas pela IA · ${achados.filter(e => e.confirmado).length} confirmadas no Google Maps`);
     else toast(`${achados.length} empresas listadas`);
   } catch (e) {
     $('#statusBusca').innerHTML = `<div class="msg erro">⚠ ${esc(e.message)}</div>`;
@@ -145,28 +180,54 @@ $('#btnBuscar').onclick = async () => {
 
 function cardLead(e, i) {
   const cls = e.score >= 75 ? '' : e.score >= 50 ? 'm' : 'l';
+  const redes = e.redes || {};
   return `<div class="lead ${selecionados.has(i) ? 'sel' : ''}" data-i="${i}">
     <div class="lead-topo">
-      <div><h3>${esc(e.nome)}</h3><div class="cat">${esc(rotulo(e.categoria))}</div></div>
+      <div><h3>${esc(e.nome)}</h3><div class="cat">${esc(rotulo(e.categoria))}${e.dono ? ` · 👤 ${esc(e.dono)}` : ''}</div></div>
       <div class="pontuacao ${cls}" title="Potencial do lead">${e.score}</div>
     </div>
     <div class="tags">
       ${e.temSite ? '<span class="tag t-com">tem site</span>' : '<span class="tag t-sem">✓ sem site</span>'}
       ${e.telefone ? '<span class="tag t-tel">☎ telefone</span>' : ''}
+      ${e.whatsapp && e.whatsapp !== e.telefone ? '<span class="tag t-tel">💬 whatsapp</span>' : ''}
       ${e.temRedeSocial ? '<span class="tag t-soc">rede social</span>' : ''}
+      ${e.nota ? `<span class="tag t-nota">★ ${Number(e.nota).toFixed(1)}${e.avaliacoes ? ` (${e.avaliacoes})` : ''}</span>` : ''}
+      ${e.fonte === 'gemini'
+        ? (e.confirmado ? '<span class="tag t-ok">✓ no Google Maps</span>'
+                        : '<span class="tag t-ia">🤖 IA · conferir</span>')
+        : ''}
       ${e.jaSalvo ? '<span class="tag t-com">já no CRM</span>' : ''}
     </div>
+    ${e.gancho ? `<div class="gancho"><b>💡 Gancho pra abordar</b>${esc(e.gancho)}</div>` : ''}
+    ${e.problema ? `<div class="gancho fraco"><b>⚠ Ponto fraco online</b>${esc(e.problema)}</div>` : ''}
     <div class="infos">
-      ${e.endereco ? `<div><i>📍</i><span>${esc(e.endereco)}</span></div>` : ''}
+      ${e.endereco ? `<div><i>📍</i><span>${esc(e.endereco)}${e.bairro ? ` — ${esc(e.bairro)}` : ''}</span></div>` : ''}
       ${e.telefone ? `<div><i>☎</i><a href="tel:${esc(e.telefone)}">${esc(e.telefone)}</a></div>` : ''}
       ${e.email ? `<div><i>✉</i><a href="mailto:${esc(e.email)}">${esc(e.email)}</a></div>` : ''}
       ${e.site ? `<div><i>🌐</i><a href="${esc(e.site)}" target="_blank">${esc(e.site.slice(0, 38))}</a></div>` : ''}
+      ${redes.instagram ? `<div><i>📸</i><a href="${esc(redes.instagram)}" target="_blank">${esc(redes.instagram.replace(/^https?:\/\//, '').slice(0, 38))}</a></div>` : ''}
+      ${redes.facebook ? `<div><i>👍</i><a href="${esc(redes.facebook)}" target="_blank">${esc(redes.facebook.replace(/^https?:\/\//, '').slice(0, 38))}</a></div>` : ''}
+      ${e.horario ? `<div><i>🕐</i><span>${esc(e.horario)}</span></div>` : ''}
     </div>
     <div class="lead-acoes">
       <button class="mini ${selecionados.has(i) ? 'pr' : ''}" data-sel="${i}">${selecionados.has(i) ? '✓ Selecionado' : 'Selecionar'}</button>
-      <a class="mini" href="${esc(e.mapa)}" target="_blank">🗺 Mapa</a>
+      ${(numeroZapServer(e.whatsapp || e.telefone))
+        ? `<a class="mini wa" target="_blank" href="https://wa.me/${esc(numeroZapServer(e.whatsapp || e.telefone))}">💬 WhatsApp</a>` : ''}
+      ${e.mapa ? `<a class="mini" href="${esc(e.mapa)}" target="_blank">🗺 Mapa</a>` : ''}
+      ${iaDisponivel ? `<button class="mini" data-inv="${i}">🔎 Investigar a fundo</button>` : ''}
+      ${e.dossie ? `<button class="mini" data-inv="${i}">📄 Ver ficha da IA</button>` : ''}
     </div>
   </div>`;
+}
+
+/* Mesmo critério do app celular: só gera link de WhatsApp quando dá pra ter
+   certeza do DDD. Sem isso o botão abre uma conversa com número errado. */
+function numeroZapServer(telefone) {
+  const n = String(telefone || '').replace(/\D/g, '');
+  if (!n) return '';
+  if (n.startsWith('55') && n.length >= 12) return n;
+  if (n.length === 10 || n.length === 11) return '55' + n;
+  return '';
 }
 
 function renderAchados() {
@@ -183,9 +244,184 @@ function renderAchados() {
     selecionados.has(i) ? selecionados.delete(i) : selecionados.add(i);
     renderAchados();
   });
+  $$('#lista [data-inv]').forEach(b => b.onclick = () => investigarEmpresa(+b.dataset.inv));
   $('#contaSel').textContent = `${selecionados.size} selecionados`;
   $('#selTodos').checked = selecionados.size === achados.length && achados.length > 0;
 }
+
+/* ═══════════════ dossiê: a ficha completa de UMA empresa ═══════════════
+   A busca traz o básico de até 40 empresas. O dossiê gasta uma chamada de IA
+   numa empresa só e volta com dono, CNPJ, há quantos anos existe, o que os
+   clientes reclamam nas avaliações, se o Instagram está parado, os concorrentes
+   e uma mensagem de WhatsApp pronta. Fica guardado no achado pra não pagar
+   duas vezes pela mesma ficha. */
+async function investigarEmpresa(i) {
+  const e = achados[i];
+  if (!e) return;
+
+  if (e.dossie) return pintarDossie(i, e, e.dossie);
+
+  $('#modalConteudo').innerHTML = `
+    <h2 class="dossie-titulo">🔎 ${esc(e.nome)}</h2>
+    <p class="dossie-sub">Investigando a fundo…</p>
+    <div class="msg carregando"><div class="spin"></div>
+      A IA está lendo o Google Maps, as avaliações, o Instagram e a busca do Google.
+      Leva de 20 a 60 segundos — não feche esta janela.</div>`;
+  $('#modal').classList.add('on');
+
+  try {
+    const d = await api('/api/dossie', { method: 'POST', body: JSON.stringify({ empresa: e }) });
+    /* mescla o que a ficha descobriu sem apagar o que a busca já sabia */
+    Object.assign(e, {
+      telefone: e.telefone || d.telefone, whatsapp: e.whatsapp || d.whatsapp,
+      email: e.email || d.email, endereco: e.endereco || d.endereco,
+      bairro: e.bairro || d.bairro, horario: e.horario || d.horario,
+      dono: e.dono || d.dono, gancho: d.gancho || e.gancho,
+      nota: e.nota || d.nota, avaliacoes: e.avaliacoes || d.avaliacoes,
+      site: e.site || d.site,
+      redes: { instagram: (e.redes || {}).instagram || d.instagram,
+               facebook: (e.redes || {}).facebook || d.facebook },
+      temSite: !!(e.site || d.site),
+      dossie: d,
+    });
+    renderAchados();
+    pintarDossie(i, e, d);
+  } catch (err) {
+    $('#modalConteudo').innerHTML = `
+      <h2 class="dossie-titulo">🔎 ${esc(e.nome)}</h2>
+      <div class="msg erro">⚠ ${esc(err.message)}</div>
+      <div class="grupo-btn" style="margin-top:14px">
+        <button class="btn primario" id="dRepetir">Tentar de novo</button>
+        <button class="btn fantasma" id="dFechar">Fechar</button>
+      </div>`;
+    $('#dRepetir').onclick = () => investigarEmpresa(i);
+    $('#dFechar').onclick = () => $('#modal').classList.remove('on');
+  }
+}
+
+function pintarDossie(i, e, d) {
+  const linha = (rotulo, valor) => (valor === null || valor === undefined || valor === '' || valor === 0) ? ''
+    : `<div class="dossie-linha"><span>${rotulo}</span><b>${esc(String(valor))}</b></div>`;
+  const lista = (rotulo, arr) => (!Array.isArray(arr) || !arr.length) ? ''
+    : `<div class="dossie-linha"><span>${rotulo}</span><b>${arr.map(x => '• ' + esc(String(x))).join('<br>')}</b></div>`;
+  const tem = (rotulo, ok) => `<div class="${ok ? 'tem' : 'nao'}">${ok ? '✔' : '✘'} ${rotulo}</div>`;
+  const p = d.presenca || {};
+  const zap = numeroZapServer(e.whatsapp || e.telefone);
+
+  $('#modalConteudo').innerHTML = `
+    <h2 class="dossie-titulo">🔎 ${esc(e.nome)}</h2>
+    <p class="dossie-sub">${esc(rotulo(e.categoria))}${e.endereco ? ' · ' + esc(e.endereco) : ''}
+      ${d.modelo ? ' · ficha por ' + esc(d.modelo) : ''}</p>
+    ${d.resumo ? `<p class="dossie-sub">${esc(d.resumo)}</p>` : ''}
+
+    <div class="presenca">
+      ${tem('Site próprio', !!p.site || !!e.temSite)}
+      ${tem('Instagram', !!p.instagram || !!(e.redes || {}).instagram)}
+      ${tem('Facebook', !!p.facebook || !!(e.redes || {}).facebook)}
+      ${tem('No Google Maps', !!p.maps || !!e.confirmado)}
+    </div>
+
+    ${d.gancho ? `<div class="gancho"><b>💡 Gancho pra abordar</b>${esc(d.gancho)}</div>` : ''}
+    ${d.oportunidades && d.oportunidades.length
+      ? `<div class="gancho"><b>🎯 O que um site resolveria</b>${d.oportunidades.map(x => '• ' + esc(String(x))).join('<br>')}</div>` : ''}
+
+    <div class="dossie" style="margin:14px 0">
+      ${linha('Dono', d.dono || e.dono)}
+      ${linha('CNPJ', d.cnpj)}
+      ${linha('Aberta em', d.abertaEm)}
+      ${linha('Equipe', d.funcionarios)}
+      ${linha('Telefone', e.telefone)}
+      ${linha('WhatsApp', e.whatsapp)}
+      ${linha('E-mail', e.email || d.email)}
+      ${linha('Endereço', e.endereco)}
+      ${linha('Bairro', e.bairro || d.bairro)}
+      ${linha('Horário', e.horario || d.horario)}
+      ${linha('Site', e.site || d.site)}
+      ${linha('Instagram', (e.redes || {}).instagram || d.instagram)}
+      ${linha('Facebook', (e.redes || {}).facebook || d.facebook)}
+      ${linha('Avaliação', e.nota ? Number(e.nota).toFixed(1) + ' ★ (' + (e.avaliacoes || 0) + ')' : '')}
+      ${linha('Fotos no Maps', d.fotos)}
+      ${linha('Insta ativo', d.instagramAtivo)}
+      ${lista('Serviços', e.servicos)}
+      ${lista('Concorrentes', d.concorrentes)}
+      ${linha('Reclamam de', d.reclamacoes)}
+      ${linha('Elogiam', d.elogios)}
+    </div>
+
+    ${d.mensagem ? `<label>Mensagem pronta pro WhatsApp</label><div class="msg-pronta">${esc(d.mensagem)}</div>` : ''}
+
+    <div class="grupo-btn" style="margin-top:14px;flex-wrap:wrap">
+      ${zap && d.mensagem
+        ? `<a class="btn primario" target="_blank" href="https://wa.me/${esc(zap)}?text=${encodeURIComponent(d.mensagem)}">💬 Enviar no WhatsApp</a>`
+        : zap ? `<a class="btn primario" target="_blank" href="https://wa.me/${esc(zap)}">💬 Abrir WhatsApp</a>` : ''}
+      ${d.mensagem ? `<button class="btn fantasma" id="dCopiar">📋 Copiar mensagem</button>` : ''}
+      ${e.mapa ? `<a class="btn fantasma" target="_blank" href="${esc(e.mapa)}">🗺 Ver no mapa</a>` : ''}
+      <button class="btn fantasma" id="dFechar">Fechar</button>
+    </div>
+    <p class="dica">Fonte: Google Maps e busca do Google via IA. Dado de mapa muda — confira antes de ligar.</p>`;
+
+  $('#modal').classList.add('on');
+  const copiar = $('#dCopiar');
+  if (copiar) copiar.onclick = async () => {
+    try { await navigator.clipboard.writeText(d.mensagem); toast('Mensagem copiada'); }
+    catch (err) { toast('Seu navegador bloqueou a cópia — selecione o texto', true); }
+  };
+  $('#dFechar').onclick = () => $('#modal').classList.remove('on');
+}
+
+/* Investigação em lote. Uma chamada de IA por empresa, então o app diz antes
+   quantas vai gastar e deixa parar. Falha numa não derruba as outras; cota
+   estourada ou chave recusada param tudo, porque insistir só queima chamada. */
+let investigando = false;
+if ($('#btnInvestigar')) $('#btnInvestigar').onclick = async () => {
+  if (investigando) return;
+  const alvos = (selecionados.size ? [...selecionados].map(i => i) : achados.map((_, i) => i))
+    .filter(i => achados[i] && !achados[i].temSite && !achados[i].dossie).slice(0, 10);
+  if (!alvos.length) return toast('Nada para investigar: selecione empresas sem site', true);
+  if (!confirm(`Isso gasta ${alvos.length} chamadas de IA (a cota grátis é de 5.000 por mês). Continuar?`)) return;
+
+  investigando = true;
+  $('#btnInvestigar').disabled = true;
+  let prontos = 0, falhas = 0;
+  try {
+    for (let k = 0; k < alvos.length; k++) {
+      if (!investigando) break;
+      const i = alvos[k], e = achados[i];
+      $('#statusBusca').innerHTML =
+        `<div class="msg carregando"><div class="spin"></div>🔎 Investigando ${esc(e.nome)} (${k + 1}/${alvos.length})…
+         <button class="mini" id="pararInv" style="margin-left:10px">Parar</button></div>`;
+      const parar = $('#pararInv');
+      if (parar) parar.onclick = () => { investigando = false; };
+      try {
+        const d = await api('/api/dossie', { method: 'POST', body: JSON.stringify({ empresa: e }) });
+        Object.assign(e, {
+          telefone: e.telefone || d.telefone, whatsapp: e.whatsapp || d.whatsapp,
+          email: e.email || d.email, endereco: e.endereco || d.endereco,
+          bairro: e.bairro || d.bairro, horario: e.horario || d.horario,
+          dono: e.dono || d.dono, gancho: d.gancho || e.gancho,
+          nota: e.nota || d.nota, avaliacoes: e.avaliacoes || d.avaliacoes,
+          site: e.site || d.site,
+          redes: { instagram: (e.redes || {}).instagram || d.instagram,
+                   facebook: (e.redes || {}).facebook || d.facebook },
+          temSite: !!(e.site || d.site), dossie: d,
+        });
+        prontos++;
+      } catch (err) {
+        falhas++;
+        if (/limite|chave|429|403|503/i.test(err.message)) {
+          toast(err.message, true);
+          break;
+        }
+      }
+    }
+  } finally {
+    investigando = false;
+    $('#btnInvestigar').disabled = false;
+    $('#statusBusca').innerHTML = '';
+    renderAchados();
+    toast(`🔎 ${prontos} fichas completas${falhas ? ` · ${falhas} com falha` : ''}`);
+  }
+};
 
 if ($('#ordemBusca')) $('#ordemBusca').onchange = () => { selecionados.clear(); renderAchados(); };
 
@@ -208,8 +444,21 @@ $('#btnSalvar').onclick = async () => {
 $('#btnCsv').onclick = () => {
   const linhas = selecionados.size ? [...selecionados].map(i => achados[i]) : achados;
   if (!linhas.length) return toast('Nada para exportar', true);
-  const cols = ['nome','categoria','telefone','email','endereco','site','temSite','score','mapa'];
-  const csv = [cols.join(';'), ...linhas.map(l => cols.map(c => `"${String(l[c] ?? '').replace(/"/g, '""')}"`).join(';'))].join('\n');
+  /* As colunas da IA vêm depois das antigas: quem já tinha uma planilha montada
+     em cima do CSV antigo não perde as posições. */
+  const cols = ['nome','categoria','telefone','email','endereco','site','temSite','score','mapa',
+                'whatsapp','instagram','facebook','dono','nota','avaliacoes','bairro','horario',
+                'confirmado','gancho','problema'];
+  const valor = (l, c) => {
+    if (c === 'instagram') return (l.redes || {}).instagram || '';
+    if (c === 'facebook') return (l.redes || {}).facebook || '';
+    if (c === 'confirmado') return l.confirmado ? 'sim' : (l.fonte === 'gemini' ? 'nao' : '');
+    if (c === 'temSite') return l.temSite ? 'sim' : 'nao';
+    const v = l[c];
+    return v === null || v === undefined ? '' : (Array.isArray(v) ? v.join(' | ') : String(v));
+  };
+  const csv = [cols.join(';'),
+    ...linhas.map(l => cols.map(c => `"${valor(l, c).replace(/"/g, '""')}"`).join(';'))].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -473,13 +722,23 @@ ${MEU_NOME}`,
 
 function abrirMensagem(l) {
   const tel = String(l.telefone || '').replace(/\D/g, '');
-  const nomes = Object.keys(TEMPLATES);
+
+  /* Quando o lead foi investigado, a IA já escreveu uma mensagem sob medida,
+     falando de algo real daquela empresa (a nota, o Instagram parado, a
+     reclamação que se repete). Ela vem PRIMEIRO: texto genérico todo mundo
+     recebe e ignora. */
+  const personalizada = (l.dossie && l.dossie.mensagem) ? String(l.dossie.mensagem) : '';
+  const T = Object.assign({}, TEMPLATES);
+  if (personalizada) T['✨ Escrita pela IA'] = () => personalizada;
+  const nomes = Object.keys(T);
+
   $('#modalConteudo').innerHTML = `
     <h2>💬 Mensagem para ${esc(l.nome)}</h2>
     <p class="sub">${l.telefone ? '☎ ' + esc(l.telefone) : 'Sem telefone cadastrado'}${l.email ? ' · ✉ ' + esc(l.email) : ''}</p>
+    ${l.gancho ? `<div class="gancho"><b>💡 Gancho que a IA encontrou</b>${esc(l.gancho)}</div>` : ''}
     <label>Modelo</label>
     <div class="tpls">${nomes.map((n, i) => `<div class="chip ${i === 0 ? 'on' : ''}" data-tpl="${esc(n)}">${esc(n)}</div>`).join('')}</div>
-    <textarea id="msgTexto" class="msgbox">${esc(TEMPLATES[nomes[0]](l))}</textarea>
+    <textarea id="msgTexto" class="msgbox">${esc(T[nomes[0]](l))}</textarea>
     <div class="grupo-btn" style="margin-top:16px">
       ${tel ? `<button class="btn primario" id="envWa">💬 Abrir no WhatsApp</button>` : ''}
       ${l.email ? `<button class="btn" id="envMail">✉ Abrir e-mail</button>` : ''}
@@ -491,7 +750,7 @@ function abrirMensagem(l) {
   $$('[data-tpl]').forEach(c => c.onclick = () => {
     $$('[data-tpl]').forEach(x => x.classList.remove('on'));
     c.classList.add('on');
-    $('#msgTexto').value = TEMPLATES[c.dataset.tpl](l);
+    $('#msgTexto').value = T[c.dataset.tpl](l);
   });
   if ($('#envWa')) $('#envWa').onclick = () => {
     const n = tel.length <= 11 ? '55' + tel : tel;

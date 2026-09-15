@@ -117,6 +117,36 @@ select{cursor:pointer}
 .mini.pr{background:var(--p);border-color:var(--p);color:#fff}
 .mini.pr:hover{background:#2f74e8;color:#fff}
 
+/* ─────────── busca com IA (Gemini + Google Maps) ─────────── */
+.dica{font-size:.8rem;color:var(--mute);margin:11px 0 0}
+.dica b{color:var(--p2)}
+
+/* o gancho de venda é o que se lê antes de abordar: cor própria pra não sumir */
+.gancho{margin-top:9px;padding:9px 11px;border-radius:9px;font-size:.83rem;line-height:1.5;
+  background:rgba(168,85,247,.11);border-left:3px solid var(--roxo)}
+.gancho b{display:block;font-size:.66rem;letter-spacing:.6px;text-transform:uppercase;
+  color:#c084fc;margin-bottom:3px}
+.gancho.fraco{background:rgba(239,68,68,.09);border-left-color:var(--bad)}
+.gancho.fraco b{color:#f87171}
+.t-ia{background:rgba(168,85,247,.15);color:#c084fc}
+.t-ok{background:rgba(34,197,94,.16);color:#4ade80}
+.t-nota{background:rgba(245,158,11,.15);color:var(--warn)}
+
+/* ficha do dossiê */
+.dossie{display:grid;gap:0}
+.dossie-linha{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.87rem}
+.dossie-linha:last-child{border-bottom:0}
+.dossie-linha>span{color:var(--mute);min-width:112px;flex:0 0 auto}
+.dossie-linha>b{font-weight:600;word-break:break-word}
+.presenca{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin:12px 0}
+.presenca div{font-size:.82rem;padding:9px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--line)}
+.presenca .tem{color:#4ade80}
+.presenca .nao{color:#f87171}
+.msg-pronta{margin:12px 0;padding:13px;border-radius:10px;font-size:.88rem;line-height:1.55;
+  white-space:pre-wrap;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.28)}
+.dossie-titulo{font-size:1.15rem;font-weight:800;margin:0 0 4px}
+.dossie-sub{color:var(--mute);font-size:.83rem;margin:0 0 10px}
+
 .st{font-size:.73rem;font-weight:800;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
 .st-novo{background:rgba(139,152,165,.18);color:#b6c2ce}
 .st-contatado{background:rgba(59,130,246,.18);color:var(--p2)}

@@ -147,11 +147,13 @@ async function geocodificar(cidade) {
   const r = await fetchJSON(url);
   if (!r || !r.length) throw new Error(`Cidade "${cidade}" não encontrada no OpenStreetMap.`);
   const b = r[0].boundingbox.map(Number); // [minLat, maxLat, minLon, maxLon]
+  const end = r[0].address || {};
   const resultado = {
     nome: r[0].display_name,
     lat: Number(r[0].lat),
     lon: Number(r[0].lon),
     bbox: [b[0], b[2], b[1], b[3]], // Overpass: S,W,N,E
+    uf: end.state_code || end.state || '',   // a busca com IA precisa do estado
   };
   cacheSet(chave, resultado, 7 * 24 * 60 * 60 * 1000); // coordenadas de cidade não mudam: 7 dias
   return resultado;
@@ -188,7 +190,26 @@ async function overpass(query) {
   throw new Error('Todos os servidores Overpass falharam: ' + ultimoErro.message);
 }
 
-async function prospectar({ cidade, categorias, raioKm, limite, apenasSemSite, exigirTelefone }) {
+/* Qual fonte vai ser usada. A IA é a mais rica: com a chave no servidor ela
+   assume sozinha, e o cliente pode pedir outra explicitamente com fonte:"osm". */
+function fonteDaProspeccao(fontePedida) {
+  if (fontePedida === 'osm') return 'osm';
+  if (fontePedida === 'gemini') return 'gemini';
+  return geminiPronto() ? 'gemini' : 'osm';
+}
+
+async function prospectar(opts = {}) {
+  const fonte = fonteDaProspeccao(opts.fonte);
+  if (fonte === 'gemini') {
+    if (!geminiPronto()) {
+      throw new Error('Fonte "gemini" pedida, mas o servidor está sem GEMINI_API_KEY.');
+    }
+    return prospectarGemini(opts);
+  }
+  return prospectarOSM(opts);
+}
+
+async function prospectarOSM({ cidade, categorias, raioKm, limite, apenasSemSite, exigirTelefone }) {
   const local = await geocodificar(cidade);
   const cats = (categorias && categorias.length) ? categorias : Object.keys(CATEGORIAS);
   const filtros = [];
@@ -262,10 +283,444 @@ async function prospectar({ cidade, categorias, raioKm, limite, apenasSemSite, e
   const lim = Math.min(Number(limite) || 120, 600);
   return {
     local: { nome: local.nome, lat: local.lat, lon: local.lon },
+    fonte: 'osm',
     total: resultados.length,
     semSite: resultados.filter(b => !b.temSite).length,
     comSite: resultados.filter(b => b.temSite).length,
     empresas: resultados.slice(0, lim),
+  };
+}
+
+/* ═══════════════ busca com IA: Gemini + Google Maps ═══════════════
+   Mesma estratégia do app celular (index.html), só que rodando no servidor.
+   Numa chamada só o Gemini consulta o Google Maps E a busca do Google e
+   devolve a empresa com telefone, Instagram, dono, nota e gancho de venda.
+
+   Ative com a variável de ambiente:
+       GEMINI_API_KEY=AIza...  node server.js
+   Sem ela, /api/prospectar continua no OpenStreetMap como sempre.
+
+   As três regras que este código segue (e que não são óbvias):
+   1. prompt em INGLÊS — o Maps grounding ignora prompt em outro idioma e aí o
+      modelo inventa empresa;
+   2. SEM responseMimeType — JSON estruturado e grounding não combinam;
+   3. nada entra na lista sem telefone, endereço ou lugar confirmado no Maps.
+   ══════════════════════════════════════════════════════════════════════ */
+const GEMINI_KEY = process.env.GEMINI_API_KEY || process.env.LEADSITE_GEMINI_KEY || '';
+const GEMINI_MODELOS = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash',
+                        'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+let geminiModeloOk = null;          // o que respondeu por último neste processo
+
+const geminiPronto = () => !!GEMINI_KEY;
+
+/* Categorias do app em inglês — ver regra 1 acima. */
+const CATEGORIAS_EN = {
+  restaurante: 'restaurants', lanchonete: 'fast food outlets, snack bars and ice cream shops',
+  cafe_bar: 'cafes, bars and pubs', padaria: 'bakeries and pastry shops',
+  mercado: 'supermarkets, grocery stores, greengrocers and butcher shops',
+  salao: 'hair salons, beauty salons, massage studios and tattoo studios',
+  academia: 'gyms and fitness centers',
+  oficina: 'car repair shops, tire shops and motorcycle repair shops',
+  autopecas: 'auto parts stores and vehicle dealerships',
+  clinica: 'medical clinics, doctors, dentists and veterinarians',
+  farmacia: 'pharmacies and drugstores', petshop: 'pet shops and pet grooming services',
+  roupas: 'clothing, shoes, boutique and jewelry stores',
+  construcao: 'building materials, hardware, DIY and paint stores',
+  moveis: 'furniture and home decoration stores',
+  eletronicos: 'electronics, computer and mobile phone stores',
+  hotel: 'hotels, guest houses, motels and hostels',
+  escola: 'schools, language schools and driving schools',
+  advocacia: 'law firms, accounting offices and insurance brokers',
+  imobiliaria: 'real estate agencies', papelaria: 'stationery stores, copy shops and bookstores',
+  floricultura: 'florists and garden centers', lavanderia: 'laundries and dry cleaners',
+  otica: 'opticians and eyewear stores',
+};
+
+const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\b(ltda|me|epp|eireli|sa|company|empresa|negocios|servicos)\b/g, ' ')
+  .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+const soDigitos = (t) => String(t || '').replace(/\D/g, '');
+function telefoneBR(v) {
+  const n = soDigitos(v);
+  if (!n) return '';
+  if (n.length === 10 || n.length === 11) return '55' + n;
+  if ((n.length === 12 || n.length === 13) && n.startsWith('55')) return n;
+  return n;
+}
+function urlLimpa(v) {
+  let s = String(v || '').trim().replace(/^["'<>\s]+|["'<>\s]+$/g, '');
+  if (!s || /^(null|undefined|none|n\/a|nao|não|desconhecido|-|@)$/i.test(s)) return '';
+  if (!/^https?:\/\//i.test(s)) {
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(s)) return '';
+    s = 'https://' + s;
+  }
+  return s;
+}
+/* Rede social que veio disfarçada de site. Empresa cujo "site" é o Instagram
+   continua sendo lead quente — é justamente quem mais precisa de um site. */
+function redeDe(url) {
+  const u = String(url || '');
+  if (/instagram\.com\//i.test(u)) return 'instagram';
+  if (/facebook\.com\//i.test(u) || /fb\.com\//i.test(u) || /fb\.me\//i.test(u)) return 'facebook';
+  if (/wa\.me\//i.test(u) || /whatsapp/i.test(u)) return 'whatsapp';
+  return '';
+}
+
+/* Casa o nome escrito pela IA com um lugar do grounding do Google Maps. */
+function casarLugar(nome, lugares) {
+  const alvo = semAcento(nome);
+  if (!alvo || !lugares.length) return null;
+  const palavras = alvo.split(' ').filter(p => p.length > 2);
+  let melhor = null, melhorPonto = 0;
+  for (const l of lugares) {
+    const cand = semAcento(l.titulo);
+    if (!cand) continue;
+    let ponto = 0;
+    if (cand === alvo) ponto = 100;
+    else if (cand.includes(alvo) || alvo.includes(cand)) ponto = 82;
+    else if (palavras.length) {
+      const acertos = palavras.filter(p => cand.includes(p)).length;
+      ponto = Math.round(78 * acertos / palavras.length);
+    }
+    if (ponto > melhorPonto) { melhorPonto = ponto; melhor = l; }
+  }
+  return melhorPonto >= 60 ? melhor : null;
+}
+
+/* Extrai a lista mesmo quando a resposta vem com texto em volta ou cortada no
+   meio por falta de token — sem isso perde-se tudo por causa do último item. */
+function pescarObjetos(s) {
+  const saida = [];
+  let pilha = 0, inicio = -1, emString = false, escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (emString) {
+      if (escape) escape = false;
+      else if (c === '\\') escape = true;
+      else if (c === '"') emString = false;
+      continue;
+    }
+    if (c === '"') { emString = true; continue; }
+    if (c === '{') { if (pilha === 0) inicio = i; pilha++; continue; }
+    if (c === '}') {
+      if (pilha > 0) pilha--;
+      if (pilha === 0 && inicio >= 0) {
+        const trecho = s.slice(inicio, i + 1); inicio = -1;
+        if (trecho.length < 8) continue;
+        try { const o = JSON.parse(trecho); if (o && (o.nome || o.name)) saida.push(o); } catch { /* descarta só ele */ }
+      }
+    }
+  }
+  return saida;
+}
+function extrairLista(texto) {
+  const s = String(texto || '').trim();
+  const semCerca = s.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  for (const c of [semCerca, s]) {
+    try {
+      const j = JSON.parse(c);
+      const arr = Array.isArray(j) ? j : (j && (j.empresas || j.businesses || j.results || j.places));
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch { /* próxima */ }
+  }
+  const colchete = s.indexOf('[');
+  return pescarObjetos(colchete >= 0 ? s.slice(colchete) : s);
+}
+function extrairObjeto(texto) {
+  const s = String(texto || '').trim();
+  try {
+    const j = JSON.parse(s.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim());
+    if (Array.isArray(j) && j.length) return j[0];
+    if (j && typeof j === 'object') return j;
+  } catch { /* plano B */ }
+  const ini = s.indexOf('{');
+  if (ini < 0) throw new Error('A IA não devolveu uma ficha legível.');
+  const t = s.slice(ini);
+  const cortes = [];
+  let emStr = false, fugiu = false, prof = 0;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (emStr) {
+      if (fugiu) fugiu = false; else if (c === '\\') fugiu = true; else if (c === '"') emStr = false;
+      continue;
+    }
+    if (c === '"') emStr = true;
+    else if (c === '{' || c === '[') prof++;
+    else if (c === '}' || c === ']') prof--;
+    else if (c === ',' && prof === 1) cortes.push(i);
+  }
+  for (let k = cortes.length - 1; k >= 0; k--) {
+    const trecho = t.slice(0, cortes[k]);
+    const colchete = (trecho.match(/\[/g) || []).length - (trecho.match(/\]/g) || []).length;
+    try {
+      const o = JSON.parse(trecho + (colchete > 0 ? ']' : '') + '}');
+      if (o && typeof o === 'object') return o;
+    } catch { /* corte anterior */ }
+  }
+  throw new Error('A IA devolveu a ficha incompleta. Tente de novo.');
+}
+
+function erroGemini(status, msg) {
+  const m = String(msg || '');
+  if (status === 400 && /API key not valid|invalid api key/i.test(m))
+    return 'A GEMINI_API_KEY do servidor é inválida.';
+  if (status === 403) return 'A GEMINI_API_KEY foi bloqueada (403). Ative a "Generative Language API" no projeto.';
+  if (status === 429) return 'Limite do Gemini atingido (5.000 buscas com Maps por mês na cota grátis). Aguarde.';
+  if (status === 404) return 'Nenhum modelo do Gemini disponível nesta chave.';
+  return `Gemini respondeu erro ${status}${m ? ': ' + m.slice(0, 200) : ''}`;
+}
+
+/* Uma chamada com Google Maps + Google Search ligados. */
+async function geminiComMaps(prompt, lat, lon, maxTokens = 8192) {
+  if (!GEMINI_KEY) throw new Error('GEMINI_API_KEY não configurada no servidor.');
+  const fila = [...new Set([geminiModeloOk, process.env.GEMINI_MODEL, ...GEMINI_MODELOS].filter(Boolean))];
+  let ultimoErro = null;
+
+  for (let i = 0; i < fila.length; i++) {
+    const modelo = fila[i];
+    const corpo = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      tools: [{ googleMaps: {} }, { googleSearch: {} }],
+      toolConfig: { retrievalConfig: { latLng: { latitude: Number(lat), longitude: Number(lon) }, languageCode: 'en-US' } },
+      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens },
+      // SEM responseMimeType: JSON estruturado e grounding brigam (ver regra 2)
+    };
+    let r;
+    try {
+      r = await fetchComTimeout(GEMINI_URL + encodeURIComponent(modelo) + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+        body: JSON.stringify(corpo),
+      }, 120000);
+    } catch (e) { ultimoErro = e; continue; }
+
+    if (!r.ok) {
+      const bruto = await r.text().catch(() => '');
+      let msg = ''; try { msg = JSON.parse(bruto).error.message; } catch { /* sem corpo */ }
+      ultimoErro = new Error(erroGemini(r.status, msg));
+      if ((r.status === 404 || /googleMaps|googleSearch|not supported/i.test(msg)) && i < fila.length - 1) continue;
+      throw ultimoErro;
+    }
+
+    const j = await r.json();
+    const cand = (j.candidates || [])[0] || {};
+    const texto = ((cand.content || {}).parts || []).map(p => p.text || '').join('');
+    const gm = cand.groundingMetadata || {};
+    const lugares = (gm.groundingChunks || [])
+      .map(c => (c && c.maps) || null).filter(Boolean)
+      .map(m => ({ placeId: String(m.placeId || '').replace(/^places\//, ''), titulo: m.title || '', uri: m.uri || '' }))
+      .filter(m => m.placeId || m.uri);
+
+    if (!texto) {
+      ultimoErro = new Error('A IA respondeu vazio.');
+      if (i < fila.length - 1) continue;
+      throw ultimoErro;
+    }
+    geminiModeloOk = modelo;
+    return { texto, lugares, modelo, consultas: gm.webSearchQueries || [] };
+  }
+  throw ultimoErro || new Error('Nenhum modelo do Gemini disponível.');
+}
+
+const promptBusca = (cidade, uf, cats, raioKm) => {
+  const tipos = cats.map(c => CATEGORIAS_EN[c] || String(c));
+  const onde = raioKm > 0
+    ? `within ${raioKm} km of the coordinates given in the tool configuration`
+    : 'across the whole city';
+  return [
+    'You are a local-business prospecting researcher.',
+    `Use the Google Maps tool to find REAL, currently operating businesses in ${cidade}${uf ? ', ' + uf : ''}, Brazil, ${onde}.`,
+    `Categories wanted: ${tipos.join('; ')}.`,
+    '',
+    'Return ONLY a JSON object. No markdown fence, no commentary:',
+    '{"empresas":[{"nome":"","categoria":"","endereco":"","bairro":"","telefone":"",',
+    '"whatsapp":"","email":"","site":"","instagram":"","facebook":"","horario":"",',
+    '"nota":0,"avaliacoes":0,"dono":"","servicos":[],"gancho":"","problema":""}]}',
+    '',
+    'HARD RULES:',
+    '- Only businesses you actually found. NEVER invent, guess or complete a name, phone,',
+    '  address or handle. Unknown field = "" (0 for numbers, [] for lists).',
+    '- Write "nome", "endereco", "bairro" and "horario" exactly as they appear locally, in Portuguese.',
+    '- "telefone" and "whatsapp" in digits with country code, e.g. 556634210000.',
+    '- "site" is the business OWN website only. If it has none, use "" — never put Instagram,',
+    '  Facebook or a Google Maps link there.',
+    '- Use Google Search to fill "instagram", "facebook", "email", "site", "dono" (owner name)',
+    '  and "servicos" (up to 6 short items, in Portuguese).',
+    '- "nota" = Google rating as a number. "avaliacoes" = review count.',
+    '- "gancho": ONE sentence IN PORTUGUESE, max 140 chars, with a concrete sales angle for someone',
+    '  who builds websites for local businesses, mentioning something you really observed.',
+    '- "problema": IN PORTUGUESE, max 120 chars, the biggest online weakness. "" if none.',
+    '- Skip closed businesses and big national chains; prefer independent local businesses.',
+    '- Return up to 40, best prospects first. If you find none, return {"empresas":[]}.',
+  ].join('\n');
+};
+
+/* Converte um item da IA no formato que /api/prospectar já devolve, pra o app
+   de computador não precisar saber de onde os dados vieram. */
+function empresaDaIA(e, cidade, local, rotulo, lugares) {
+  const nome = String(e.nome || e.name || '').trim();
+  if (!nome || nome.length < 2 || /^(unknown|desconhecido|null|n\/a)$/i.test(nome)) return null;
+
+  const siteBruto = urlLimpa(e.site || e.website);
+  const rede = redeDe(siteBruto);
+  const site = rede ? '' : siteBruto;
+  const instagram = urlLimpa(e.instagram) || (rede === 'instagram' ? siteBruto : '');
+  const facebook = urlLimpa(e.facebook) || (rede === 'facebook' ? siteBruto : '');
+  const lugar = casarLugar(nome, lugares);
+  const placeId = lugar ? String(lugar.placeId || '').replace(/^places\//, '') : '';
+  const telefone = telefoneBR(e.telefone || e.phone);
+  const whatsapp = telefoneBR(e.whatsapp) || telefone;
+  const temRedeSocial = !!(instagram || facebook);
+
+  const b = {
+    osmId: 'ia:' + (placeId || (semAcento(nome) + '|' + semAcento(cidade))),
+    nome,
+    categoria: rotulo || String(e.categoria || 'outro'),
+    telefone: telefone || null,
+    email: String(e.email || '').trim() || null,
+    endereco: String(e.endereco || '').trim() || null,
+    bairro: String(e.bairro || '').trim() || null,
+    cidade,
+    site: site || null, temSite: !!site,
+    redes: { facebook: facebook || null, instagram: instagram || null },
+    temRedeSocial,
+    horario: String(e.horario || '').trim() || null,
+    lat: local ? local.lat : null, lon: local ? local.lon : null,
+    mapa: (lugar && lugar.uri) || urlLimpa(e.maps) || null,
+    // ── campos exclusivos da busca com IA ──
+    whatsapp: whatsapp || null,
+    nota: Number(e.nota) > 0 ? Number(e.nota) : null,
+    avaliacoes: Number(e.avaliacoes) > 0 ? Math.round(Number(e.avaliacoes)) : null,
+    dono: String(e.dono || '').trim() || null,
+    servicos: Array.isArray(e.servicos) ? e.servicos.map(String).slice(0, 8) : [],
+    gancho: String(e.gancho || '').trim() || null,
+    problema: String(e.problema || '').trim() || null,
+    placeId: placeId || null,
+    confirmado: !!lugar,
+    fonte: 'gemini',
+  };
+  b.score = pontuarEmpresa(b);
+  return b;
+}
+
+/* Mesma base do OpenStreetMap + bônus pelo que só a IA descobre. Quem vem do
+   OSM não tem estes campos, então o score antigo não muda nada. */
+function pontuarEmpresa(b) {
+  let p = (b.telefone ? 40 : 0) + (!b.temSite ? 35 : 0) + (!b.temRedeSocial ? 15 : 0) +
+    (b.endereco ? 10 : 0) + (b.email ? 10 : 0) + (b.horario ? 5 : 0);
+  if (b.fonte === 'gemini') {
+    if (b.confirmado) p += 10;
+    if (b.whatsapp) p += 8;
+    if (b.dono) p += 5;
+    if (b.gancho) p += 5;
+    if (b.nota && b.avaliacoes && b.avaliacoes < 30) p += 7;
+    if ((b.redes && b.redes.instagram) && !b.temSite) p += 5;
+  }
+  return p;
+}
+
+async function prospectarGemini({ cidade, categorias, raioKm, limite, apenasSemSite, exigirTelefone }) {
+  const local = await geocodificar(cidade);
+  const cats = (categorias && categorias.length) ? categorias : Object.keys(CATEGORIAS);
+  const rotulo = cats.length === 1 && CATEGORIAS[cats[0]] ? cats[0] : null;
+
+  const res = await geminiComMaps(promptBusca(cidade, local.uf, cats, Number(raioKm) || 0), local.lat, local.lon);
+  const vistos = new Set();
+  let resultados = [];
+  for (const e of extrairLista(res.texto)) {
+    const b = empresaDaIA(e, cidade, local, rotulo, res.lugares);
+    if (!b || vistos.has(b.osmId)) continue;
+    vistos.add(b.osmId);
+    if (apenasSemSite && b.temSite) continue;
+    if (exigirTelefone && !b.telefone) continue;
+    resultados.push(b);
+  }
+
+  /* Respondeu sem consultar o Maps de verdade? Melhor avisar do que encher o
+     CRM de empresa fantasma. */
+  const confirmados = resultados.filter(b => b.confirmado).length;
+  if (resultados.length && !confirmados && !res.lugares.length &&
+      !resultados.some(b => b.telefone || b.endereco)) {
+    throw new Error(`A IA respondeu sem consultar o Google Maps (modelo ${res.modelo}). Tente de novo.`);
+  }
+
+  resultados.sort((a, b) => b.score - a.score || a.nome.localeCompare(b.nome));
+  const lim = Math.min(Number(limite) || 120, 600);
+  resultados = resultados.slice(0, lim);
+  return {
+    local: { nome: local.nome, lat: local.lat, lon: local.lon },
+    fonte: 'gemini', modelo: res.modelo, confirmados,
+    total: resultados.length,
+    semSite: resultados.filter(b => !b.temSite).length,
+    comSite: resultados.filter(b => b.temSite).length,
+    empresas: resultados,
+  };
+}
+
+/* ---------------- dossiê: tudo sobre UMA empresa ---------------- */
+function promptDossie(b) {
+  return [
+    'Research ONE business in depth. Use the Google Maps tool first, then Google Search.',
+    `Business name: "${b.nome}"`,
+    b.categoria ? `Category: ${b.categoria}` : '',
+    b.endereco ? `Address on file: ${b.endereco}` : '',
+    b.cidade ? `City: ${b.cidade}, Brazil` : 'Country: Brazil',
+    b.placeId ? `Google Maps place_id: ${b.placeId}` : '',
+    b.mapa ? `Google Maps link: ${b.mapa}` : '',
+    b.telefone ? `Phone on file: ${b.telefone}` : '',
+    '',
+    'Return ONLY a JSON object. No markdown fence:',
+    '{"resumo":"","dono":"","cnpj":"","abertaEm":0,"funcionarios":"",',
+    '"endereco":"","bairro":"","telefone":"","whatsapp":"","email":"","site":"",',
+    '"instagram":"","facebook":"","horario":"","nota":0,"avaliacoes":0,"fotos":0,',
+    '"instagramAtivo":"","reclamacoes":"","elogios":"","concorrentes":[],',
+    '"presenca":{"site":false,"instagram":false,"facebook":false,"maps":false},',
+    '"oportunidades":[],"gancho":"","mensagem":""}',
+    '',
+    'HARD RULES:',
+    '- Only facts you actually found. NEVER invent or guess. Unknown string = "", number = 0,',
+    '  list = [], boolean = false.',
+    '- Every human-readable value IN PORTUGUESE (Brazilian).',
+    '- "resumo": 2 sentences on what the business does and how it stands locally.',
+    '- "dono": owner/founder/manager name. "cnpj": only if you really found it.',
+    '- "abertaEm": year it opened. "fotos": photos on its Google Maps listing.',
+    '- "reclamacoes" / "elogios": what customers REPEAT in the reviews. "" if no reviews.',
+    '- "instagramAtivo": when it last posted ("ontem", "há 3 meses", "parado desde 2023").',
+    '- "concorrentes": up to 3 real nearby competitors.',
+    '- "oportunidades": 3 to 5 concrete gaps a professional local website would fix.',
+    '- "gancho": ONE sentence, max 140 characters, strongest sales angle.',
+    '- "mensagem": a WhatsApp opener, max 350 chars, from a web designer to this owner. Friendly,',
+    '  direct, at most one emoji, and it MUST mention one specific thing you really found.',
+    '- "site" is the OWN website only. Instagram or Facebook is NOT a website.',
+  ].filter(Boolean).join('\n');
+}
+
+async function dossieEmpresa(empresa) {
+  const local = await geocodificar(empresa.cidade || empresa.cidadePadrao || 'Rondonópolis');
+  const res = await geminiComMaps(promptDossie(empresa), local.lat, local.lon, 6000);
+  const d = extrairObjeto(res.texto);
+  return {
+    modelo: res.modelo,
+    resumo: String(d.resumo || ''), dono: String(d.dono || ''), cnpj: String(d.cnpj || ''),
+    abertaEm: Number(d.abertaEm) || 0, funcionarios: String(d.funcionarios || ''),
+    endereco: String(d.endereco || ''), bairro: String(d.bairro || ''),
+    telefone: telefoneBR(d.telefone), whatsapp: telefoneBR(d.whatsapp) || telefoneBR(d.telefone),
+    email: String(d.email || ''), site: redeDe(urlLimpa(d.site)) ? '' : urlLimpa(d.site),
+    instagram: urlLimpa(d.instagram) || (redeDe(urlLimpa(d.site)) === 'instagram' ? urlLimpa(d.site) : ''),
+    facebook: urlLimpa(d.facebook) || (redeDe(urlLimpa(d.site)) === 'facebook' ? urlLimpa(d.site) : ''),
+    horario: String(d.horario || ''),
+    nota: Number(d.nota) > 0 ? Number(d.nota) : null,
+    avaliacoes: Number(d.avaliacoes) > 0 ? Math.round(Number(d.avaliacoes)) : null,
+    fotos: Number(d.fotos) || 0, instagramAtivo: String(d.instagramAtivo || ''),
+    reclamacoes: String(d.reclamacoes || ''), elogios: String(d.elogios || ''),
+    concorrentes: Array.isArray(d.concorrentes) ? d.concorrentes.map(String) : [],
+    presenca: (d.presenca && typeof d.presenca === 'object') ? d.presenca : {},
+    oportunidades: Array.isArray(d.oportunidades) ? d.oportunidades.map(String) : [],
+    gancho: String(d.gancho || ''), mensagem: String(d.mensagem || ''),
+    lugares: res.lugares,
   };
 }
 
@@ -558,10 +1013,39 @@ const server = http.createServer(async (req, res) => {
       }
       const b = await corpo(req);
       if (!b.cidade) return json(res, 400, { erro: 'Informe a cidade.' });
-      console.log(`[prospecção] ${b.cidade} | cats: ${(b.categorias||[]).join(',') || 'todas'}`);
-      const r = await prospectar(b);
-      console.log(`[prospecção] ${r.total} encontradas, ${r.semSite} sem site`);
+      const fonte = fonteDaProspeccao(b.fonte);
+      console.log(`[prospeccao:${fonte}] ${b.cidade} | cats: ${(b.categorias||[]).join(',') || 'todas'}`);
+      const r = await prospectar({ ...b, fonte });
+      console.log(`[prospeccao:${fonte}] ${r.total} encontradas, ${r.semSite} sem site` +
+        (r.confirmados !== undefined ? `, ${r.confirmados} confirmadas no Maps` : ''));
       return json(res, 200, r);
+    }
+
+    /* Ficha completa de UMA empresa, feita pela IA. Gasta uma chamada, então é
+       um botão explícito no app — nunca roda em lote sozinho. */
+    if (p === '/api/dossie' && req.method === 'POST') {
+      const ip = req.socket.remoteAddress || 'desconhecido';
+      if (limiteExcedido(ip, 10 * 60 * 1000, 30)) {
+        return json(res, 429, { erro: 'Muitas investigações em pouco tempo. Aguarde alguns minutos.' });
+      }
+      if (!geminiPronto()) {
+        return json(res, 503, { erro: 'Busca com IA desligada: defina GEMINI_API_KEY ao subir o servidor.' });
+      }
+      const b = await corpo(req);
+      if (!b.empresa || !b.empresa.nome) return json(res, 400, { erro: 'Informe a empresa.' });
+      console.log(`[dossie] ${b.empresa.nome} (${b.empresa.cidade || 'sem cidade'})`);
+      const d = await dossieEmpresa(b.empresa);
+      return json(res, 200, d);
+    }
+
+    /* Diz ao app de computador o que o servidor consegue fazer agora — é o que
+       ele usa pra mostrar ou esconder os botões de IA. */
+    if (p === '/api/fontes' && req.method === 'GET') {
+      return json(res, 200, {
+        padrao: fonteDaProspeccao(null),
+        gemini: geminiPronto(),
+        modelo: geminiModeloOk || GEMINI_MODELOS[0],
+      });
     }
 
     if (p === '/api/leads' && req.method === 'GET') {

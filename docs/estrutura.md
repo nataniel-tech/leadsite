@@ -36,10 +36,12 @@ leadsite/
 ├── docs/
 │   ├── hospedar.md
 │   ├── github-pages.md
+│   ├── busca-com-ia.md
 │   └── estrutura.md
 └── tests/
     ├── verificar.js
-    └── testar-navegador.js
+    ├── testar-navegador.js
+    └── testar-busca-ia.js
 ```
 
 ## O que editar
@@ -50,6 +52,14 @@ leadsite/
 | App de computador | `public/index.html` e `public/app.js` | — |
 | Gerador de sites | `sitegen.js` | `node build.js` |
 | Servidor / API | `server.js` | — |
+| Busca com IA (celular) | `index.html` (bloco da busca) | `node build.js` |
+| Busca com IA (servidor) | `server.js` | — |
+| Busca com IA (computador) | `public/app.js` | — |
+
+A busca com IA mora em três lugares que precisam continuar dizendo a mesma coisa:
+`index.html` (celular), `server.js` (servidor) e `public/app.js` (computador).
+Mudou o prompt ou a limpeza de campos num? Confira os outros dois — e rode
+`npm run test:ia`, que é o que pega divergência silenciosa.
 
 Não edite `public/celular.html`, `previa.html` nem `previa-formulario.html`.
 Eles são gerados e a próxima build apaga a alteração.
